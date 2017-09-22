@@ -33,7 +33,95 @@ main =
         }
 
 
+
+-- MODEL
+
+
 type alias Model =
+    { page : Page
+    , schemasModel : SchemasModel
+    , singleSchemaModel : SingleSchemaModel
+    }
+
+
+type Page
+    = Schemas
+    | SingleSchema
+
+
+init : ( Model, Cmd Msg )
+init =
+    Model Schemas initialSchemasModel initialSingleSchemaModel ! []
+
+
+
+-- UPDATE
+
+
+type Msg
+    = Goto Page
+    | SchemasMsg SchemasMsg
+    | SingleSchemaMsg SingleSchemaMsg
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        Goto page ->
+            ( { model | page = page }, Cmd.none )
+
+        SchemasMsg schemasMsg ->
+            let
+                ( schemasModel, schemasCmd ) =
+                    updateSchemas schemasMsg model.schemasModel
+            in
+            ( { model | schemasModel = schemasModel }, Cmd.map SchemasMsg schemasCmd )
+
+        SingleSchemaMsg singleSchemaMsg ->
+            let
+                ( singleSchemaModel, singleSchemaCmd ) =
+                    updateSingleSchema singleSchemaMsg model.singleSchemaModel
+            in
+            ( { model | singleSchemaModel = singleSchemaModel }, Cmd.map SingleSchemaMsg singleSchemaCmd )
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.none
+
+
+view : Model -> Html Msg
+view model =
+    div []
+        [ header []
+            [ h1 [] [ text "Sequelize UI" ] ]
+        , pageView model
+        , footer []
+            []
+        ]
+
+
+pageView : Model -> Html Msg
+pageView model =
+    case model.page of
+        Schemas ->
+            schemasPage model.schemasModel |> Html.map SchemasMsg
+
+        SingleSchema ->
+            singleSchemaView model.singleSchemaModel |> Html.map SingleSchemaMsg
+
+
+pageTitle : String -> Html msg
+pageTitle title =
+    div [] [ h2 [] [ text title ] ]
+
+
+
+-- SCHEMAS
+-- SCHEMAS MODEL
+
+
+type alias SchemasModel =
     { schemas : List Schema
     , schemaNameInput : String
     , editingSchema : Maybe Schema
@@ -42,25 +130,23 @@ type alias Model =
     }
 
 
+initialSchemasModel : SchemasModel
+initialSchemasModel =
+    SchemasModel [] "" Nothing Nothing 1
+
+
 type alias Schema =
     { id : Int
     , name : String
     }
 
 
-init : ( Model, Cmd Msg )
-init =
-    initialModel ! []
+
+-- SCHEMAS UPDATE
 
 
-initialModel : Model
-initialModel =
-    Model [] "" Nothing Nothing 1
-
-
-type Msg
-    = NoOp
-    | InputSchemaName String
+type SchemasMsg
+    = InputSchemaName String
     | AddSchema
     | EditSchema Int
     | InputEditingSchemaName String
@@ -68,12 +154,9 @@ type Msg
     | DeleteSchema Int
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+updateSchemas : SchemasMsg -> SchemasModel -> ( SchemasModel, Cmd SchemasMsg )
+updateSchemas msg model =
     case msg of
-        NoOp ->
-            ( model, Cmd.none )
-
         InputSchemaName name ->
             ( { model | schemaNameInput = name }, Cmd.none )
 
@@ -129,57 +212,53 @@ saveSchema schemas maybeSchema =
             schemas
 
 
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.none
+
+-- SCHEMAS VIEW
 
 
-view : Model -> Html Msg
-view model =
-    div []
-        [ nav []
-            [ h1 [] [ text "Sequelize UI" ] ]
-        , header []
-            [ h2 [] [ text "Schemas" ] ]
-        , main_ [] (content model)
-        , footer []
-            []
+schemasPage : SchemasModel -> Html SchemasMsg
+schemasPage model =
+    main_ []
+        [ pageTitle "Schemas"
+        , schemasContent model
         ]
 
 
-content : Model -> List (Html Msg)
-content model =
+schemasContent : SchemasModel -> Html SchemasMsg
+schemasContent model =
     case model.error of
         Just message ->
-            [ errorMessage message
-            , createSchemaInput model.schemaNameInput
-            , createSchemaButton
-            , schemaList model.schemas model.editingSchema
-            ]
+            div []
+                [ errorMessage message
+                , createSchemaInput model.schemaNameInput
+                , createSchemaButton
+                , schemaList model.schemas model.editingSchema
+                ]
 
         Nothing ->
-            [ createSchemaInput model.schemaNameInput
-            , createSchemaButton
-            , schemaList model.schemas model.editingSchema
-            ]
+            div []
+                [ createSchemaInput model.schemaNameInput
+                , createSchemaButton
+                , schemaList model.schemas model.editingSchema
+                ]
 
 
-errorMessage : String -> Html Msg
+errorMessage : String -> Html SchemasMsg
 errorMessage message =
     aside [] [ p [] [ text message ] ]
 
 
-createSchemaInput : String -> Html Msg
+createSchemaInput : String -> Html SchemasMsg
 createSchemaInput name =
     input [ value name, onInput InputSchemaName ] []
 
 
-createSchemaButton : Html Msg
+createSchemaButton : Html SchemasMsg
 createSchemaButton =
     button [ onClick AddSchema ] [ text "Add Schema" ]
 
 
-schemaList : List Schema -> Maybe Schema -> Html Msg
+schemaList : List Schema -> Maybe Schema -> Html SchemasMsg
 schemaList schemas editingSchema =
     case editingSchema of
         Just schema ->
@@ -189,7 +268,7 @@ schemaList schemas editingSchema =
             ul [] (List.map (schemaView True) schemas)
 
 
-renderSchema : Schema -> Schema -> Html Msg
+renderSchema : Schema -> Schema -> Html SchemasMsg
 renderSchema editingSchema schema =
     if schema.id == editingSchema.id then
         editSchemaView editingSchema
@@ -197,7 +276,7 @@ renderSchema editingSchema schema =
         schemaView False schema
 
 
-schemaView : Bool -> Schema -> Html Msg
+schemaView : Bool -> Schema -> Html SchemasMsg
 schemaView hideButtons schema =
     if hideButtons then
         li [] [ text schema.name, editSchemaButton schema.id, deleteSchmeaButton schema.id ]
@@ -205,7 +284,7 @@ schemaView hideButtons schema =
         li [] [ text schema.name ]
 
 
-editSchemaView : Schema -> Html Msg
+editSchemaView : Schema -> Html SchemasMsg
 editSchemaView schema =
     div []
         [ input [ value schema.name, onInput InputEditingSchemaName ] []
@@ -213,11 +292,47 @@ editSchemaView schema =
         ]
 
 
-editSchemaButton : Int -> Html Msg
+editSchemaButton : Int -> Html SchemasMsg
 editSchemaButton id =
     button [ onClick (EditSchema id) ] [ text "Edit" ]
 
 
-deleteSchmeaButton : Int -> Html Msg
+deleteSchmeaButton : Int -> Html SchemasMsg
 deleteSchmeaButton id =
     button [ onClick (DeleteSchema id) ] [ text "Delete" ]
+
+
+
+-- SINGLE SCHEMA
+-- SINGLE SCHEMA MODEL
+
+
+type alias SingleSchemaModel =
+    {}
+
+
+initialSingleSchemaModel : SingleSchemaModel
+initialSingleSchemaModel =
+    SingleSchemaModel
+
+
+
+-- SINGLE SCHEMA UPDATE
+
+
+type SingleSchemaMsg
+    = NoOp
+
+
+updateSingleSchema : SingleSchemaMsg -> SingleSchemaModel -> ( SingleSchemaModel, Cmd SingleSchemaMsg )
+updateSingleSchema msg model =
+    model ! []
+
+
+
+-- SINGLE SCHEMA VIEW
+
+
+singleSchemaView : SingleSchemaModel -> Html SingleSchemaMsg
+singleSchemaView model =
+    div [] []
