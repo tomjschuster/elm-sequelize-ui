@@ -17,12 +17,13 @@ type alias Model =
     , editingSchema : Maybe Schema
     , error : Maybe String
     , nextId : Int
+    , toDeleteId : Maybe Int
     }
 
 
 initialModel : Model
 initialModel =
-    Model [] "" Nothing Nothing 1
+    Model [] "" Nothing Nothing 1 Nothing
 
 
 init : Cmd Msg
@@ -44,6 +45,7 @@ type Msg
     | InputEditingSchemaName String
     | SaveSchema
     | DeleteSchema Int
+    | RemoveSchema (Result Http.Error ())
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -59,7 +61,7 @@ update msg model =
             ( model, Request.createSchema model.schemaNameInput |> Http.send LoadNewSchema )
 
         LoadNewSchema (Ok schema) ->
-            ( { model | schemas = schema :: model.schemas, error = Nothing }, Cmd.none )
+            ( { model | schemas = model.schemas ++ [ schema ], error = Nothing }, Cmd.none )
 
         LoadNewSchema (Err error) ->
             ( { model | error = Just "Error creating schema" }, Cmd.none )
@@ -99,7 +101,19 @@ update msg model =
             )
 
         DeleteSchema id ->
-            ( { model | schemas = List.filter (.id >> (/=) id) model.schemas }, Cmd.none )
+            ( { model | toDeleteId = Just id }, Request.deleteSchema id |> Http.send RemoveSchema )
+
+        RemoveSchema (Ok ()) ->
+            ( { model
+                | schemas = List.filter (.id >> Just >> (/=) model.toDeleteId) model.schemas
+                , toDeleteId = Nothing
+                , error = Nothing
+              }
+            , Cmd.none
+            )
+
+        RemoveSchema (Err error) ->
+            ( { model | error = Just "Error deleting schema", toDeleteId = Nothing }, Cmd.none )
 
 
 saveSchema : List Schema -> Maybe Schema -> List Schema

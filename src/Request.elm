@@ -1,9 +1,22 @@
-module Request exposing (createSchema, getSchema, getSchemas)
+module Request exposing (createSchema, deleteSchema, getSchema, getSchemas)
 
 import Data exposing (Schema, schemaDecoder)
 import Http
 import Json.Decode as JD
 import Json.Encode as JE
+
+
+delete : String -> Http.Request ()
+delete url =
+    Http.request
+        { method = "DELETE"
+        , headers = []
+        , url = url
+        , body = Http.emptyBody
+        , expect = Http.expectStringResponse (\_ -> Ok ())
+        , timeout = Nothing
+        , withCredentials = False
+        }
 
 
 baseUrl : String
@@ -34,3 +47,8 @@ createSchema name =
 getSchema : Int -> Http.Request Schema
 getSchema id =
     Http.get (schemaUrl id) schemaDecoder
+
+
+deleteSchema : Int -> Http.Request ()
+deleteSchema id =
+    delete (schemaUrl id)
