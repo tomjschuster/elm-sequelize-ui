@@ -1,9 +1,11 @@
-module Home exposing (Model, Msg, initialModel, subscriptions, update, view)
+module Home exposing (Model, Msg, init, initialModel, subscriptions, update, view)
 
-import Data exposing (Schema, emptySchema)
+import Data exposing (Schema, emptySchema, schemaDecoder)
 import Html exposing (Html, aside, button, div, h2, input, li, main_, p, text, ul)
 import Html.Attributes exposing (value)
 import Html.Events exposing (onClick, onInput)
+import Http
+import Request
 
 
 -- MODEL
@@ -23,12 +25,20 @@ initialModel =
     Model [] "" Nothing Nothing 1
 
 
+init : Cmd Msg
+init =
+    Http.send LoadSchemas Request.getSchemas
+
+
 
 -- UPDATE
 
 
 type Msg
-    = InputSchemaName String
+    = LoadSchemas (Result Http.Error (List Schema))
+    | CreateSchema
+    | LoadNewSchema (Result Http.Error Schema)
+    | InputSchemaName String
     | AddSchema
     | EditSchema Int
     | InputEditingSchemaName String
@@ -39,6 +49,21 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        LoadSchemas (Ok schemas) ->
+            ( { model | schemas = schemas, error = Nothing }, Cmd.none )
+
+        LoadSchemas (Err error) ->
+            ( { model | error = Just "Error loading schemas" }, Cmd.none )
+
+        CreateSchema ->
+            ( model, Request.createSchema model.schemaNameInput |> Http.send LoadNewSchema )
+
+        LoadNewSchema (Ok schema) ->
+            ( { model | schemas = schema :: model.schemas, error = Nothing }, Cmd.none )
+
+        LoadNewSchema (Err error) ->
+            ( { model | error = Just "Error creating schema" }, Cmd.none )
+
         InputSchemaName name ->
             ( { model | schemaNameInput = name }, Cmd.none )
 
@@ -151,7 +176,7 @@ createSchemaInput name =
 
 createSchemaButton : Html Msg
 createSchemaButton =
-    button [ onClick AddSchema ] [ text "Add Schema" ]
+    button [ onClick CreateSchema ] [ text "Add Schema" ]
 
 
 schemaList : List Schema -> Maybe Schema -> Html Msg

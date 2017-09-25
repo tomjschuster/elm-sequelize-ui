@@ -1,0 +1,11 @@
+{
+  "name": "sequelize-ui",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/tomjschuster/elm-sequelize-ui.git",
+  "author": "Tom Schuster <tomjschuster@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "json-server": "^0.12.0"
+  }
+}

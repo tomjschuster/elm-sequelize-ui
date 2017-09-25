@@ -47,17 +47,17 @@ getRoute =
     Url.parsePath routeParser >> Maybe.withDefault NotFound
 
 
-routeToPage : Route -> Page
+routeToPage : Route -> ( Page, Cmd PageMessage )
 routeToPage route =
     case route of
         HomeRoute ->
-            Home Home.initialModel
+            ( Home Home.initialModel, Home.init |> Cmd.map HomeMsg )
 
         SchemaRoute id ->
-            SingleSchema SingleSchema.initialModel
+            ( SingleSchema SingleSchema.initialModel, Cmd.none )
 
         NotFound ->
-            Home Home.initialModel
+            ( Home Home.initialModel, Home.init |> Cmd.map HomeMsg )
 
 
 
@@ -75,8 +75,11 @@ init location =
     let
         route =
             getRoute location
+
+        ( page, cmd ) =
+            routeToPage route
     in
-    Model ( location, route ) (routeToPage route) ! []
+    ( Model ( location, route ) page, Cmd.map PageMsg cmd )
 
 
 
@@ -107,7 +110,11 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         SetRoute route ->
-            ( { model | page = routeToPage route }, Cmd.none )
+            let
+                ( page, cmd ) =
+                    routeToPage route
+            in
+            ( { model | page = page }, Cmd.map PageMsg cmd )
 
         PageMsg pageMsg ->
             let
