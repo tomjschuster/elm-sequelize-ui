@@ -1,6 +1,6 @@
-module Request exposing (createSchema, deleteSchema, getSchema, getSchemas)
+module Request exposing (createSchema, deleteSchema, getSchema, getSchemas, updateSchema)
 
-import Data exposing (Schema, schemaDecoder)
+import Data exposing (Schema, encodeSchema, schemaDecoder)
 import Http
 import Json.Decode as JD
 import Json.Encode as JE
@@ -14,6 +14,19 @@ delete url =
         , url = url
         , body = Http.emptyBody
         , expect = Http.expectStringResponse (\_ -> Ok ())
+        , timeout = Nothing
+        , withCredentials = False
+        }
+
+
+put : String -> Http.Body -> JD.Decoder a -> Http.Request a
+put url body decoder =
+    Http.request
+        { method = "PUT"
+        , headers = []
+        , url = url
+        , body = body
+        , expect = Http.expectJson decoder
         , timeout = Nothing
         , withCredentials = False
         }
@@ -47,6 +60,11 @@ createSchema name =
 getSchema : Int -> Http.Request Schema
 getSchema id =
     Http.get (schemaUrl id) schemaDecoder
+
+
+updateSchema : Schema -> Http.Request Schema
+updateSchema schema =
+    put (schemaUrl schema.id) (Http.jsonBody (encodeSchema schema)) schemaDecoder
 
 
 deleteSchema : Int -> Http.Request ()

@@ -40,13 +40,15 @@ type Msg
     = LoadSchemas (Result Http.Error (List Schema))
     | CreateSchema (Result String String)
     | LoadNewSchema (Result Http.Error Schema)
-    | InputSchemaName String
-    | ValidateSchema
-    | EditSchema Int
-    | InputEditingSchemaName String
-    | SaveSchema
+    | UpdateSchema (Result String String)
+    | LoadUpdatedSchema (Result Http.Error Schema)
     | DeleteSchema Int
     | RemoveSchema (Result Http.Error ())
+    | InputSchemaName String
+    | EditSchema Int
+    | InputEditingSchemaName String
+    | ValidateNewSchema
+    | ValidateUpdatedSchema
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -70,6 +72,37 @@ update msg model =
         LoadSchemas (Err error) ->
             ( { model | error = Just "Error loading schemas" }, Cmd.none )
 
+        UpdateSchema (Ok _) ->
+            case model.editingSchema of
+                Just schema ->
+                    ( { model | error = Nothing }, Request.updateSchema schema |> Http.send LoadUpdatedSchema )
+
+                Nothing ->
+                    model ! []
+
+        UpdateSchema (Err error) ->
+            ( { model | error = Just error }, Cmd.none )
+
+        LoadUpdatedSchema (Ok schema) ->
+            ( { model
+                | error = Nothing
+                , editingSchema = Nothing
+                , schemas =
+                    List.map
+                        (\s ->
+                            if s.id == schema.id then
+                                schema
+                            else
+                                s
+                        )
+                        model.schemas
+              }
+            , Cmd.none
+            )
+
+        LoadUpdatedSchema (Err error) ->
+            ( { model | error = Just "Error editing schema" }, Cmd.none )
+
         DeleteSchema id ->
             ( { model | toDeleteId = Just id }, Request.deleteSchema id |> Http.send RemoveSchema )
 
@@ -88,9 +121,6 @@ update msg model =
         InputSchemaName name ->
             ( { model | schemaNameInput = name }, Cmd.none )
 
-        ValidateSchema ->
-            ( model, validateSchema model.schemas model.schemaNameInput |> Task.attempt CreateSchema )
-
         EditSchema id ->
             let
                 schema =
@@ -101,13 +131,16 @@ update msg model =
         InputEditingSchemaName name ->
             ( { model | editingSchema = Maybe.map (\s -> { s | name = name }) model.editingSchema }, Cmd.none )
 
-        SaveSchema ->
-            ( { model
-                | schemas = saveSchema model.schemas model.editingSchema
-                , editingSchema = Nothing
-              }
-            , Cmd.none
-            )
+        ValidateNewSchema ->
+            ( model, validateSchema model.schemas model.schemaNameInput |> Task.attempt CreateSchema )
+
+        ValidateUpdatedSchema ->
+            case model.editingSchema of
+                Just schema ->
+                    ( model, validateSchema model.schemas schema.name |> Task.attempt UpdateSchema )
+
+                Nothing ->
+                    model ! []
 
 
 validateSchema : List Schema -> String -> Task String String
@@ -207,7 +240,7 @@ createSchemaInput name =
 
 createSchemaButton : Html Msg
 createSchemaButton =
-    button [ onClick ValidateSchema ] [ text "Add Schema" ]
+    button [ onClick ValidateNewSchema ] [ text "Add Schema" ]
 
 
 schemaList : List Schema -> Maybe Schema -> Html Msg
@@ -240,7 +273,7 @@ editSchemaView : Schema -> Html Msg
 editSchemaView schema =
     div []
         [ input [ value schema.name, onInput InputEditingSchemaName ] []
-        , button [ onClick SaveSchema ] [ text "Save" ]
+        , button [ onClick ValidateUpdatedSchema ] [ text "Save" ]
         ]
 
 
