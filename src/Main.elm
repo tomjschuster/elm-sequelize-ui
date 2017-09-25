@@ -21,16 +21,56 @@ import Html
         )
 import Html.Attributes exposing (value)
 import Html.Events exposing (onClick, onInput)
+import Navigation exposing (Location)
+import UrlParser as Url exposing ((</>), Parser, int, s, top)
 
 
 main : Program Never Model Msg
 main =
-    Html.program
+    Navigation.program (getRoute >> Goto)
         { init = init
         , update = update
         , view = view
         , subscriptions = subscriptions
         }
+
+
+type Route
+    = HomeRoute
+    | SchemaRoute Int
+    | NotFound
+
+
+type Page
+    = HomePage HomeModel
+    | SchemaPage SchemaModel
+
+
+routeParser : Parser (Route -> Route) Route
+routeParser =
+    Url.oneOf
+        [ Url.map HomeRoute top
+        , Url.map HomeRoute (s "home")
+        , Url.map SchemaRoute (s "schema" </> int)
+        ]
+
+
+getRoute : Location -> Route
+getRoute =
+    Url.parsePath routeParser >> Maybe.withDefault NotFound
+
+
+routeToPage : Route -> Page
+routeToPage route =
+    case route of
+        HomeRoute ->
+            HomePage initialHomeModel
+
+        SchemaRoute id ->
+            SchemaPage initialSchemaModel
+
+        NotFound ->
+            HomePage initialHomeModel
 
 
 
@@ -39,19 +79,18 @@ main =
 
 type alias Model =
     { page : Page
-    , schemasModel : SchemasModel
-    , singleSchemaModel : SingleSchemaModel
+    , homeModel : HomeModel
+    , singleSchemaModel : SchemaModel
     }
 
 
-type Page
-    = Schemas
-    | SingleSchema
-
-
-init : ( Model, Cmd Msg )
-init =
-    Model Schemas initialSchemasModel initialSingleSchemaModel ! []
+init : Location -> ( Model, Cmd Msg )
+init location =
+    let
+        page =
+            getRoute location |> routeToPage
+    in
+    Model page initialHomeModel initialSchemaModel ! []
 
 
 
@@ -59,30 +98,30 @@ init =
 
 
 type Msg
-    = Goto Page
-    | SchemasMsg SchemasMsg
-    | SingleSchemaMsg SingleSchemaMsg
+    = Goto Route
+    | HomeMsg HomeMsg
+    | SchemaMsg SchemaMsg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Goto page ->
-            ( { model | page = page }, Cmd.none )
+        Goto route ->
+            ( { model | page = routeToPage route }, Cmd.none )
 
-        SchemasMsg schemasMsg ->
+        HomeMsg homeMsg ->
             let
-                ( schemasModel, schemasCmd ) =
-                    updateSchemas schemasMsg model.schemasModel
+                ( homeModel, homeCmd ) =
+                    updateHome homeMsg model.homeModel
             in
-            ( { model | schemasModel = schemasModel }, Cmd.map SchemasMsg schemasCmd )
+            ( { model | homeModel = homeModel }, Cmd.map HomeMsg homeCmd )
 
-        SingleSchemaMsg singleSchemaMsg ->
+        SchemaMsg singleSchemaMsg ->
             let
                 ( singleSchemaModel, singleSchemaCmd ) =
-                    updateSingleSchema singleSchemaMsg model.singleSchemaModel
+                    updateSchema singleSchemaMsg model.singleSchemaModel
             in
-            ( { model | singleSchemaModel = singleSchemaModel }, Cmd.map SingleSchemaMsg singleSchemaCmd )
+            ( { model | singleSchemaModel = singleSchemaModel }, Cmd.map SchemaMsg singleSchemaCmd )
 
 
 subscriptions : Model -> Sub Msg
@@ -104,11 +143,11 @@ view model =
 pageView : Model -> Html Msg
 pageView model =
     case model.page of
-        Schemas ->
-            schemasPage model.schemasModel |> Html.map SchemasMsg
+        HomePage homeModel ->
+            homePage homeModel |> Html.map HomeMsg
 
-        SingleSchema ->
-            singleSchemaView model.singleSchemaModel |> Html.map SingleSchemaMsg
+        SchemaPage schemaModel ->
+            singleSchemaView schemaModel |> Html.map SchemaMsg
 
 
 pageTitle : String -> Html msg
@@ -121,7 +160,7 @@ pageTitle title =
 -- SCHEMAS MODEL
 
 
-type alias SchemasModel =
+type alias HomeModel =
     { schemas : List Schema
     , schemaNameInput : String
     , editingSchema : Maybe Schema
@@ -130,9 +169,9 @@ type alias SchemasModel =
     }
 
 
-initialSchemasModel : SchemasModel
-initialSchemasModel =
-    SchemasModel [] "" Nothing Nothing 1
+initialHomeModel : HomeModel
+initialHomeModel =
+    HomeModel [] "" Nothing Nothing 1
 
 
 type alias Schema =
@@ -141,11 +180,16 @@ type alias Schema =
     }
 
 
+emptySchema : Schema
+emptySchema =
+    Schema 0 ""
+
+
 
 -- SCHEMAS UPDATE
 
 
-type SchemasMsg
+type HomeMsg
     = InputSchemaName String
     | AddSchema
     | EditSchema Int
@@ -154,8 +198,8 @@ type SchemasMsg
     | DeleteSchema Int
 
 
-updateSchemas : SchemasMsg -> SchemasModel -> ( SchemasModel, Cmd SchemasMsg )
-updateSchemas msg model =
+updateHome : HomeMsg -> HomeModel -> ( HomeModel, Cmd HomeMsg )
+updateHome msg model =
     case msg of
         InputSchemaName name ->
             ( { model | schemaNameInput = name }, Cmd.none )
@@ -216,16 +260,16 @@ saveSchema schemas maybeSchema =
 -- SCHEMAS VIEW
 
 
-schemasPage : SchemasModel -> Html SchemasMsg
-schemasPage model =
+homePage : HomeModel -> Html HomeMsg
+homePage model =
     main_ []
-        [ pageTitle "Schemas"
-        , schemasContent model
+        [ pageTitle "My Schemas"
+        , homeContent model
         ]
 
 
-schemasContent : SchemasModel -> Html SchemasMsg
-schemasContent model =
+homeContent : HomeModel -> Html HomeMsg
+homeContent model =
     case model.error of
         Just message ->
             div []
@@ -243,22 +287,22 @@ schemasContent model =
                 ]
 
 
-errorMessage : String -> Html SchemasMsg
+errorMessage : String -> Html HomeMsg
 errorMessage message =
     aside [] [ p [] [ text message ] ]
 
 
-createSchemaInput : String -> Html SchemasMsg
+createSchemaInput : String -> Html HomeMsg
 createSchemaInput name =
     input [ value name, onInput InputSchemaName ] []
 
 
-createSchemaButton : Html SchemasMsg
+createSchemaButton : Html HomeMsg
 createSchemaButton =
     button [ onClick AddSchema ] [ text "Add Schema" ]
 
 
-schemaList : List Schema -> Maybe Schema -> Html SchemasMsg
+schemaList : List Schema -> Maybe Schema -> Html HomeMsg
 schemaList schemas editingSchema =
     case editingSchema of
         Just schema ->
@@ -268,7 +312,7 @@ schemaList schemas editingSchema =
             ul [] (List.map (schemaView True) schemas)
 
 
-renderSchema : Schema -> Schema -> Html SchemasMsg
+renderSchema : Schema -> Schema -> Html HomeMsg
 renderSchema editingSchema schema =
     if schema.id == editingSchema.id then
         editSchemaView editingSchema
@@ -276,7 +320,7 @@ renderSchema editingSchema schema =
         schemaView False schema
 
 
-schemaView : Bool -> Schema -> Html SchemasMsg
+schemaView : Bool -> Schema -> Html HomeMsg
 schemaView hideButtons schema =
     if hideButtons then
         li [] [ text schema.name, editSchemaButton schema.id, deleteSchmeaButton schema.id ]
@@ -284,7 +328,7 @@ schemaView hideButtons schema =
         li [] [ text schema.name ]
 
 
-editSchemaView : Schema -> Html SchemasMsg
+editSchemaView : Schema -> Html HomeMsg
 editSchemaView schema =
     div []
         [ input [ value schema.name, onInput InputEditingSchemaName ] []
@@ -292,12 +336,12 @@ editSchemaView schema =
         ]
 
 
-editSchemaButton : Int -> Html SchemasMsg
+editSchemaButton : Int -> Html HomeMsg
 editSchemaButton id =
     button [ onClick (EditSchema id) ] [ text "Edit" ]
 
 
-deleteSchmeaButton : Int -> Html SchemasMsg
+deleteSchmeaButton : Int -> Html HomeMsg
 deleteSchmeaButton id =
     button [ onClick (DeleteSchema id) ] [ text "Delete" ]
 
@@ -307,25 +351,30 @@ deleteSchmeaButton id =
 -- SINGLE SCHEMA MODEL
 
 
-type alias SingleSchemaModel =
-    {}
+type alias SchemaModel =
+    { schema : Schema }
 
 
-initialSingleSchemaModel : SingleSchemaModel
-initialSingleSchemaModel =
-    SingleSchemaModel
+initialSchemaModel : SchemaModel
+initialSchemaModel =
+    SchemaModel emptySchema
+
+
+initSchema : Schema -> SchemaModel
+initSchema schema =
+    SchemaModel schema
 
 
 
 -- SINGLE SCHEMA UPDATE
 
 
-type SingleSchemaMsg
+type SchemaMsg
     = NoOp
 
 
-updateSingleSchema : SingleSchemaMsg -> SingleSchemaModel -> ( SingleSchemaModel, Cmd SingleSchemaMsg )
-updateSingleSchema msg model =
+updateSchema : SchemaMsg -> SchemaModel -> ( SchemaModel, Cmd SchemaMsg )
+updateSchema msg model =
     model ! []
 
 
@@ -333,6 +382,6 @@ updateSingleSchema msg model =
 -- SINGLE SCHEMA VIEW
 
 
-singleSchemaView : SingleSchemaModel -> Html SingleSchemaMsg
+singleSchemaView : SchemaModel -> Html SchemaMsg
 singleSchemaView model =
-    div [] []
+    div [] [ h1 [] [ text model.schema.name ] ]
