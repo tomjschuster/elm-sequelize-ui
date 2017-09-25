@@ -1,24 +1,28 @@
 module SingleSchema exposing (Model, Msg, init, initialModel, subscriptions, update, view)
 
 import Data exposing (Schema, emptySchema)
-import Html exposing (Html, div, h1, text)
+import Html exposing (Html, div, h2, text)
+import Http
+import Request
 
 
 -- MODEL
 
 
 type alias Model =
-    { schema : Schema }
+    { schema : Schema
+    , error : Maybe String
+    }
 
 
 initialModel : Model
 initialModel =
-    Model emptySchema
+    Model emptySchema Nothing
 
 
-init : Schema -> Model
-init schema =
-    Model schema
+init : Int -> Cmd Msg
+init id =
+    Request.getSchema id |> Http.send LoadSchema
 
 
 
@@ -26,12 +30,17 @@ init schema =
 
 
 type Msg
-    = NoOp
+    = LoadSchema (Result Http.Error Schema)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    model ! []
+    case msg of
+        LoadSchema (Ok schema) ->
+            ( { model | schema = schema, error = Nothing }, Cmd.none )
+
+        LoadSchema (Err error) ->
+            ( { model | error = Just "Error loading schema" }, Cmd.none )
 
 
 
@@ -49,4 +58,4 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    div [] [ h1 [] [ text model.schema.name ] ]
+    div [] [ h2 [] [ text model.schema.name ] ]

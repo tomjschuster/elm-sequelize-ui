@@ -1,10 +1,12 @@
 module Home exposing (Model, Msg, init, initialModel, subscriptions, update, view)
 
 import Data exposing (Schema, emptySchema, schemaDecoder)
-import Html exposing (Html, aside, button, div, h2, input, li, main_, p, text, ul)
-import Html.Attributes exposing (value)
-import Html.Events exposing (onClick, onInput)
+import Html exposing (Html, a, aside, button, div, h2, input, li, main_, p, text, ul)
+import Html.Attributes exposing (href, value)
+import Html.Events as Events exposing (onClick, onInput)
 import Http
+import Json.Decode as JD
+import Navigation
 import Request
 import Task exposing (Task)
 
@@ -37,10 +39,11 @@ init =
 
 
 type Msg
-    = LoadSchemas (Result Http.Error (List Schema))
-    | CreateSchema (Result String String)
+    = GotoSchema Int
+    | LoadSchemas (Result Http.Error (List Schema))
+    | CreateSchema (Result String Schema)
     | LoadNewSchema (Result Http.Error Schema)
-    | UpdateSchema (Result String String)
+    | UpdateSchema (Result String Schema)
     | LoadUpdatedSchema (Result Http.Error Schema)
     | DeleteSchema Int
     | RemoveSchema (Result Http.Error ())
@@ -54,7 +57,10 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        CreateSchema (Ok name) ->
+        GotoSchema id ->
+            ( model, Navigation.newUrl (schemaUrl id) )
+
+        CreateSchema (Ok _) ->
             ( { model | schemaNameInput = "" }, Request.createSchema model.schemaNameInput |> Http.send LoadNewSchema )
 
         CreateSchema (Err error) ->
@@ -132,38 +138,58 @@ update msg model =
             ( { model | editingSchema = Maybe.map (\s -> { s | name = name }) model.editingSchema }, Cmd.none )
 
         ValidateNewSchema ->
-            ( model, validateSchema model.schemas model.schemaNameInput |> Task.attempt CreateSchema )
+            ( model, validateSchema model.schemas (draftSchema model.schemaNameInput) |> Task.attempt CreateSchema )
 
         ValidateUpdatedSchema ->
             case model.editingSchema of
                 Just schema ->
-                    ( model, validateSchema model.schemas schema.name |> Task.attempt UpdateSchema )
+                    ( model, validateSchema model.schemas schema |> Task.attempt UpdateSchema )
 
                 Nothing ->
                     model ! []
 
 
-validateSchema : List Schema -> String -> Task String String
-validateSchema schemas name =
-    Task.succeed name
+schemaUrl : Int -> String
+schemaUrl =
+    toString >> (++) "/schema/"
+
+
+draftSchema : String -> Schema
+draftSchema name =
+    { emptySchema | name = name }
+
+
+validateSchema : List Schema -> Schema -> Task String Schema
+validateSchema schemas schema =
+    Task.succeed schema
         |> Task.andThen validateNameExists
         |> Task.andThen (validateNameNotTaken schemas)
 
 
-validateNameExists : String -> Task String String
-validateNameExists name =
-    if name == "" then
+validateNameExists : Schema -> Task String Schema
+validateNameExists schema =
+    if schema.name == "" then
         Task.fail "Please enter a name"
     else
-        Task.succeed name
+        Task.succeed schema
 
 
-validateNameNotTaken : List Schema -> String -> Task String String
-validateNameNotTaken schemas name =
-    if schemas |> List.map .name |> List.member name then
-        Task.fail ("Schema named '" ++ name ++ "' alread exists.")
+validateNameNotTaken : List Schema -> Schema -> Task String Schema
+validateNameNotTaken schemas schema =
+    if nameTaken schema schemas then
+        Task.fail ("Schema named '" ++ schema.name ++ "' alread exists.")
     else
-        Task.succeed name
+        Task.succeed schema
+
+
+nameTaken : Schema -> List Schema -> Bool
+nameTaken schema =
+    List.filter (nameConflict schema) >> List.head >> (/=) Nothing
+
+
+nameConflict : Schema -> Schema -> Bool
+nameConflict current schema =
+    current.name == schema.name && current.id /= schema.id
 
 
 saveSchema : List Schema -> Maybe Schema -> List Schema
@@ -261,10 +287,23 @@ renderSchema editingSchema schema =
         schemaView False schema
 
 
+onPreventDefaultClick : Msg -> Html.Attribute Msg
+onPreventDefaultClick msg =
+    Events.onWithOptions
+        "click"
+        { stopPropagation = False, preventDefault = True }
+        (JD.succeed msg)
+
+
+schemaLink : Schema -> Html Msg
+schemaLink { id, name } =
+    a [ href (schemaUrl id), onPreventDefaultClick (GotoSchema id) ] [ text name ]
+
+
 schemaView : Bool -> Schema -> Html Msg
-schemaView hideButtons schema =
-    if hideButtons then
-        li [] [ text schema.name, editSchemaButton schema.id, deleteSchmeaButton schema.id ]
+schemaView showButtons schema =
+    if showButtons then
+        li [] [ schemaLink schema, editSchemaButton schema.id, deleteSchmeaButton schema.id ]
     else
         li [] [ text schema.name ]
 

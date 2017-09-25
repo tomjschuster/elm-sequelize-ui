@@ -1,8 +1,8 @@
 {
   "schemas": [
     {
-      "name": "E-Commerce",
-      "id": 1
+      "id": 1,
+      "name": "E-Commerce"
     },
     {
       "id": 2,

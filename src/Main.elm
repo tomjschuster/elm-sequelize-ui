@@ -54,7 +54,7 @@ routeToPage route =
             ( Home Home.initialModel, Home.init |> Cmd.map HomeMsg )
 
         SchemaRoute id ->
-            ( SingleSchema SingleSchema.initialModel, Cmd.none )
+            ( SingleSchema SingleSchema.initialModel, SingleSchema.init id |> Cmd.map SingleSchemaMsg )
 
         NotFound ->
             ( Home Home.initialModel, Home.init |> Cmd.map HomeMsg )
