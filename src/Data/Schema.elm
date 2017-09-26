@@ -1,4 +1,4 @@
-module Data exposing (Schema, emptySchema, encodeSchema, schemaDecoder)
+module Data.Schema exposing (Schema, emptySchema, encodeSchema, schemaDecoder)
 
 import Json.Decode exposing (Decoder, Value, int, string)
 import Json.Decode.Pipeline exposing (decode, required)

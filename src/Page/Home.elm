@@ -1,13 +1,12 @@
-module Home exposing (Model, Msg, init, initialModel, subscriptions, update, view)
+module Page.Home exposing (Model, Msg, init, initialModel, subscriptions, update, view)
 
-import Data exposing (Schema, emptySchema, schemaDecoder)
+import Data.Schema exposing (Schema, emptySchema, schemaDecoder)
 import Html exposing (Html, a, aside, button, div, h2, input, li, main_, p, text, ul)
 import Html.Attributes exposing (href, value)
 import Html.Events as Events exposing (onClick, onInput)
 import Http
-import Json.Decode as JD
-import Navigation
-import Request
+import Request.Schema as RS
+import Router exposing (Route)
 import Task exposing (Task)
 
 
@@ -31,7 +30,7 @@ initialModel =
 
 init : Cmd Msg
 init =
-    Http.send LoadSchemas Request.getSchemas
+    Http.send LoadSchemas RS.getAll
 
 
 
@@ -39,7 +38,7 @@ init =
 
 
 type Msg
-    = GotoSchema Int
+    = Navigate Route
     | LoadSchemas (Result Http.Error (List Schema))
     | CreateSchema (Result String Schema)
     | LoadNewSchema (Result Http.Error Schema)
@@ -57,11 +56,11 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        GotoSchema id ->
-            ( model, Navigation.newUrl (schemaUrl id) )
+        Navigate route ->
+            ( model, Router.goto route )
 
         CreateSchema (Ok _) ->
-            ( { model | schemaNameInput = "" }, Request.createSchema model.schemaNameInput |> Http.send LoadNewSchema )
+            ( { model | schemaNameInput = "" }, RS.create model.schemaNameInput |> Http.send LoadNewSchema )
 
         CreateSchema (Err error) ->
             ( { model | error = Just error }, Cmd.none )
@@ -81,7 +80,7 @@ update msg model =
         UpdateSchema (Ok _) ->
             case model.editingSchema of
                 Just schema ->
-                    ( { model | error = Nothing }, Request.updateSchema schema |> Http.send LoadUpdatedSchema )
+                    ( { model | error = Nothing }, RS.update schema |> Http.send LoadUpdatedSchema )
 
                 Nothing ->
                     model ! []
@@ -110,7 +109,7 @@ update msg model =
             ( { model | error = Just "Error editing schema" }, Cmd.none )
 
         DeleteSchema id ->
-            ( { model | toDeleteId = Just id }, Request.deleteSchema id |> Http.send RemoveSchema )
+            ( { model | toDeleteId = Just id }, RS.destroy id |> Http.send RemoveSchema )
 
         RemoveSchema (Ok ()) ->
             ( { model
@@ -287,17 +286,9 @@ renderSchema editingSchema schema =
         schemaView False schema
 
 
-onPreventDefaultClick : Msg -> Html.Attribute Msg
-onPreventDefaultClick msg =
-    Events.onWithOptions
-        "click"
-        { stopPropagation = False, preventDefault = True }
-        (JD.succeed msg)
-
-
 schemaLink : Schema -> Html Msg
 schemaLink { id, name } =
-    a [ href (schemaUrl id), onPreventDefaultClick (GotoSchema id) ] [ text name ]
+    Router.link Navigate (Router.Schema id) [] [ text name ]
 
 
 schemaView : Bool -> Schema -> Html Msg

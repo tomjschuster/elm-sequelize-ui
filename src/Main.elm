@@ -1,15 +1,15 @@
 module Main exposing (..)
 
-import Home
 import Html exposing (Html, div, footer, h1, header, text)
 import Navigation exposing (Location)
-import SingleSchema
-import UrlParser as Url exposing ((</>), Parser, int, s, top)
+import Page.Home as Home
+import Page.Schema as Schema
+import Router exposing (Route)
 
 
 main : Program Never Model Msg
 main =
-    Navigation.program (getRoute >> SetRoute)
+    Navigation.program (Router.fromLocation >> SetRoute)
         { init = init
         , update = update
         , view = view
@@ -17,47 +17,9 @@ main =
         }
 
 
-type Route
-    = HomeRoute
-    | SchemaRoute Int
-    | NotFound
-
-
 type Page
     = Home Home.Model
-    | SingleSchema SingleSchema.Model
-
-
-type PageMessage
-    = HomeMsg Home.Msg
-    | SingleSchemaMsg SingleSchema.Msg
-
-
-routeParser : Parser (Route -> Route) Route
-routeParser =
-    Url.oneOf
-        [ Url.map HomeRoute top
-        , Url.map HomeRoute (s "home")
-        , Url.map SchemaRoute (s "schema" </> int)
-        ]
-
-
-getRoute : Location -> Route
-getRoute =
-    Url.parsePath routeParser >> Maybe.withDefault NotFound
-
-
-routeToPage : Route -> ( Page, Cmd PageMessage )
-routeToPage route =
-    case route of
-        HomeRoute ->
-            ( Home Home.initialModel, Home.init |> Cmd.map HomeMsg )
-
-        SchemaRoute id ->
-            ( SingleSchema SingleSchema.initialModel, SingleSchema.init id |> Cmd.map SingleSchemaMsg )
-
-        NotFound ->
-            ( Home Home.initialModel, Home.init |> Cmd.map HomeMsg )
+    | Schema Schema.Model
 
 
 
@@ -73,11 +35,11 @@ type alias Model =
 init : Location -> ( Model, Cmd Msg )
 init location =
     let
-        route =
-            getRoute location
+        ( _, route ) =
+            Router.fromLocation location
 
         ( page, cmd ) =
-            routeToPage route
+            setRoute route
     in
     ( Model ( location, route ) page, Cmd.map PageMsg cmd )
 
@@ -87,18 +49,72 @@ init location =
 
 
 type Msg
-    = SetRoute Route
-    | PageMsg PageMessage
+    = SetRoute ( Location, Route )
+    | PageMsg PageMsg
 
 
-updatePage :
+type PageMsg
+    = HomeMsg Home.Msg
+    | SchemaMsg Schema.Msg
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        SetRoute ( location, route ) ->
+            let
+                ( page, cmd ) =
+                    setRoute route
+            in
+            ( { model
+                | page = page
+                , navState = ( location, route )
+              }
+            , Cmd.map PageMsg cmd
+            )
+
+        PageMsg pageMsg ->
+            let
+                ( page, pageCmd ) =
+                    updatePage pageMsg model.page
+            in
+            ( { model | page = page }, Cmd.map PageMsg pageCmd )
+
+
+setRoute : Route -> ( Page, Cmd PageMsg )
+setRoute route =
+    case route of
+        Router.Home ->
+            ( Home Home.initialModel, Home.init |> Cmd.map HomeMsg )
+
+        Router.Schema id ->
+            ( Schema Schema.initialModel, Schema.init id |> Cmd.map SchemaMsg )
+
+        Router.NotFound ->
+            ( Home Home.initialModel, Home.init |> Cmd.map HomeMsg )
+
+
+updatePage : PageMsg -> Page -> ( Page, Cmd PageMsg )
+updatePage msg page =
+    case ( msg, page ) of
+        ( HomeMsg subMsg, Home subModel ) ->
+            updatePageHelper Home HomeMsg Home.update subMsg subModel
+
+        ( SchemaMsg subMsg, Schema subModel ) ->
+            updatePageHelper Schema SchemaMsg Schema.update subMsg subModel
+
+        ( _, _ ) ->
+            ( page, Cmd.none )
+
+
+updatePageHelper :
     (model -> Page)
-    -> (msg -> PageMessage)
+    -> (msg -> PageMsg)
     -> (msg -> model -> ( model, Cmd msg ))
     -> msg
     -> model
-    -> ( Page, Cmd PageMessage )
-updatePage toModel toMsg pageUpdate msg model =
+    -> ( Page, Cmd PageMsg )
+updatePageHelper toModel toMsg pageUpdate msg model =
     let
         ( updatedModel, cmd ) =
             pageUpdate msg model
@@ -106,37 +122,8 @@ updatePage toModel toMsg pageUpdate msg model =
     ( toModel updatedModel, Cmd.map toMsg cmd )
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case msg of
-        SetRoute route ->
-            let
-                ( page, cmd ) =
-                    routeToPage route
-            in
-            ( { model | page = page }, Cmd.map PageMsg cmd )
 
-        PageMsg pageMsg ->
-            let
-                ( page, pageCmd ) =
-                    case pageMsg of
-                        HomeMsg subMsg ->
-                            case model.page of
-                                Home subModel ->
-                                    updatePage Home HomeMsg Home.update subMsg subModel
-
-                                _ ->
-                                    ( model.page, Cmd.none )
-
-                        SingleSchemaMsg subMsg ->
-                            case model.page of
-                                SingleSchema subModel ->
-                                    updatePage SingleSchema SingleSchemaMsg SingleSchema.update subMsg subModel
-
-                                _ ->
-                                    ( model.page, Cmd.none )
-            in
-            ( { model | page = page }, Cmd.map PageMsg pageCmd )
+-- SUBSCRIPTION
 
 
 subscriptions : Model -> Sub Msg
@@ -144,22 +131,26 @@ subscriptions model =
     Sub.none
 
 
+
+-- VIEW
+
+
 view : Model -> Html Msg
 view model =
     div []
         [ header []
             [ h1 [] [ text "Sequelize UI" ] ]
-        , pageView model
+        , pageView model |> Html.map PageMsg
         , footer []
             []
         ]
 
 
-pageView : Model -> Html Msg
+pageView : Model -> Html PageMsg
 pageView model =
     case model.page of
         Home subModel ->
-            Home.view subModel |> Html.map (HomeMsg >> PageMsg)
+            Home.view subModel |> Html.map HomeMsg
 
-        SingleSchema subModel ->
-            SingleSchema.view subModel |> Html.map (SingleSchemaMsg >> PageMsg)
+        Schema subModel ->
+            Schema.view subModel |> Html.map SchemaMsg

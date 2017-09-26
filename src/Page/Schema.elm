@@ -1,9 +1,9 @@
-module SingleSchema exposing (Model, Msg, init, initialModel, subscriptions, update, view)
+module Page.Schema exposing (Model, Msg, init, initialModel, subscriptions, update, view)
 
-import Data exposing (Schema, emptySchema)
-import Html exposing (Html, div, h2, text)
+import Data.Schema exposing (Schema, emptySchema)
+import Html exposing (Html, a, div, h2, text)
 import Http
-import Request
+import Request.Schema as RS
 
 
 -- MODEL
@@ -22,7 +22,7 @@ initialModel =
 
 init : Int -> Cmd Msg
 init id =
-    Request.getSchema id |> Http.send LoadSchema
+    RS.get id |> Http.send LoadSchema
 
 
 
@@ -58,4 +58,14 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    div [] [ h2 [] [ text model.schema.name ] ]
+    div []
+        [ h2 [] [ text model.schema.name ]
+        ]
+
+
+title : Schema -> Html Msg
+title schema =
+    div []
+        [ h2 [] [ text schema.name ]
+        , a [] []
+        ]
