@@ -38,7 +38,7 @@ init =
 
 
 type Msg
-    = Navigate Route
+    = Goto Route
     | LoadSchemas (Result Http.Error (List Schema))
     | CreateSchema (Result String Schema)
     | LoadNewSchema (Result Http.Error Schema)
@@ -56,7 +56,7 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Navigate route ->
+        Goto route ->
             ( model, Router.goto route )
 
         CreateSchema (Ok _) ->
@@ -288,7 +288,7 @@ renderSchema editingSchema schema =
 
 schemaLink : Schema -> Html Msg
 schemaLink { id, name } =
-    Router.link Navigate (Router.Schema id) [] [ text name ]
+    Router.link Goto (Router.Schema id) [] [ text name ]
 
 
 schemaView : Bool -> Schema -> Html Msg
@@ -309,7 +309,7 @@ editSchemaView schema =
 
 editSchemaButton : Int -> Html Msg
 editSchemaButton id =
-    button [ onClick (EditSchema id) ] [ text "Edit" ]
+    button [ onClick (EditSchema id) ] [ text "Edit Name" ]
 
 
 deleteSchmeaButton : Int -> Html Msg

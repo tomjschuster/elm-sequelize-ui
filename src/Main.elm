@@ -51,6 +51,7 @@ init location =
 type Msg
     = SetRoute ( Location, Route )
     | PageMsg PageMsg
+    | Goto Route
 
 
 type PageMsg
@@ -79,6 +80,9 @@ update msg model =
                     updatePage pageMsg model.page
             in
             ( { model | page = page }, Cmd.map PageMsg pageCmd )
+
+        Goto route ->
+            ( model, Router.goto route )
 
 
 setRoute : Route -> ( Page, Cmd PageMsg )
@@ -139,11 +143,16 @@ view : Model -> Html Msg
 view model =
     div []
         [ header []
-            [ h1 [] [ text "Sequelize UI" ] ]
+            [ headerLink ]
         , pageView model |> Html.map PageMsg
         , footer []
             []
         ]
+
+
+headerLink : Html Msg
+headerLink =
+    Router.link Goto Router.Home [] [ h1 [] [ text "Sequelize UI" ] ]
 
 
 pageView : Model -> Html PageMsg
