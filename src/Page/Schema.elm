@@ -1,10 +1,12 @@
 module Page.Schema exposing (Model, Msg, init, initialModel, subscriptions, update, view)
 
+import Data.Entity exposing (Entity)
 import Data.Schema exposing (Schema, emptySchema)
-import Html exposing (Html, a, button, div, h2, input, text)
+import Html exposing (Html, a, button, div, h2, input, li, text, ul)
 import Html.Attributes exposing (value)
 import Html.Events exposing (onClick, onInput)
 import Http
+import Request.Entity as RE
 import Request.Schema as RS
 import Router
 
@@ -26,7 +28,7 @@ initialModel =
 
 init : Int -> Cmd Msg
 init id =
-    RS.get id |> Http.send LoadSchema
+    RS.one id |> Http.send LoadSchema
 
 
 
@@ -36,6 +38,7 @@ init id =
 type Msg
     = LoadSchema (Result Http.Error Schema)
     | RemoveSchema (Result Http.Error ())
+    | LoadEntity (Result Http.Error Entity)
     | EditName
     | UpdateEditingName String
     | CancelEditName
@@ -57,6 +60,12 @@ update msg model =
 
         RemoveSchema (Err error) ->
             ( { model | error = Just "Error deleting schema" }, Cmd.none )
+
+        LoadEntity (Ok entity) ->
+            ( { model | schema = addEntity model.schema entity, error = Nothing }, Cmd.none )
+
+        LoadEntity (Err error) ->
+            ( { model | error = Just "Error creating entity" }, Cmd.none )
 
         EditName ->
             ( { model | editingName = Just model.schema.name }, Cmd.none )
@@ -88,6 +97,11 @@ updateSchemaName schema name =
     { schema | name = name }
 
 
+addEntity : Schema -> Entity -> Schema
+addEntity schema entity =
+    { schema | entities = schema.entities ++ [ entity ] }
+
+
 
 -- SUBSCRIPTIONS
 
@@ -105,6 +119,7 @@ view : Model -> Html Msg
 view model =
     div []
         [ title model.editingName model.schema.name
+        , ul [] (List.map viewEntity model.schema.entities)
         ]
 
 
@@ -134,3 +149,8 @@ editTitle name =
         , button [ onClick CancelEditName ] [ text "Cancel" ]
         , button [ onClick SaveName ] [ text "Save" ]
         ]
+
+
+viewEntity : Entity -> Html Msg
+viewEntity { name } =
+    li [] [ text name ]

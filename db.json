@@ -7,6 +7,31 @@
     {
       "name": "Blog",
       "id": 2
+    },
+    {
+      "name": "yo schema",
+      "entities": [
+        {
+          "name": "table 1"
+        }
+      ],
+      "id": 3
+    },
+    {
+      "name": "a",
+      "entities": [
+        {
+          "name": "b"
+        }
+      ],
+      "id": 4
+    }
+  ],
+  "entities": [
+    {
+      "id": 1,
+      "name": "Post",
+      "schemaId": 2
     }
   ]
 }

@@ -30,7 +30,7 @@ initialModel =
 
 init : Cmd Msg
 init =
-    Http.send LoadSchemas RS.getAll
+    Http.send LoadSchemas RS.all
 
 
 

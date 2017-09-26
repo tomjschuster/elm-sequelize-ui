@@ -1,9 +1,9 @@
 module Request.Schema
     exposing
-        ( create
+        ( all
+        , create
         , destroy
-        , get
-        , getAll
+        , one
         , update
         )
 
@@ -19,24 +19,32 @@ schemasUrl =
     baseUrl ++ "schemas/"
 
 
+embedEntities : String -> String
+embedEntities =
+    flip (++) "?_embed=entities"
+
+
 schemaUrl : Int -> String
 schemaUrl =
     toString >> (++) schemasUrl
 
 
-getAll : Http.Request (List Schema)
-getAll =
-    Http.get schemasUrl (JD.list schemaDecoder)
+all : Http.Request (List Schema)
+all =
+    Http.get (embedEntities schemasUrl) (JD.list schemaDecoder)
+
+
+one : Int -> Http.Request Schema
+one id =
+    Http.get (schemaUrl id |> embedEntities) schemaDecoder
 
 
 create : String -> Http.Request Schema
 create name =
-    Http.post schemasUrl (JE.object [ ( "name", JE.string name ) ] |> Http.jsonBody) schemaDecoder
-
-
-get : Int -> Http.Request Schema
-get id =
-    Http.get (schemaUrl id) schemaDecoder
+    Http.post
+        schemasUrl
+        (JE.object [ ( "name", JE.string name ) ] |> Http.jsonBody)
+        schemaDecoder
 
 
 update : Schema -> Http.Request Schema
