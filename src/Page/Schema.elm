@@ -10,7 +10,7 @@ module Page.Schema
         )
 
 import Data.Entity exposing (Entity)
-import Data.Schema exposing (Schema, emptySchema)
+import Data.Schema as Schema exposing (Schema)
 import Html
     exposing
         ( Html
@@ -31,7 +31,7 @@ import Html.Events exposing (onClick, onInput)
 import Http
 import Request.Entity as RE
 import Request.Schema as RS
-import Router
+import Router exposing (Route)
 
 
 -- MODEL
@@ -49,12 +49,12 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model emptySchema Nothing "" Nothing Nothing Nothing
+    Model Schema.empty Nothing "" Nothing Nothing Nothing
 
 
 init : Int -> Cmd Msg
 init id =
-    RS.one id |> Http.send LoadSchema
+    RS.oneWithEntities id |> Http.send LoadSchema
 
 
 
@@ -62,8 +62,8 @@ init id =
 
 
 type Msg
-    = -- SCHEMA
-      LoadSchema (Result Http.Error Schema)
+    = Goto Route -- SCHEMA
+    | LoadSchema (Result Http.Error Schema)
     | RemoveSchema (Result Http.Error ())
     | EditSchemaName
     | InputSchemaName String
@@ -86,6 +86,9 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        Goto route ->
+            ( model, Router.goto route )
+
         -- SCHEMA
         LoadSchema (Ok schema) ->
             ( { model
@@ -157,7 +160,7 @@ update msg model =
         InputEditingEntityName name ->
             ( { model
                 | editingEntity =
-                    Maybe.map (updateEditingEntityName name) model.editingEntity
+                    Maybe.map (updateEntityName name) model.editingEntity
               }
             , Cmd.none
             )
@@ -232,8 +235,8 @@ getEditingEntity id =
     List.filter (.id >> (==) id) >> List.head
 
 
-updateEditingEntityName : String -> Entity -> Entity
-updateEditingEntityName name entity =
+updateEntityName : String -> Entity -> Entity
+updateEntityName name entity =
     { entity | name = name }
 
 
@@ -374,23 +377,23 @@ entityView editingEntity entity =
 
 entityChildrenView : Entity -> Maybe Entity -> List (Html Msg)
 entityChildrenView entity =
-    Maybe.map (getEntityChildren entity)
+    Maybe.map (getEditingEntityChildren entity)
         >> Maybe.withDefault (normalEntityChildren entity)
 
 
-getEntityChildren : Entity -> Entity -> List (Html Msg)
-getEntityChildren entity editingEntity =
+getEditingEntityChildren : Entity -> Entity -> List (Html Msg)
+getEditingEntityChildren entity editingEntity =
     if editingEntity.id == entity.id then
         editingEntityChildren editingEntity
     else
-        normalEntityChildren entity
+        [ text entity.name ]
 
 
 normalEntityChildren : Entity -> List (Html Msg)
-normalEntityChildren { id, name } =
-    [ text name
-    , editEntityNameButton id
-    , deleteEntityButton id
+normalEntityChildren entity =
+    [ entityLink entity
+    , editEntityNameButton entity.id
+    , deleteEntityButton entity.id
     ]
 
 
@@ -402,9 +405,19 @@ editingEntityChildren { name } =
     ]
 
 
+entityLink : Entity -> Html Msg
+entityLink { id, name, schemaId } =
+    Router.link Goto (Router.Entity schemaId id) [] [ text name ]
+
+
 editEntityNameButton : Int -> Html Msg
 editEntityNameButton id =
     button [ onClick (EditEntityName id) ] [ text "Edit Name" ]
+
+
+deleteEntityButton : Int -> Html Msg
+deleteEntityButton id =
+    button [ onClick (DestroyEntity id) ] [ text "Delete" ]
 
 
 editEntityNameInput : String -> Html Msg
@@ -420,8 +433,3 @@ cancelEditEntityNameButton =
 saveEntityNameButton : Html Msg
 saveEntityNameButton =
     button [ onClick SaveEntityName ] [ text "Save" ]
-
-
-deleteEntityButton : Int -> Html Msg
-deleteEntityButton id =
-    button [ onClick (DestroyEntity id) ] [ text "Delete" ]

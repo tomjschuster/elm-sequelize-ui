@@ -18,6 +18,7 @@ import Utils.Handlers exposing (onPreventDefaultClick)
 type Route
     = Home
     | Schema Int
+    | Entity Int Int
     | NotFound
 
 
@@ -43,6 +44,16 @@ getConfig route =
             , parent = Just Home
             }
 
+        Entity schemaId id ->
+            { route = Entity id schemaId
+            , url =
+                "/schemas/"
+                    ++ toString schemaId
+                    ++ "/models/"
+                    ++ toString id
+            , parent = Just (Schema schemaId)
+            }
+
         NotFound ->
             { route = NotFound
             , url = "/not-found"
@@ -61,6 +72,7 @@ routeParser =
         [ Url.map Home top
         , Url.map Home (s "schemas")
         , Url.map Schema (s "schemas" </> int)
+        , Url.map Entity (s "schemas" </> int </> s "models" </> int)
         ]
 
 

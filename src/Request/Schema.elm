@@ -4,10 +4,11 @@ module Request.Schema
         , create
         , destroy
         , one
+        , oneWithEntities
         , update
         )
 
-import Data.Schema exposing (Schema, encodeSchema, schemaDecoder)
+import Data.Schema as Schema exposing (Schema)
 import Http
 import Json.Decode as JD
 import Json.Encode as JE
@@ -31,12 +32,17 @@ schemaUrl =
 
 all : Http.Request (List Schema)
 all =
-    Http.get (embedEntities schemasUrl) (JD.list schemaDecoder)
+    Http.get (embedEntities schemasUrl) (JD.list Schema.decoder)
+
+
+oneWithEntities : Int -> Http.Request Schema
+oneWithEntities id =
+    Http.get (schemaUrl id |> embedEntities) Schema.decoder
 
 
 one : Int -> Http.Request Schema
 one id =
-    Http.get (schemaUrl id |> embedEntities) schemaDecoder
+    Http.get (schemaUrl id) Schema.decoder
 
 
 create : String -> Http.Request Schema
@@ -44,12 +50,12 @@ create name =
     Http.post
         schemasUrl
         (JE.object [ ( "name", JE.string name ) ] |> Http.jsonBody)
-        schemaDecoder
+        Schema.decoder
 
 
 update : Schema -> Http.Request Schema
 update schema =
-    put (schemaUrl schema.id) (Http.jsonBody (encodeSchema schema)) schemaDecoder
+    put (schemaUrl schema.id) (Http.jsonBody (Schema.encode schema)) Schema.decoder
 
 
 destroy : Int -> Http.Request ()

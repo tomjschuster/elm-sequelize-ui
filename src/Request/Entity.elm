@@ -1,6 +1,6 @@
-module Request.Entity exposing (all, create, destroy, one, update)
+module Request.Entity exposing (all, create, destroy, one, oneWithFields, update)
 
-import Data.Entity exposing (Entity, encodeEntity, entityDecoder)
+import Data.Entity as Entity exposing (Entity)
 import Http exposing (Request)
 import Json.Decode as JD
 import Json.Encode as JE
@@ -12,6 +12,11 @@ entitiesUrl =
     baseUrl ++ "entities/"
 
 
+embedFields : String -> String
+embedFields =
+    flip (++) "?_embed=fields"
+
+
 entityUrl : Int -> String
 entityUrl =
     toString >> (++) entitiesUrl
@@ -19,12 +24,17 @@ entityUrl =
 
 all : Request (List Entity)
 all =
-    Http.get entitiesUrl (JD.list entityDecoder)
+    Http.get entitiesUrl (JD.list Entity.decoder)
 
 
 one : Int -> Request Entity
 one id =
-    Http.get (entityUrl id) entityDecoder
+    Http.get (entityUrl id) Entity.decoder
+
+
+oneWithFields : Int -> Http.Request Entity
+oneWithFields id =
+    Http.get (entityUrl id |> embedFields) Entity.decoder
 
 
 create : String -> Int -> Request Entity
@@ -36,7 +46,7 @@ create name schemaId =
             ]
             |> Http.jsonBody
         )
-        entityDecoder
+        Entity.decoder
 
 
 destroy : Int -> Request ()
@@ -48,5 +58,5 @@ update : Entity -> Request Entity
 update entity =
     put
         (entityUrl entity.id)
-        (encodeEntity entity |> Http.jsonBody)
-        entityDecoder
+        (Entity.encode entity |> Http.jsonBody)
+        Entity.decoder

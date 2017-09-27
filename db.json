@@ -13,21 +13,39 @@
     {
       "name": "Post",
       "schemaId": 2,
-      "id": 3
+      "id": 1
     },
     {
-      "name": "abcd",
-      "id": 4
+      "id": 2,
+      "name": "Author",
+      "schemaId": 2
     },
     {
+      "id": 3,
       "name": "Product",
-      "schemaId": 1,
-      "id": 5
+      "schemaId": 1
     },
     {
+      "id": 6,
       "name": "User",
-      "schemaId": 1,
-      "id": 6
+      "schemaId": 1
+    }
+  ],
+  "fields": [
+    {
+      "name": "Title",
+      "entityId": 1,
+      "id": 1
+    },
+    {
+      "id": 3,
+      "name": "Name",
+      "entityId": 2
+    },
+    {
+      "name": "Content",
+      "entityId": 2,
+      "id": 4
     }
   ]
 }

@@ -1,6 +1,6 @@
-module Data.Schema exposing (Schema, emptySchema, encodeSchema, schemaDecoder)
+module Data.Schema exposing (Schema, decoder, empty, encode)
 
-import Data.Entity exposing (Entity, encodeEntity, entityDecoder)
+import Data.Entity as Entity exposing (Entity)
 import Json.Decode exposing (Decoder, Value, int, list, string)
 import Json.Decode.Pipeline exposing (decode, optional, required)
 import Json.Encode as JE
@@ -13,21 +13,21 @@ type alias Schema =
     }
 
 
-emptySchema : Schema
-emptySchema =
+empty : Schema
+empty =
     Schema 0 "" []
 
 
-schemaDecoder : Decoder Schema
-schemaDecoder =
+decoder : Decoder Schema
+decoder =
     decode Schema
         |> required "id" int
         |> required "name" string
-        |> optional "entities" (list entityDecoder) []
+        |> optional "entities" (list Entity.decoder) []
 
 
-encodeSchema : Schema -> JE.Value
-encodeSchema schema =
+encode : Schema -> JE.Value
+encode schema =
     JE.object
         [ ( "id", JE.int schema.id )
         , ( "name", JE.string schema.name )

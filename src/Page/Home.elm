@@ -1,6 +1,6 @@
 module Page.Home exposing (Model, Msg, init, initialModel, subscriptions, update, view)
 
-import Data.Schema exposing (Schema, emptySchema, schemaDecoder)
+import Data.Schema as Schema exposing (Schema)
 import Html exposing (Html, a, aside, button, div, h2, input, li, main_, p, text, ul)
 import Html.Attributes exposing (href, value)
 import Html.Events as Events exposing (onClick, onInput)
@@ -172,6 +172,11 @@ update msg model =
 
         RemoveSchema (Err error) ->
             ( { model | error = Just "Error deleting schema", toDeleteId = Nothing }, Cmd.none )
+
+
+emptySchema : Schema
+emptySchema =
+    Schema.empty
 
 
 draftSchema : String -> Schema
