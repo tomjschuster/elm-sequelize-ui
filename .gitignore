@@ -2,5 +2,6 @@ elm-stuff
 elm.js
 node_modules
 yarn.lock
+npm-debug.log
 *.DS_STore
 
