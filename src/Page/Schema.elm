@@ -18,6 +18,7 @@ type alias Model =
     { schema : Schema
     , editingName : Maybe String
     , newEntityInput : String
+    , editingEntity : Maybe Entity
     , toDeleteId : Maybe Int
     , error : Maybe String
     }
@@ -25,7 +26,7 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model emptySchema Nothing "" Nothing Nothing
+    Model emptySchema Nothing "" Nothing Nothing Nothing
 
 
 init : Int -> Cmd Msg
@@ -41,14 +42,19 @@ type Msg
     = LoadSchema (Result Http.Error Schema)
     | RemoveSchema (Result Http.Error ())
     | LoadEntity (Result Http.Error Entity)
+    | UpdateEntity (Result Http.Error Entity)
     | RemoveEntity (Result Http.Error ())
-    | EditName
+    | EditSchemaName
     | UpdateEditingName String
-    | CancelEditName
-    | SaveName
+    | CancelEditSchemaName
+    | SaveSchemaName
     | Destroy
-    | UpdateNewEntityInput String
+    | InputNewEntityName String
     | CreateEntity
+    | EditEntityName Int
+    | InputEditingEntityName String
+    | CancelEditEntityName
+    | SaveEntityName
     | DestroyEntity Int
 
 
@@ -56,7 +62,13 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         LoadSchema (Ok schema) ->
-            ( { model | schema = schema, editingName = Nothing, error = Nothing }, Cmd.none )
+            ( { model
+                | schema = schema
+                , editingName = Nothing
+                , error = Nothing
+              }
+            , Cmd.none
+            )
 
         LoadSchema (Err error) ->
             ( { model | error = Just "Error loading schema" }, Cmd.none )
@@ -79,6 +91,18 @@ update msg model =
         LoadEntity (Err error) ->
             ( { model | error = Just "Error creating entity" }, Cmd.none )
 
+        UpdateEntity (Ok entity) ->
+            ( { model
+                | schema = updateEntity model.schema entity
+                , editingEntity = Nothing
+                , error = Nothing
+              }
+            , Cmd.none
+            )
+
+        UpdateEntity (Err error) ->
+            ( { model | error = Just "Error updating entity" }, Cmd.none )
+
         RemoveEntity (Ok ()) ->
             ( { model
                 | schema = removeEntity model.schema model.toDeleteId
@@ -90,31 +114,61 @@ update msg model =
         RemoveEntity (Err error) ->
             ( { model | error = Just "Error deleting model" }, Cmd.none )
 
-        EditName ->
+        EditSchemaName ->
             ( { model | editingName = Just model.schema.name }, Cmd.none )
 
         UpdateEditingName name ->
             ( { model | editingName = Just name }, Cmd.none )
 
-        CancelEditName ->
+        CancelEditSchemaName ->
             ( { model | editingName = Nothing }, Cmd.none )
 
-        SaveName ->
+        SaveSchemaName ->
             ( model
-            , model.editingName |> saveSchemaName model.schema |> RS.update |> Http.send LoadSchema
+            , model.editingName
+                |> saveSchemaName model.schema
+                |> RS.update
+                |> Http.send LoadSchema
             )
 
         Destroy ->
             ( model, RS.destroy model.schema.id |> Http.send RemoveSchema )
 
-        UpdateNewEntityInput newEntityInput ->
+        InputNewEntityName newEntityInput ->
             ( { model | newEntityInput = newEntityInput }, Cmd.none )
 
+        CancelEditEntityName ->
+            ( { model | editingEntity = Nothing }, Cmd.none )
+
         CreateEntity ->
-            ( model, RE.create model.newEntityInput model.schema.id |> Http.send LoadEntity )
+            ( model
+            , RE.create model.newEntityInput model.schema.id
+                |> Http.send LoadEntity
+            )
+
+        EditEntityName id ->
+            ( { model
+                | editingEntity = getEditingEntity id model.schema.entities
+              }
+            , Cmd.none
+            )
+
+        InputEditingEntityName name ->
+            ( { model
+                | editingEntity =
+                    Maybe.map (updateEditingEntityName name) model.editingEntity
+              }
+            , Cmd.none
+            )
+
+        SaveEntityName ->
+            ( model, model.editingEntity |> Maybe.map (RE.update >> Http.send UpdateEntity) |> Maybe.withDefault Cmd.none )
 
         DestroyEntity id ->
-            ( { model | toDeleteId = Just id }, RE.destroy id |> Http.send RemoveEntity )
+            ( { model | toDeleteId = Just id }
+            , RE.destroy id
+                |> Http.send RemoveEntity
+            )
 
 
 saveSchemaName : Schema -> Maybe String -> Schema
@@ -134,9 +188,35 @@ addEntity schema entity =
     { schema | entities = schema.entities ++ [ entity ] }
 
 
+getEditingEntity : Int -> List Entity -> Maybe Entity
+getEditingEntity id =
+    List.filter (.id >> (==) id) >> List.head
+
+
+updateEditingEntityName : String -> Entity -> Entity
+updateEditingEntityName name entity =
+    { entity | name = name }
+
+
+updateEntity : Schema -> Entity -> Schema
+updateEntity schema entity =
+    { schema | entities = List.map (replaceEntity entity) schema.entities }
+
+
+replaceEntity : Entity -> Entity -> Entity
+replaceEntity newEntity entity =
+    if entity.id == newEntity.id then
+        Debug.log ";lkj" newEntity
+    else
+        entity
+
+
 removeEntity : Schema -> Maybe Int -> Schema
 removeEntity schema maybeId =
-    { schema | entities = List.filter (.id >> Just >> (/=) maybeId) schema.entities }
+    { schema
+        | entities =
+            List.filter (.id >> Just >> (/=) maybeId) schema.entities
+    }
 
 
 
@@ -153,10 +233,10 @@ subscriptions model =
 
 
 view : Model -> Html Msg
-view { schema, editingName, newEntityInput } =
+view { schema, editingName, newEntityInput, editingEntity } =
     div []
         [ nameView editingName schema.name
-        , entitiesView schema.entities newEntityInput
+        , entitiesView editingEntity schema.entities newEntityInput
         ]
 
 
@@ -173,10 +253,16 @@ nameChildren : Maybe String -> String -> List (Html Msg)
 nameChildren maybeEditingName name =
     case maybeEditingName of
         Just editingName ->
-            [ editNameInput editingName, cancelEditNameButton, saveNameButton ]
+            [ editSchemaNameInput editingName
+            , cancelEditSchemaNameButton
+            , saveSchemaNameButton
+            ]
 
         Nothing ->
-            [ schemaName name, editNameButton, deleteSchemaButton ]
+            [ schemaName name
+            , editSchemaNameButton
+            , deleteSchemaButton
+            ]
 
 
 schemaName : String -> Html Msg
@@ -184,9 +270,9 @@ schemaName name =
     h2 [] [ text name ]
 
 
-editNameButton : Html Msg
-editNameButton =
-    button [ onClick EditName ] [ text "Edit Title" ]
+editSchemaNameButton : Html Msg
+editSchemaNameButton =
+    button [ onClick EditSchemaName ] [ text "Edit Title" ]
 
 
 deleteSchemaButton : Html Msg
@@ -194,50 +280,92 @@ deleteSchemaButton =
     button [ onClick Destroy ] [ text "Delete Schema" ]
 
 
-editNameInput : String -> Html Msg
-editNameInput name =
+editSchemaNameInput : String -> Html Msg
+editSchemaNameInput name =
     input [ value name, onInput UpdateEditingName ] []
 
 
-cancelEditNameButton : Html Msg
-cancelEditNameButton =
-    button [ onClick CancelEditName ] [ text "Cancel" ]
+cancelEditSchemaNameButton : Html Msg
+cancelEditSchemaNameButton =
+    button [ onClick CancelEditSchemaName ] [ text "Cancel" ]
 
 
-saveNameButton : Html Msg
-saveNameButton =
-    button [ onClick SaveName ] [ text "Save" ]
+saveSchemaNameButton : Html Msg
+saveSchemaNameButton =
+    button [ onClick SaveSchemaName ] [ text "Save" ]
 
 
 
 -- ENTITIES VIEW
 
 
-entitiesView : List Entity -> String -> Html Msg
-entitiesView entities newEntityInput =
+entitiesView : Maybe Entity -> List Entity -> String -> Html Msg
+entitiesView editingEntity entities newEntityInput =
     section []
         [ h3 [] [ text "Models" ]
         , createEntityView newEntityInput
-        , entitiesListView entities
+        , entitiesListView editingEntity entities
         ]
 
 
 createEntityView : String -> Html Msg
 createEntityView newEntityInput =
     div []
-        [ input [ value newEntityInput, onInput UpdateNewEntityInput ] []
+        [ input [ value newEntityInput, onInput InputNewEntityName ] []
         , button [ onClick CreateEntity ] [ text "Create Model" ]
         ]
 
 
-entitiesListView : List Entity -> Html Msg
-entitiesListView entities =
-    ul [] (List.map entityView entities)
+entitiesListView : Maybe Entity -> List Entity -> Html Msg
+entitiesListView editingEntity entities =
+    ul [] (List.map (entityView editingEntity) entities)
 
 
-entityView : Entity -> Html Msg
-entityView { id, name } =
-    li [] [ text name, deleteEntityButton id ]
+entityView : Maybe Entity -> Entity -> Html Msg
+entityView editingEntity entity =
+    li [] (entityChildren editingEntity entity)
+
+
+entityChildren : Maybe Entity -> Entity -> List (Html Msg)
+entityChildren maybeEditingEntity { id, name } =
+    case maybeEditingEntity of
+        Just editingEntity ->
+            if editingEntity.id == id then
+                [ editEntityNameInput editingEntity.name
+                , cancelEditEntityNameButton
+                , saveEntityNameButton
+                ]
+            else
+                [ text name
+                , editEntityNameButton id
+                , deleteEntityButton id
+                ]
+
+        Nothing ->
+            [ text name
+            , editEntityNameButton id
+            , deleteEntityButton id
+            ]
+
+
+editEntityNameButton : Int -> Html Msg
+editEntityNameButton id =
+    button [ onClick (EditEntityName id) ] [ text "Edit" ]
+
+
+editEntityNameInput : String -> Html Msg
+editEntityNameInput name =
+    input [ value name, onInput InputEditingEntityName ] []
+
+
+cancelEditEntityNameButton : Html Msg
+cancelEditEntityNameButton =
+    button [ onClick CancelEditEntityName ] [ text "Cancel" ]
+
+
+saveEntityNameButton : Html Msg
+saveEntityNameButton =
+    button [ onClick SaveEntityName ] [ text "Save" ]
 
 
 deleteEntityButton : Int -> Html Msg
