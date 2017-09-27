@@ -1,4 +1,4 @@
-module Page.Entity exposing (..)
+module Page.Entity exposing (Model, Msg, init, initialModel, update, view)
 
 import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
@@ -191,11 +191,11 @@ removeField entity id =
 
 
 view : Model -> Html Msg
-view model =
+view { schema, entity, newFieldInput, editingField } =
     main_ []
-        [ schemaLink model.schema
-        , title model.entity.name
-        , fieldsView model.newFieldInput model.editingField model.entity.fields
+        [ schemaLink schema
+        , title entity.name
+        , fieldsView newFieldInput editingField schema.id entity.fields
         ]
 
 
@@ -209,14 +209,14 @@ schemaLink { id, name } =
     Router.link Goto (Router.Schema id) [] [ text name ]
 
 
-fieldsView : String -> Maybe Field -> List Field -> Html Msg
-fieldsView newFieldInput editingField fields =
+fieldsView : String -> Maybe Field -> Int -> List Field -> Html Msg
+fieldsView newFieldInput editingField schemaId fields =
     section
         []
         [ h3 [] [ text "Fields" ]
         , createFieldInput newFieldInput
         , createFieldButton
-        , fieldList editingField fields
+        , fieldList editingField schemaId fields
         ]
 
 
@@ -230,26 +230,26 @@ createFieldButton =
     button [ onClick CreateField ] [ text "Create" ]
 
 
-fieldList : Maybe Field -> List Field -> Html Msg
-fieldList editingField fields =
-    ul [] (List.map (fieldItem editingField) fields)
+fieldList : Maybe Field -> Int -> List Field -> Html Msg
+fieldList editingField schemaId fields =
+    ul [] (List.map (fieldItem editingField schemaId) fields)
 
 
-fieldItem : Maybe Field -> Field -> Html Msg
-fieldItem editingField field =
-    li [] (fieldItemChildren editingField field)
+fieldItem : Maybe Field -> Int -> Field -> Html Msg
+fieldItem editingField schemaId field =
+    li [] (fieldItemChildren editingField schemaId field)
 
 
-fieldItemChildren : Maybe Field -> Field -> List (Html Msg)
-fieldItemChildren editingField field =
+fieldItemChildren : Maybe Field -> Int -> Field -> List (Html Msg)
+fieldItemChildren editingField schemaId field =
     editingField
         |> Maybe.map (getEditingFieldItemChildren field)
-        |> Maybe.withDefault (normalFieldItemChildren field)
+        |> Maybe.withDefault (normalFieldItemChildren schemaId field)
 
 
-normalFieldItemChildren : Field -> List (Html Msg)
-normalFieldItemChildren field =
-    [ text field.name, editFieldButton field.id, deleteFieldButton field.id ]
+normalFieldItemChildren : Int -> Field -> List (Html Msg)
+normalFieldItemChildren schemaId field =
+    [ fieldLink schemaId field, editFieldButton field.id, deleteFieldButton field.id ]
 
 
 getEditingFieldItemChildren : Field -> Field -> List (Html Msg)
@@ -266,6 +266,11 @@ editingFieldItemChildren field =
     , cancelEditFieldNameButton
     , saveEditFieldNameButton
     ]
+
+
+fieldLink : Int -> Field -> Html Msg
+fieldLink schemaId { entityId, id, name } =
+    Router.link Goto (Router.Field schemaId entityId id) [] [ text name ]
 
 
 editFieldButton : Int -> Html Msg

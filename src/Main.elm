@@ -3,6 +3,7 @@ module Main exposing (..)
 import Html exposing (Html, div, footer, h1, header, text)
 import Navigation exposing (Location)
 import Page.Entity as Entity
+import Page.Field as Field
 import Page.Home as Home
 import Page.Schema as Schema
 import Router exposing (Route)
@@ -32,6 +33,7 @@ type Page
     = Home Home.Model
     | Schema Schema.Model
     | Entity Entity.Model
+    | Field Field.Model
 
 
 init : Location -> ( Model, Cmd Msg )
@@ -60,6 +62,7 @@ type PageMsg
     = HomeMsg Home.Msg
     | SchemaMsg Schema.Msg
     | EntityMsg Entity.Msg
+    | FieldMsg Field.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -100,6 +103,9 @@ setRoute route =
         Router.Entity schemaId id ->
             ( Entity Entity.initialModel, Entity.init schemaId id |> Cmd.map EntityMsg )
 
+        Router.Field schemaId entityId id ->
+            ( Field Field.initialModel, Field.init id |> Cmd.map FieldMsg )
+
         Router.NotFound ->
             ( Home Home.initialModel, Home.init |> Cmd.map HomeMsg )
 
@@ -115,6 +121,9 @@ updatePage msg page =
 
         ( EntityMsg subMsg, Entity subModel ) ->
             updatePageHelper Entity EntityMsg Entity.update subMsg subModel
+
+        ( FieldMsg subMsg, Field subModel ) ->
+            updatePageHelper Field FieldMsg Field.update subMsg subModel
 
         ( _, _ ) ->
             ( page, Cmd.none )
@@ -180,3 +189,6 @@ pageView model =
 
         Entity subModel ->
             Entity.view subModel |> Html.map EntityMsg
+
+        Field subModel ->
+            Field.view subModel |> Html.map FieldMsg

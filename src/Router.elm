@@ -19,6 +19,7 @@ type Route
     = Home
     | Schema Int
     | Entity Int Int
+    | Field Int Int Int
     | NotFound
 
 
@@ -54,6 +55,18 @@ getConfig route =
             , parent = Just (Schema schemaId)
             }
 
+        Field schemaId entityId id ->
+            { route = Field schemaId entityId id
+            , url =
+                "/schemas/"
+                    ++ toString schemaId
+                    ++ "/models/"
+                    ++ toString entityId
+                    ++ "/fields/"
+                    ++ toString id
+            , parent = Just (Entity schemaId entityId)
+            }
+
         NotFound ->
             { route = NotFound
             , url = "/not-found"
@@ -73,6 +86,7 @@ routeParser =
         , Url.map Home (s "schemas")
         , Url.map Schema (s "schemas" </> int)
         , Url.map Entity (s "schemas" </> int </> s "models" </> int)
+        , Url.map Field (s "schemas" </> int </> s "models" </> int </> s "fields" </> int)
         ]
 
 
