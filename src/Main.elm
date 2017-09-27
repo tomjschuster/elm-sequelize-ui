@@ -17,11 +17,6 @@ main =
         }
 
 
-type Page
-    = Home Home.Model
-    | Schema Schema.Model
-
-
 
 -- MODEL
 
@@ -30,6 +25,11 @@ type alias Model =
     { navState : ( Location, Route )
     , page : Page
     }
+
+
+type Page
+    = Home Home.Model
+    | Schema Schema.Model
 
 
 init : Location -> ( Model, Cmd Msg )
@@ -140,11 +140,16 @@ subscriptions model =
 
 
 view : Model -> Html Msg
-view model =
+view =
+    pageView >> Html.map PageMsg >> layout
+
+
+layout : Html Msg -> Html Msg
+layout content =
     div []
         [ header []
             [ headerLink ]
-        , pageView model |> Html.map PageMsg
+        , content
         , footer []
             []
         ]

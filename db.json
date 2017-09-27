@@ -5,15 +5,15 @@
       "name": "E-Commerce"
     },
     {
-      "name": "Blog",
-      "id": 2
+      "id": 2,
+      "name": "Blog"
     }
   ],
   "entities": [
     {
-      "id": 1,
       "name": "Post",
-      "schemaId": 2
+      "schemaId": 2,
+      "id": 3
     }
   ]
 }

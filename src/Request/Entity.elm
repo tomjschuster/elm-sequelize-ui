@@ -1,10 +1,10 @@
-module Request.Entity exposing (all, create, one)
+module Request.Entity exposing (all, create, destroy, one)
 
 import Data.Entity exposing (Entity, encodeEntity, entityDecoder)
 import Http exposing (Request)
 import Json.Decode as JD
 import Json.Encode as JE
-import Utils.Http exposing (baseUrl)
+import Utils.Http exposing (baseUrl, delete)
 
 
 entitiesUrl : String
@@ -14,7 +14,7 @@ entitiesUrl =
 
 entityUrl : Int -> String
 entityUrl =
-    toString >> (++) baseUrl
+    toString >> (++) entitiesUrl
 
 
 all : Request (List Entity)
@@ -37,3 +37,8 @@ create name schemaId =
             |> Http.jsonBody
         )
         entityDecoder
+
+
+destroy : Int -> Request ()
+destroy id =
+    delete (entityUrl id)
