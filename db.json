@@ -18,6 +18,16 @@
     {
       "name": "abcd",
       "id": 4
+    },
+    {
+      "name": "Product",
+      "schemaId": 1,
+      "id": 5
+    },
+    {
+      "name": "User",
+      "schemaId": 1,
+      "id": 6
     }
   ]
 }

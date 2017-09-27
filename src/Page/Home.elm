@@ -17,15 +17,14 @@ type alias Model =
     { schemas : List Schema
     , schemaNameInput : String
     , editingSchema : Maybe Schema
-    , error : Maybe String
-    , nextId : Int
     , toDeleteId : Maybe Int
+    , error : Maybe String
     }
 
 
 initialModel : Model
 initialModel =
-    Model [] "" Nothing Nothing 1 Nothing
+    Model [] "" Nothing Nothing Nothing
 
 
 init : Cmd Msg
@@ -40,17 +39,21 @@ init =
 type Msg
     = Goto Route
     | LoadSchemas (Result Http.Error (List Schema))
+      -- CREATE SCHEMA
+    | InputSchemaName String
+    | ValidateNewSchema
     | CreateSchema (Result String Schema)
     | LoadNewSchema (Result Http.Error Schema)
-    | UpdateSchema (Result String Schema)
-    | LoadUpdatedSchema (Result Http.Error Schema)
-    | DeleteSchema Int
-    | RemoveSchema (Result Http.Error ())
-    | InputSchemaName String
+      -- EDIT SCHEMA
     | EditSchema Int
     | InputEditingSchemaName String
-    | ValidateNewSchema
+    | CancelEditSchemaName
     | ValidateUpdatedSchema
+    | UpdateSchema (Result String Schema)
+    | LoadUpdatedSchema (Result Http.Error Schema)
+      -- DELETE SCHEMA
+    | DestroySchema Int
+    | RemoveSchema (Result Http.Error ())
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -59,28 +62,74 @@ update msg model =
         Goto route ->
             ( model, Router.goto route )
 
-        CreateSchema (Ok _) ->
-            ( { model | schemaNameInput = "" }, RS.create model.schemaNameInput |> Http.send LoadNewSchema )
-
-        CreateSchema (Err error) ->
-            ( { model | error = Just error }, Cmd.none )
-
-        LoadNewSchema (Ok schema) ->
-            ( { model | schemas = model.schemas ++ [ schema ], error = Nothing }, Cmd.none )
-
-        LoadNewSchema (Err error) ->
-            ( { model | error = Just "Error creating schema" }, Cmd.none )
-
         LoadSchemas (Ok schemas) ->
             ( { model | schemas = schemas, error = Nothing }, Cmd.none )
 
         LoadSchemas (Err error) ->
             ( { model | error = Just "Error loading schemas" }, Cmd.none )
 
+        -- CREATE SCHEMA
+        InputSchemaName name ->
+            ( { model | schemaNameInput = name }, Cmd.none )
+
+        ValidateNewSchema ->
+            ( model
+            , validateSchema model.schemas (draftSchema model.schemaNameInput)
+                |> Task.attempt CreateSchema
+            )
+
+        CreateSchema (Ok _) ->
+            ( { model | schemaNameInput = "" }
+            , RS.create model.schemaNameInput |> Http.send LoadNewSchema
+            )
+
+        CreateSchema (Err error) ->
+            ( { model | error = Just error }, Cmd.none )
+
+        LoadNewSchema (Ok schema) ->
+            ( { model
+                | schemas = model.schemas ++ [ schema ]
+                , error = Nothing
+              }
+            , Cmd.none
+            )
+
+        LoadNewSchema (Err error) ->
+            ( { model | error = Just "Error creating schema" }, Cmd.none )
+
+        -- EDIT SCHEMA
+        EditSchema id ->
+            let
+                schema =
+                    model.schemas |> List.filter (.id >> (==) id) |> List.head
+            in
+            ( { model | editingSchema = schema }, Cmd.none )
+
+        InputEditingSchemaName name ->
+            ( { model
+                | editingSchema =
+                    Maybe.map (\s -> { s | name = name }) model.editingSchema
+              }
+            , Cmd.none
+            )
+
+        CancelEditSchemaName ->
+            ( { model | editingSchema = Nothing }, Cmd.none )
+
+        ValidateUpdatedSchema ->
+            ( model
+            , model.editingSchema
+                |> Maybe.map
+                    (validateSchema model.schemas >> Task.attempt UpdateSchema)
+                |> Maybe.withDefault Cmd.none
+            )
+
         UpdateSchema (Ok _) ->
             case model.editingSchema of
                 Just schema ->
-                    ( { model | error = Nothing }, RS.update schema |> Http.send LoadUpdatedSchema )
+                    ( { model | error = Nothing }
+                    , RS.update schema |> Http.send LoadUpdatedSchema
+                    )
 
                 Nothing ->
                     model ! []
@@ -108,7 +157,8 @@ update msg model =
         LoadUpdatedSchema (Err error) ->
             ( { model | error = Just "Error editing schema" }, Cmd.none )
 
-        DeleteSchema id ->
+        -- DELETE SCHEMA
+        DestroySchema id ->
             ( { model | toDeleteId = Just id }, RS.destroy id |> Http.send RemoveSchema )
 
         RemoveSchema (Ok ()) ->
@@ -123,39 +173,14 @@ update msg model =
         RemoveSchema (Err error) ->
             ( { model | error = Just "Error deleting schema", toDeleteId = Nothing }, Cmd.none )
 
-        InputSchemaName name ->
-            ( { model | schemaNameInput = name }, Cmd.none )
-
-        EditSchema id ->
-            let
-                schema =
-                    model.schemas |> List.filter (.id >> (==) id) |> List.head
-            in
-            ( { model | editingSchema = schema }, Cmd.none )
-
-        InputEditingSchemaName name ->
-            ( { model | editingSchema = Maybe.map (\s -> { s | name = name }) model.editingSchema }, Cmd.none )
-
-        ValidateNewSchema ->
-            ( model, validateSchema model.schemas (draftSchema model.schemaNameInput) |> Task.attempt CreateSchema )
-
-        ValidateUpdatedSchema ->
-            case model.editingSchema of
-                Just schema ->
-                    ( model, validateSchema model.schemas schema |> Task.attempt UpdateSchema )
-
-                Nothing ->
-                    model ! []
-
-
-schemaUrl : Int -> String
-schemaUrl =
-    toString >> (++) "/schema/"
-
 
 draftSchema : String -> Schema
 draftSchema name =
     { emptySchema | name = name }
+
+
+
+-- SCHEMA NAME VALIDATION
 
 
 validateSchema : List Schema -> Schema -> Task String Schema
@@ -191,23 +216,6 @@ nameConflict current schema =
     current.name == schema.name && current.id /= schema.id
 
 
-saveSchema : List Schema -> Maybe Schema -> List Schema
-saveSchema schemas maybeSchema =
-    case maybeSchema of
-        Just schema ->
-            List.map
-                (\s ->
-                    if schema.id == s.id then
-                        schema
-                    else
-                        s
-                )
-                schemas
-
-        Nothing ->
-            schemas
-
-
 
 -- SUBSCRIPTIONS
 
@@ -224,38 +232,48 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
     main_ []
-        [ title "My Schemas"
+        [ title
         , content model
         ]
 
 
-title : String -> Html msg
-title title =
-    div [] [ h2 [] [ text title ] ]
+title : Html msg
+title =
+    h2 [] [ text "My Schemas" ]
 
 
 content : Model -> Html Msg
 content model =
-    case model.error of
-        Just message ->
-            div []
-                [ errorMessage message
-                , createSchemaInput model.schemaNameInput
-                , createSchemaButton
-                , schemaList model.schemas model.editingSchema
-                ]
+    div [] (contentChildrenView model)
 
-        Nothing ->
-            div []
-                [ createSchemaInput model.schemaNameInput
-                , createSchemaButton
-                , schemaList model.schemas model.editingSchema
-                ]
+
+contentChildrenView : Model -> List (Html Msg)
+contentChildrenView model =
+    model.error
+        |> Maybe.map (errorContentChildren model)
+        |> Maybe.withDefault (normalContentChildren model)
+
+
+errorContentChildren : Model -> String -> List (Html Msg)
+errorContentChildren model =
+    errorMessage >> flip (::) (normalContentChildren model)
+
+
+normalContentChildren : Model -> List (Html Msg)
+normalContentChildren model =
+    [ createSchemaInput model.schemaNameInput
+    , createSchemaButton
+    , schemaList model.schemas model.editingSchema
+    ]
 
 
 errorMessage : String -> Html Msg
 errorMessage message =
     aside [] [ p [] [ text message ] ]
+
+
+
+-- CREATE SCHEMA VIEW
 
 
 createSchemaInput : String -> Html Msg
@@ -268,22 +286,44 @@ createSchemaButton =
     button [ onClick ValidateNewSchema ] [ text "Add Schema" ]
 
 
+
+-- SCHEMAS VIEW
+
+
 schemaList : List Schema -> Maybe Schema -> Html Msg
 schemaList schemas editingSchema =
-    case editingSchema of
-        Just schema ->
-            ul [] (List.map (renderSchema schema) schemas)
-
-        Nothing ->
-            ul [] (List.map (schemaView True) schemas)
+    ul [] (List.map (schemaListItem editingSchema) schemas)
 
 
-renderSchema : Schema -> Schema -> Html Msg
-renderSchema editingSchema schema =
-    if schema.id == editingSchema.id then
-        editSchemaView editingSchema
+schemaListItem : Maybe Schema -> Schema -> Html Msg
+schemaListItem editingSchema schema =
+    li [] (schemaListItemChildren editingSchema schema)
+
+
+schemaListItemChildren : Maybe Schema -> Schema -> List (Html Msg)
+schemaListItemChildren editingSchema schema =
+    editingSchema
+        |> Maybe.map (editingSchemaListItemChildren schema)
+        |> Maybe.withDefault (normalSchemaListItemChildren schema)
+
+
+editingSchemaListItemChildren : Schema -> Schema -> List (Html Msg)
+editingSchemaListItemChildren schema editingSchema =
+    if editingSchema.id == schema.id then
+        [ editSchemaNameInput editingSchema.name
+        , cancelEditSchemaNameButton
+        , saveSchemaNameButton
+        ]
     else
-        schemaView False schema
+        [ text schema.name ]
+
+
+normalSchemaListItemChildren : Schema -> List (Html Msg)
+normalSchemaListItemChildren schema =
+    [ schemaLink schema
+    , editSchemaNameButton schema.id
+    , deleteSchemaButton schema.id
+    ]
 
 
 schemaLink : Schema -> Html Msg
@@ -291,27 +331,26 @@ schemaLink { id, name } =
     Router.link Goto (Router.Schema id) [] [ text name ]
 
 
-schemaView : Bool -> Schema -> Html Msg
-schemaView showButtons schema =
-    if showButtons then
-        li [] [ schemaLink schema, editSchemaButton schema.id, deleteSchmeaButton schema.id ]
-    else
-        li [] [ text schema.name ]
+editSchemaNameInput : String -> Html Msg
+editSchemaNameInput name =
+    input [ value name, onInput InputEditingSchemaName ] []
 
 
-editSchemaView : Schema -> Html Msg
-editSchemaView schema =
-    div []
-        [ input [ value schema.name, onInput InputEditingSchemaName ] []
-        , button [ onClick ValidateUpdatedSchema ] [ text "Save" ]
-        ]
+cancelEditSchemaNameButton : Html Msg
+cancelEditSchemaNameButton =
+    button [ onClick CancelEditSchemaName ] [ text "Cancel" ]
 
 
-editSchemaButton : Int -> Html Msg
-editSchemaButton id =
+saveSchemaNameButton : Html Msg
+saveSchemaNameButton =
+    button [ onClick ValidateUpdatedSchema ] [ text "Save" ]
+
+
+editSchemaNameButton : Int -> Html Msg
+editSchemaNameButton id =
     button [ onClick (EditSchema id) ] [ text "Edit Name" ]
 
 
-deleteSchmeaButton : Int -> Html Msg
-deleteSchmeaButton id =
-    button [ onClick (DeleteSchema id) ] [ text "Delete" ]
+deleteSchemaButton : Int -> Html Msg
+deleteSchemaButton id =
+    button [ onClick (DestroySchema id) ] [ text "Delete" ]

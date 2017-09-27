@@ -2,7 +2,7 @@ module Data.Schema exposing (Schema, emptySchema, encodeSchema, schemaDecoder)
 
 import Data.Entity exposing (Entity, encodeEntity, entityDecoder)
 import Json.Decode exposing (Decoder, Value, int, list, string)
-import Json.Decode.Pipeline exposing (decode, required)
+import Json.Decode.Pipeline exposing (decode, optional, required)
 import Json.Encode as JE
 
 
@@ -23,7 +23,7 @@ schemaDecoder =
     decode Schema
         |> required "id" int
         |> required "name" string
-        |> required "entities" (list entityDecoder)
+        |> optional "entities" (list entityDecoder) []
 
 
 encodeSchema : Schema -> JE.Value
