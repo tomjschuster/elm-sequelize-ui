@@ -237,7 +237,8 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
     main_ []
-        [ title
+        [ breadCrumbs
+        , title
         , content model
         ]
 
@@ -245,6 +246,11 @@ view model =
 title : Html msg
 title =
     h2 [] [ text "My Schemas" ]
+
+
+breadCrumbs : Html Msg
+breadCrumbs =
+    Router.breadCrumbs Goto [ ( Router.Home, "Home" ) ]
 
 
 content : Model -> Html Msg

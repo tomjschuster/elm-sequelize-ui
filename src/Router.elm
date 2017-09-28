@@ -1,14 +1,16 @@
 module Router
     exposing
         ( Route(..)
+        , breadCrumbs
         , fromLocation
         , getUrl
         , goto
         , link
         , replaceWith
+        , routePath
         )
 
-import Html exposing (Attribute, Html, a)
+import Html exposing (Attribute, Html, a, p, text)
 import Html.Attributes exposing (href)
 import Navigation exposing (Location)
 import UrlParser as Url exposing ((</>), Parser, int, s, top)
@@ -25,6 +27,7 @@ type Route
 
 type alias RouteConfig =
     { route : Route
+    , title : String
     , url : String
     , parent : Maybe Route
     }
@@ -35,18 +38,21 @@ getConfig route =
     case route of
         Home ->
             { route = Home
+            , title = "Home"
             , url = "/schemas"
             , parent = Nothing
             }
 
         Schema id ->
             { route = Schema id
+            , title = "Schema"
             , url = "/schemas/" ++ toString id
             , parent = Just Home
             }
 
         Entity schemaId id ->
             { route = Entity id schemaId
+            , title = "Model"
             , url =
                 "/schemas/"
                     ++ toString schemaId
@@ -57,6 +63,7 @@ getConfig route =
 
         Field schemaId entityId id ->
             { route = Field schemaId entityId id
+            , title = "Field"
             , url =
                 "/schemas/"
                     ++ toString schemaId
@@ -69,6 +76,7 @@ getConfig route =
 
         NotFound ->
             { route = NotFound
+            , title = "Not Found"
             , url = "/not-found"
             , parent = Nothing
             }
@@ -77,6 +85,11 @@ getConfig route =
 getUrl : Route -> String
 getUrl =
     getConfig >> .url
+
+
+getParent : Route -> Maybe Route
+getParent =
+    getConfig >> .parent
 
 
 routeParser : Parser (Route -> Route) Route
@@ -125,3 +138,27 @@ getHref =
 getOnClick : (Route -> msg) -> Route -> Attribute msg
 getOnClick toMsg =
     toMsg >> onPreventDefaultClick
+
+
+breadCrumbs : (Route -> msg) -> List ( Route, String ) -> Html msg
+breadCrumbs gotoMsg crumbs =
+    p [] (breadCrumbsChildren gotoMsg crumbs)
+
+
+breadCrumbsChildren : (Route -> msg) -> List ( Route, String ) -> List (Html msg)
+breadCrumbsChildren gotoMsg crumbs =
+    crumbs |> List.map (crumb gotoMsg) |> List.intersperse (text ">")
+
+
+crumb : (Route -> msg) -> ( Route, String ) -> Html msg
+crumb gotoMsg ( route, name ) =
+    link gotoMsg route [] [ text name ]
+
+
+routePath : Route -> List Route
+routePath route =
+    route
+        |> getParent
+        |> Maybe.map (routePath >> (::) route)
+        |> Maybe.withDefault []
+        |> List.reverse

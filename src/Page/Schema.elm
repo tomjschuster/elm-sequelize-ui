@@ -62,7 +62,8 @@ init id =
 
 
 type Msg
-    = Goto Route -- SCHEMA
+    = Goto Route
+      -- SCHEMA
     | LoadSchema (Result Http.Error Schema)
     | RemoveSchema (Result Http.Error ())
     | EditSchemaName

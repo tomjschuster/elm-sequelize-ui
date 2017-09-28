@@ -95,19 +95,29 @@ setRoute : Route -> ( Page, Cmd PageMsg )
 setRoute route =
     case route of
         Router.Home ->
-            ( Home Home.initialModel, Home.init |> Cmd.map HomeMsg )
+            ( Home Home.initialModel
+            , Home.init |> Cmd.map HomeMsg
+            )
 
         Router.Schema id ->
-            ( Schema Schema.initialModel, Schema.init id |> Cmd.map SchemaMsg )
+            ( Schema Schema.initialModel
+            , Schema.init id |> Cmd.map SchemaMsg
+            )
 
         Router.Entity schemaId id ->
-            ( Entity Entity.initialModel, Entity.init schemaId id |> Cmd.map EntityMsg )
+            ( Entity Entity.initialModel
+            , Entity.init schemaId id |> Cmd.map EntityMsg
+            )
 
         Router.Field schemaId entityId id ->
-            ( Field Field.initialModel, Field.init id |> Cmd.map FieldMsg )
+            ( Field Field.initialModel
+            , Field.init schemaId entityId id |> Cmd.map FieldMsg
+            )
 
         Router.NotFound ->
-            ( Home Home.initialModel, Home.init |> Cmd.map HomeMsg )
+            ( Home Home.initialModel
+            , Home.init |> Cmd.map HomeMsg
+            )
 
 
 updatePage : PageMsg -> Page -> ( Page, Cmd PageMsg )

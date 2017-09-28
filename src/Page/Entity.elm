@@ -32,12 +32,18 @@ initialModel =
     Model Entity.empty Schema.empty "" Nothing Nothing Nothing
 
 
+type alias InitialData =
+    { schema : Schema
+    , entity : Entity
+    }
+
+
 init : Int -> Int -> Cmd Msg
 init schemaId id =
     Task.map2
-        (,)
-        (RE.oneWithFields id |> Http.toTask)
+        InitialData
         (RS.one schemaId |> Http.toTask)
+        (RE.oneWithFields id |> Http.toTask)
         |> Task.attempt LoadEntityAndSchema
 
 
@@ -47,7 +53,7 @@ init schemaId id =
 
 type Msg
     = Goto Route
-    | LoadEntityAndSchema (Result Http.Error ( Entity, Schema ))
+    | LoadEntityAndSchema (Result Http.Error InitialData)
     | InputNewFieldName String
     | CreateField
     | LoadNewField (Result Http.Error Field)
@@ -66,7 +72,7 @@ update msg model =
         Goto route ->
             ( model, Router.goto route )
 
-        LoadEntityAndSchema (Ok ( entity, schema )) ->
+        LoadEntityAndSchema (Ok { schema, entity }) ->
             ( { model
                 | entity = entity
                 , schema = schema
