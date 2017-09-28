@@ -8,6 +8,7 @@ import Http
 import Request.Schema as RS
 import Router exposing (Route)
 import Task exposing (Task)
+import Views.Breadcrumbs as BC
 
 
 -- MODEL
@@ -250,7 +251,7 @@ title =
 
 breadCrumbs : Html Msg
 breadCrumbs =
-    Router.breadCrumbs Goto [ ( Router.Home, "Home" ) ]
+    BC.view Goto [ BC.home ]
 
 
 content : Model -> Html Msg

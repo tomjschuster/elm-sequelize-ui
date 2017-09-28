@@ -1,7 +1,6 @@
 module Router
     exposing
         ( Route(..)
-        , breadCrumbs
         , fromLocation
         , getUrl
         , goto
@@ -138,21 +137,6 @@ getHref =
 getOnClick : (Route -> msg) -> Route -> Attribute msg
 getOnClick toMsg =
     toMsg >> onPreventDefaultClick
-
-
-breadCrumbs : (Route -> msg) -> List ( Route, String ) -> Html msg
-breadCrumbs gotoMsg crumbs =
-    p [] (breadCrumbsChildren gotoMsg crumbs)
-
-
-breadCrumbsChildren : (Route -> msg) -> List ( Route, String ) -> List (Html msg)
-breadCrumbsChildren gotoMsg crumbs =
-    crumbs |> List.map (crumb gotoMsg) |> List.intersperse (text ">")
-
-
-crumb : (Route -> msg) -> ( Route, String ) -> Html msg
-crumb gotoMsg ( route, name ) =
-    link gotoMsg route [] [ text name ]
 
 
 routePath : Route -> List Route

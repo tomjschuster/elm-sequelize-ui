@@ -11,11 +11,6 @@
   ],
   "entities": [
     {
-      "name": "Post",
-      "schemaId": 2,
-      "id": 1
-    },
-    {
       "id": 2,
       "name": "Author",
       "schemaId": 2
@@ -29,14 +24,14 @@
       "id": 6,
       "name": "User",
       "schemaId": 1
+    },
+    {
+      "name": "Post",
+      "schemaId": 2,
+      "id": 7
     }
   ],
   "fields": [
-    {
-      "name": "Title",
-      "entityId": 1,
-      "id": 1
-    },
     {
       "id": 3,
       "name": "Name",

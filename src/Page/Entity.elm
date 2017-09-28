@@ -12,14 +12,16 @@ import Request.Field as RF
 import Request.Schema as RS
 import Router exposing (Route)
 import Task
+import Views.Breadcrumbs as BC
 
 
 -- MODEL
 
 
 type alias Model =
-    { entity : Entity
-    , schema : Schema
+    { schema : Schema
+    , entity : Entity
+    , editingName : Maybe String
     , newFieldInput : String
     , editingField : Maybe Field
     , toDeleteId : Maybe Int
@@ -29,7 +31,7 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model Entity.empty Schema.empty "" Nothing Nothing Nothing
+    Model Schema.empty Entity.empty Nothing "" Nothing Nothing Nothing
 
 
 type alias InitialData =
@@ -44,7 +46,7 @@ init schemaId id =
         InitialData
         (RS.one schemaId |> Http.toTask)
         (RE.oneWithFields id |> Http.toTask)
-        |> Task.attempt LoadEntityAndSchema
+        |> Task.attempt LoadInitialData
 
 
 
@@ -53,7 +55,16 @@ init schemaId id =
 
 type Msg
     = Goto Route
-    | LoadEntityAndSchema (Result Http.Error InitialData)
+    | LoadInitialData (Result Http.Error InitialData)
+      -- ENTITY
+    | LoadEntity (Result Http.Error Entity)
+    | EditEntityName
+    | InputEntityName String
+    | CancelEditEntityName
+    | SaveEntityName
+    | Destroy
+    | RemoveEntity (Result Http.Error ())
+      -- FIELDS
     | InputNewFieldName String
     | CreateField
     | LoadNewField (Result Http.Error Field)
@@ -72,7 +83,7 @@ update msg model =
         Goto route ->
             ( model, Router.goto route )
 
-        LoadEntityAndSchema (Ok { schema, entity }) ->
+        LoadInitialData (Ok { schema, entity }) ->
             ( { model
                 | entity = entity
                 , schema = schema
@@ -81,9 +92,52 @@ update msg model =
             , Cmd.none
             )
 
-        LoadEntityAndSchema (Err error) ->
+        LoadInitialData (Err error) ->
             ( { model | error = Just "Error loading model" }, Cmd.none )
 
+        -- ENTITY
+        LoadEntity (Ok entity) ->
+            ( { model
+                | entity = entity
+                , editingName = Nothing
+                , error = Nothing
+              }
+            , Cmd.none
+            )
+
+        LoadEntity (Err error) ->
+            ( { model | error = Just "Error loading model" }, Cmd.none )
+
+        EditEntityName ->
+            ( { model | editingName = Just model.entity.name }, Cmd.none )
+
+        InputEntityName name ->
+            ( { model | editingName = Just name }, Cmd.none )
+
+        CancelEditEntityName ->
+            ( { model | editingName = Nothing }, Cmd.none )
+
+        SaveEntityName ->
+            ( model
+            , model.editingName
+                |> Maybe.map
+                    (updateEntityName model.entity
+                        >> RE.update
+                        >> Http.send LoadEntity
+                    )
+                |> Maybe.withDefault Cmd.none
+            )
+
+        Destroy ->
+            ( model, RE.destroy model.entity.id |> Http.send RemoveEntity )
+
+        RemoveEntity (Ok ()) ->
+            ( model, Router.goto (Router.Schema model.schema.id) )
+
+        RemoveEntity (Err error) ->
+            ( { model | error = Just "Error deleting model" }, Cmd.none )
+
+        -- FIELDS
         InputNewFieldName name ->
             ( { model | newFieldInput = name }, Cmd.none )
 
@@ -164,6 +218,11 @@ update msg model =
             ( { model | error = Just "Error deleting field", toDeleteId = Nothing }, Cmd.none )
 
 
+updateEntityName : Entity -> String -> Entity
+updateEntityName entity name =
+    { entity | name = name }
+
+
 addNewField : Entity -> Field -> Entity
 addNewField entity field =
     { entity | fields = entity.fields ++ [ field ] }
@@ -197,22 +256,83 @@ removeField entity id =
 
 
 view : Model -> Html Msg
-view { schema, entity, newFieldInput, editingField } =
+view { schema, entity, editingName, newFieldInput, editingField } =
     main_ []
-        [ schemaLink schema
-        , title entity.name
+        [ breadCrumbs schema entity
+        , nameView editingName entity.name
         , fieldsView newFieldInput editingField schema.id entity.fields
         ]
 
 
-title : String -> Html Msg
-title name =
+breadCrumbs : Schema -> Entity -> Html Msg
+breadCrumbs schema entity =
+    BC.view Goto [ BC.home, BC.schema schema, BC.entity entity ]
+
+
+
+-- ENTITY NAME VIEW
+
+
+nameView : Maybe String -> String -> Html Msg
+nameView editingName name =
+    section [] (nameChildren editingName name)
+
+
+nameChildren : Maybe String -> String -> List (Html Msg)
+nameChildren editingName name =
+    editingName
+        |> Maybe.map editingNameChildren
+        |> Maybe.withDefault (normalNameChildren name)
+
+
+editingNameChildren : String -> List (Html Msg)
+editingNameChildren name =
+    [ editEntityNameInput name
+    , cancelEditEntityNameButton
+    , saveEditEntityNameButton
+    ]
+
+
+normalNameChildren : String -> List (Html Msg)
+normalNameChildren name =
+    [ entityName name
+    , editEntityNameButton
+    , deleteEntityButton
+    ]
+
+
+entityName : String -> Html Msg
+entityName name =
     h2 [] [ text name ]
 
 
-schemaLink : Schema -> Html Msg
-schemaLink { id, name } =
-    Router.link Goto (Router.Schema id) [] [ text name ]
+editEntityNameButton : Html Msg
+editEntityNameButton =
+    button [ onClick EditEntityName ] [ text "Edit Name" ]
+
+
+deleteEntityButton : Html Msg
+deleteEntityButton =
+    button [ onClick Destroy ] [ text "Delete Model" ]
+
+
+editEntityNameInput : String -> Html Msg
+editEntityNameInput name =
+    input [ value name, onInput InputEntityName ] []
+
+
+cancelEditEntityNameButton : Html Msg
+cancelEditEntityNameButton =
+    button [ onClick CancelEditEntityName ] [ text "Cancel" ]
+
+
+saveEditEntityNameButton : Html Msg
+saveEditEntityNameButton =
+    button [ onClick SaveEntityName ] [ text "Save" ]
+
+
+
+-- FIELDS VIEW
 
 
 fieldsView : String -> Maybe Field -> Int -> List Field -> Html Msg

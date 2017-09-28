@@ -32,6 +32,7 @@ import Http
 import Request.Entity as RE
 import Request.Schema as RS
 import Router exposing (Route)
+import Views.Breadcrumbs as BC
 
 
 -- MODEL
@@ -65,12 +66,12 @@ type Msg
     = Goto Route
       -- SCHEMA
     | LoadSchema (Result Http.Error Schema)
-    | RemoveSchema (Result Http.Error ())
     | EditSchemaName
     | InputSchemaName String
     | CancelEditSchemaName
     | SaveSchemaName
     | Destroy
+    | RemoveSchema (Result Http.Error ())
       -- ENTITIES
     | InputNewEntityName String
     | CreateEntity
@@ -103,9 +104,6 @@ update msg model =
         LoadSchema (Err error) ->
             ( { model | error = Just "Error loading schema" }, Cmd.none )
 
-        Destroy ->
-            ( model, RS.destroy model.schema.id |> Http.send RemoveSchema )
-
         EditSchemaName ->
             ( { model | editingName = Just model.schema.name }, Cmd.none )
 
@@ -122,6 +120,9 @@ update msg model =
                 |> RS.update
                 |> Http.send LoadSchema
             )
+
+        Destroy ->
+            ( model, RS.destroy model.schema.id |> Http.send RemoveSchema )
 
         RemoveSchema (Ok ()) ->
             ( model, Router.goto Router.Home )
@@ -278,9 +279,16 @@ subscriptions model =
 view : Model -> Html Msg
 view { schema, editingName, newEntityInput, editingEntity } =
     main_ []
-        [ nameView editingName schema.name
+        [ breadCrumbs schema
+        , nameView editingName schema.name
         , entitiesView editingEntity schema.entities newEntityInput
         ]
+
+
+breadCrumbs : Schema -> Html Msg
+breadCrumbs schema =
+    BC.view Goto
+        [ BC.home, BC.schema schema ]
 
 
 
