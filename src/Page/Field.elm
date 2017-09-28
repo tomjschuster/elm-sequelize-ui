@@ -3,7 +3,9 @@ module Page.Field exposing (Model, Msg, init, initialModel, update, view)
 import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
 import Data.Schema as Schema exposing (Schema)
-import Html exposing (Html, div, h2, main_, section, text)
+import Html exposing (Html, button, div, h2, input, main_, section, text)
+import Html.Attributes exposing (value)
+import Html.Events exposing (onClick, onInput)
 import Http
 import Request.Entity as RE
 import Request.Field as RF
@@ -80,11 +82,22 @@ update msg model =
             )
 
         LoadInitialData (Err error) ->
-            ( { model | error = Just "Error loading initial data" }, Cmd.none )
+            ( { model
+                | error = Just "Error loading initial data"
+                , editingName = Nothing
+              }
+            , Cmd.none
+            )
 
         -- FIELD
         LoadField (Ok field) ->
-            ( { model | field = field, error = Nothing }, Cmd.none )
+            ( { model
+                | field = field
+                , editingName = Nothing
+                , error = Nothing
+              }
+            , Cmd.none
+            )
 
         LoadField (Err error) ->
             ( { model | error = Just "Error loading field" }, Cmd.none )
@@ -129,10 +142,11 @@ updateFieldName field name =
 
 
 view : Model -> Html Msg
-view { schema, entity, field } =
-    main_ []
+view { schema, entity, field, editingName } =
+    main_
+        []
         [ breadcrumbs schema entity field
-        , h2 [] [ text field.name ]
+        , nameView editingName field.name
         ]
 
 
@@ -148,9 +162,50 @@ breadcrumbs schema entity field =
 
 nameView : Maybe String -> String -> Html Msg
 nameView editingName name =
-    section [] (nameViewChildren editingName name)
+    section [] (nameViewChildren name editingName)
 
 
-nameViewChildren : Maybe String -> String -> List (Html Msg)
-nameViewChildren editingName name =
-    []
+nameViewChildren : String -> Maybe String -> List (Html Msg)
+nameViewChildren name =
+    Maybe.map editingNameChildren
+        >> Maybe.withDefault (normalNameChildren name)
+
+
+editingNameChildren : String -> List (Html Msg)
+editingNameChildren name =
+    [ fieldNameInput name, saveFieldNameButton, cancelUpdateFieldName ]
+
+
+normalNameChildren : String -> List (Html Msg)
+normalNameChildren name =
+    [ nameTitle name, editFieldNameButton, deleteFieldButton ]
+
+
+nameTitle : String -> Html Msg
+nameTitle name =
+    h2 [] [ text name ]
+
+
+editFieldNameButton : Html Msg
+editFieldNameButton =
+    button [ onClick EditFieldName ] [ text "Edit Field Name" ]
+
+
+deleteFieldButton : Html Msg
+deleteFieldButton =
+    button [ onClick Destroy ] [ text "Delete" ]
+
+
+fieldNameInput : String -> Html Msg
+fieldNameInput name =
+    input [ value name, onInput InputEditFieldName ] []
+
+
+cancelUpdateFieldName : Html Msg
+cancelUpdateFieldName =
+    button [ onClick CancelEditFieldName ] [ text "Cancel" ]
+
+
+saveFieldNameButton : Html Msg
+saveFieldNameButton =
+    button [ onClick SaveFieldName ] [ text "Save" ]

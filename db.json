@@ -33,9 +33,9 @@
   ],
   "fields": [
     {
-      "id": 3,
       "name": "Name",
-      "entityId": 2
+      "entityId": 2,
+      "id": 3
     },
     {
       "name": "Content",
