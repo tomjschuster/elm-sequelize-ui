@@ -143,7 +143,7 @@ update msg model =
 
         CreateField ->
             ( model
-            , RF.create model.newFieldInput model.schema.id
+            , RF.create model.newFieldInput model.entity.id
                 |> Http.send LoadNewField
             )
 

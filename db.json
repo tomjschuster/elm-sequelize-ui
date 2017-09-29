@@ -1,46 +1,51 @@
 {
   "schemas": [
     {
-      "id": 1,
-      "name": "E-Commerce"
+      "name": "E-Commerce",
+      "id": 1
     },
     {
-      "id": 2,
-      "name": "Blog"
+      "name": "Blog",
+      "id": 2
     }
   ],
   "entities": [
     {
-      "id": 2,
-      "name": "Author",
-      "schemaId": 2
-    },
-    {
-      "id": 3,
-      "name": "Product",
-      "schemaId": 1
-    },
-    {
-      "id": 6,
-      "name": "User",
-      "schemaId": 1
-    },
-    {
       "name": "Post",
       "schemaId": 2,
-      "id": 7
+      "id": 1
+    },
+    {
+      "name": "Author",
+      "schemaId": 2,
+      "id": 2
+    },
+    {
+      "name": "Product",
+      "schemaId": 1,
+      "id": 3
+    },
+    {
+      "name": "Customer",
+      "schemaId": 1,
+      "id": 4
     }
   ],
   "fields": [
     {
       "name": "Name",
-      "entityId": 2,
-      "id": 3
+      "entityId": 3,
+      "id": 1
     },
     {
-      "name": "Content",
-      "entityId": 2,
-      "id": 4
+      "name": "email",
+      "entityId": 4,
+      "id": 2
+    },
+    {
+      "name": "title",
+      "entityId": 1,
+      "id": 3
     }
   ]
 }
