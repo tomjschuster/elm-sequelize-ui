@@ -13,6 +13,16 @@ defmodule SequelizeUiWeb.Router do
     plug :accepts, ["json"]
   end
 
+  scope "/api", SequelizeUiWeb do
+    pipe_through :api
+
+    resources "/schemas", SchemaController
+    resources "/entities", EntityController
+    get "/entities/:id/schema", EntityController, :show
+    get "/entities/:id/fields", EntityController, :show
+    resources "/fields", FieldController
+  end
+
   scope "/", SequelizeUiWeb do
     pipe_through :browser # Use the default browser stack
 
