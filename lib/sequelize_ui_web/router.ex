@@ -18,8 +18,6 @@ defmodule SequelizeUiWeb.Router do
 
     resources "/schemas", SchemaController
     resources "/entities", EntityController
-    get "/entities/:id/schema", EntityController, :show
-    get "/entities/:id/fields", EntityController, :show
     resources "/fields", FieldController
   end
 

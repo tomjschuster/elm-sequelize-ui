@@ -20,24 +20,21 @@ defmodule SequelizeUiWeb.EntityController do
     end
   end
 
-  def show(conn, %{"id" => id, "schema" => "show", "fields" => "show"}) do
-    entity = DbDesign.get_entity_with_all!(id)
-    render(conn, "show-with-all.json", entity: entity)
-  end
-
-  def show(conn, %{"id" => id, "schema" => "show"}) do
-    entity = DbDesign.get_entity_with_schema!(id)
-    render(conn, "show-with-schema.json", entity: entity)
-  end
-
-  def show(conn, %{"id" => id, "fields" => "show"}) do
-    entity = DbDesign.get_entity_with_fields!(id)
-    render(conn, "show-with-fields.json", entity: entity)
-  end
-
-  def show(conn, %{"id" => id}) do
-    entity = DbDesign.get_entity!(id)
-    render(conn, "show.json", entity: entity)
+  def show(conn, %{"id" => id} = params) do
+    case {params["schema"], params["fields"]} do
+      {"true", "true"} ->
+        entity = DbDesign.get_entity_with_all!(id)
+        render(conn, "show-with-all.json", entity: entity)
+      {"true", _} ->
+        entity = DbDesign.get_entity_with_schema!(id)
+        render(conn, "show-with-schema.json", entity: entity)
+      {_, "true"} ->
+        entity = DbDesign.get_entity_with_fields!(id)
+        render(conn, "show-with-fields.json", entity: entity)
+      {_, _} ->
+        entity = DbDesign.get_entity!(id)
+        render(conn, "show.json", entity: entity)
+    end
   end
 
   def update(conn, %{"id" => id, "entity" => entity_params}) do

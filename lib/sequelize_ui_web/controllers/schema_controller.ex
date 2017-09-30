@@ -12,7 +12,6 @@ defmodule SequelizeUiWeb.SchemaController do
   end
 
   def create(conn, %{"schema" => schema_params}) do
-    IO.inspect("here")
     with {:ok, %Schema{} = schema} <- DbDesign.create_schema(schema_params) do
       conn
       |> put_status(:created)
@@ -21,19 +20,19 @@ defmodule SequelizeUiWeb.SchemaController do
     end
   end
 
-  def show(conn, %{"id" => id, "entities" => "show"}) do
-    schema = DbDesign.get_schema_with_entities!(id)
-    render(conn, "show-with-entities.json", schema: schema)
-  end
-
-  def show(conn, %{"id" => id}) do
-    schema = DbDesign.get_schema!(id)
-    render(conn, "show.json", schema: schema)
+  def show(conn, %{"id" => id} = params) do
+    IO.inspect({"yo!", params["entities"]})
+    if params["entities"] == "true" do
+      schema = DbDesign.get_schema_with_entities!(id)
+      render(conn, "show-with-entities.json", schema: schema)
+    else
+      schema = DbDesign.get_schema!(id)
+      render(conn, "show.json", schema: schema)
+    end
   end
 
   def update(conn, %{"id" => id, "schema" => schema_params}) do
     schema = DbDesign.get_schema!(id)
-
     with {:ok, %Schema{} = schema} <- DbDesign.update_schema(schema, schema_params) do
       render(conn, "show.json", schema: schema)
     end

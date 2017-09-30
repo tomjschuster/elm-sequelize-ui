@@ -10,9 +10,9 @@ defmodule SequelizeUiWeb.FieldView do
     %{data: render_one(field, FieldView, "field.json")}
   end
 
-  def render("show-with-entity.jon", %{field: field}) do
+  def render("show-with-entity.json", %{field: field}) do
     %{data: %{field: render_one(field, FieldView, "field.json"),
-              entity: render_many(field.entity, Entityiew, "entity.json")}}
+              entity: render_one(field.entity, EntityView, "entity.json")}}
   end
 
   def render("show-with-all.json", %{field: field}) do

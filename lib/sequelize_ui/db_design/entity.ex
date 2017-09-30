@@ -6,9 +6,8 @@ defmodule SequelizeUi.DbDesign.Entity do
 
   schema "entity" do
     field :name, :string
-    field :schema_id, :integer
 
-    belongs_to :schema, Schema, define_field: false
+    belongs_to :schema, Schema
     has_many :fields, Field
 
     timestamps()

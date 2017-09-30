@@ -20,24 +20,22 @@ defmodule SequelizeUiWeb.FieldController do
     end
   end
 
-  def show(conn, %{"id" => id, "entity" => "show", "schema" => "show"}) do
-    field = DbDesign.get_field_with_all!(id)
-    render(conn, "show-with-all.json", field: field)
-  end
-
-  def show(conn, %{"id" => id, "entity" => "show"}) do
-    field = DbDesign.get_field_with_entity!(id)
-    render(conn, "show-with-entity.json", field: field)
-  end
-
-  def show(conn, %{"id" => id}) do
-    field = DbDesign.get_field!(id)
-    render(conn, "show.json", field: field)
+  def show(conn, %{"id" => id} = params) do
+    case {params["schema"], params["entity"]} do
+      {"true", "true"} ->
+        field = DbDesign.get_field_with_all!(id)
+        render(conn, "show-with-all.json", field: field)
+      {_, "true"} ->
+        field = DbDesign.get_field_with_entity!(id)
+        render(conn, "show-with-entity.json", field: field)
+      {_, _} ->
+        field = DbDesign.get_field!(id)
+        render(conn, "show.json", field: field)
+    end
   end
 
   def update(conn, %{"id" => id, "field" => field_params}) do
     field = DbDesign.get_field!(id)
-
     with {:ok, %Field{} = field} <- DbDesign.update_field(field, field_params) do
       render(conn, "show.json", field: field)
     end
