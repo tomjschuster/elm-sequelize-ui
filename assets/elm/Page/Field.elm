@@ -1,5 +1,6 @@
 module Page.Field exposing (Model, Msg, init, initialModel, update, view)
 
+import Data.Combined as Combined exposing (FieldWithAll)
 import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
 import Data.Schema as Schema exposing (Schema)
@@ -7,9 +8,7 @@ import Html exposing (Html, button, div, h2, input, main_, section, text)
 import Html.Attributes exposing (value)
 import Html.Events exposing (onClick, onInput)
 import Http
-import Request.Entity as RE
 import Request.Field as RF
-import Request.Schema as RS
 import Router exposing (Route)
 import Task exposing (Task)
 import Views.Breadcrumbs as BC
@@ -32,20 +31,10 @@ initialModel =
     Model Schema.empty Entity.empty Field.empty Nothing Nothing
 
 
-type alias InitialData =
-    { schema : Schema
-    , entity : Entity
-    , field : Field
-    }
-
-
 init : Int -> Int -> Int -> Cmd Msg
 init schemaId entityId id =
-    Task.map3 InitialData
-        (RS.one schemaId |> Http.toTask)
-        (RE.one entityId |> Http.toTask)
-        (RF.one id |> Http.toTask)
-        |> Task.attempt LoadInitialData
+    (RF.oneWithAll id |> Http.toTask)
+        |> Task.attempt LoadFieldWithAll
 
 
 
@@ -54,7 +43,7 @@ init schemaId entityId id =
 
 type Msg
     = Goto Route
-    | LoadInitialData (Result Http.Error InitialData)
+    | LoadFieldWithAll (Result Http.Error FieldWithAll)
       -- FIELD
     | LoadField (Result Http.Error Field)
     | EditFieldName
@@ -71,7 +60,7 @@ update msg model =
         Goto route ->
             ( model, Router.goto route )
 
-        LoadInitialData (Ok { schema, entity, field }) ->
+        LoadFieldWithAll (Ok { schema, entity, field }) ->
             ( { model
                 | schema = schema
                 , entity = entity
@@ -81,7 +70,7 @@ update msg model =
             , Cmd.none
             )
 
-        LoadInitialData (Err error) ->
+        LoadFieldWithAll (Err error) ->
             ( { model
                 | error = Just "Error loading initial data"
                 , editingName = Nothing
