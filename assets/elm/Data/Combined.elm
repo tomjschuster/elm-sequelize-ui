@@ -12,11 +12,11 @@ module Data.Combined
         , schemaWithEntitiesDecoder
         )
 
-import Entity exposing (Entity)
-import Field exposing (Field)
+import Data.Entity as Entity exposing (Entity)
+import Data.Field as Field exposing (Field)
+import Data.Schema as Schema exposing (Schema)
 import Json.Decode as JD exposing (Decoder)
 import Json.Decode.Pipeline exposing (decode, required)
-import Schema exposing (Schema)
 
 
 type alias SchemaWithEntities =
@@ -27,7 +27,7 @@ schemaWithEntitiesDecoder : Decoder SchemaWithEntities
 schemaWithEntitiesDecoder =
     decode SchemaWithEntities
         |> required "schema" Schema.decoder
-        |> required "entities" (JD.list Entity.Decoder)
+        |> required "entities" (JD.list Entity.decoder)
 
 
 type alias EntityWithSchema =

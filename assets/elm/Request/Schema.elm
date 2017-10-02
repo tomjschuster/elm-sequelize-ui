@@ -8,11 +8,11 @@ module Request.Schema
         , update
         )
 
+import Data.Combined as Combined exposing (SchemaWithEntities)
 import Data.Schema as Schema exposing (Schema)
 import Http
 import Json.Decode as JD
-import Json.Encode as JE
-import Utils.Http exposing (baseUrl, delete, put)
+import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
 
 schemasUrl : String
@@ -20,9 +20,9 @@ schemasUrl =
     baseUrl ++ "schemas/"
 
 
-embedEntities : String -> String
-embedEntities =
-    flip (++) "?_embed=entities"
+withEntities : String -> String
+withEntities =
+    flip (++) "?entities=show"
 
 
 schemaUrl : Int -> String
@@ -32,12 +32,14 @@ schemaUrl =
 
 all : Http.Request (List Schema)
 all =
-    Http.get (embedEntities schemasUrl) (JD.list Schema.decoder)
+    Http.get
+        schemasUrl
+        (dataDecoder (JD.list Schema.decoder))
 
 
-oneWithEntities : Int -> Http.Request Schema
+oneWithEntities : Int -> Http.Request SchemaWithEntities
 oneWithEntities id =
-    Http.get (schemaUrl id |> embedEntities) Schema.decoder
+    Http.get (schemaUrl id |> withEntities) Combined.schemaWithEntitiesDecoder
 
 
 one : Int -> Http.Request Schema
@@ -49,13 +51,15 @@ create : String -> Http.Request Schema
 create name =
     Http.post
         schemasUrl
-        (JE.object [ ( "name", JE.string name ) ] |> Http.jsonBody)
-        Schema.decoder
+        (Schema.encodeNewSchema name |> Http.jsonBody)
+        (dataDecoder Schema.decoder)
 
 
 update : Schema -> Http.Request Schema
 update schema =
-    put (schemaUrl schema.id) (Http.jsonBody (Schema.encode schema)) Schema.decoder
+    put (schemaUrl schema.id)
+        (Http.jsonBody (Schema.encode schema))
+        (dataDecoder Schema.decoder)
 
 
 destroy : Int -> Http.Request ()

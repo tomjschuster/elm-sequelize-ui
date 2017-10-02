@@ -9,6 +9,7 @@ module Page.Schema
         , view
         )
 
+import Data.Combined exposing (SchemaWithEntities)
 import Data.Entity exposing (Entity)
 import Data.Schema as Schema exposing (Schema)
 import Html
@@ -40,6 +41,7 @@ import Views.Breadcrumbs as BC
 
 type alias Model =
     { schema : Schema
+    , entities : List Entity
     , editingName : Maybe String
     , newEntityInput : String
     , editingEntity : Maybe Entity
@@ -50,12 +52,12 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model Schema.empty Nothing "" Nothing Nothing Nothing
+    Model Schema.empty [] Nothing "" Nothing Nothing Nothing
 
 
 init : Int -> Cmd Msg
 init id =
-    RS.oneWithEntities id |> Http.send LoadSchema
+    RS.oneWithEntities id |> Http.send LoadSchemaWithEntities
 
 
 
@@ -65,6 +67,7 @@ init id =
 type Msg
     = Goto Route
       -- SCHEMA
+    | LoadSchemaWithEntities (Result Http.Error SchemaWithEntities)
     | LoadSchema (Result Http.Error Schema)
     | EditSchemaName
     | InputSchemaName String
@@ -92,6 +95,19 @@ update msg model =
             ( model, Router.goto route )
 
         -- SCHEMA
+        LoadSchemaWithEntities (Ok { schema, entities }) ->
+            ( { model
+                | schema = schema
+                , entities = entities
+                , editingName = Nothing
+                , error = Nothing
+              }
+            , Cmd.none
+            )
+
+        LoadSchemaWithEntities (Err error) ->
+            ( { model | error = Just "Error loading schema" }, Cmd.none )
+
         LoadSchema (Ok schema) ->
             ( { model
                 | schema = schema
@@ -142,7 +158,7 @@ update msg model =
 
         LoadEntity (Ok entity) ->
             ( { model
-                | schema = addEntity model.schema entity
+                | entities = model.entities ++ [ entity ]
                 , newEntityInput = ""
                 , error = Nothing
               }
@@ -154,7 +170,7 @@ update msg model =
 
         EditEntityName id ->
             ( { model
-                | editingEntity = getEditingEntity id model.schema.entities
+                | editingEntity = getEditingEntity id model.entities
               }
             , Cmd.none
             )
@@ -179,7 +195,7 @@ update msg model =
 
         UpdateEntity (Ok entity) ->
             ( { model
-                | schema = updateEntity model.schema entity
+                | entities = List.map (replaceEntity entity) model.entities
                 , editingEntity = Nothing
                 , error = Nothing
               }
@@ -197,7 +213,10 @@ update msg model =
 
         RemoveEntity (Ok ()) ->
             ( { model
-                | schema = removeEntity model.schema model.toDeleteId
+                | entities =
+                    List.filter
+                        (.id >> Just >> (/=) model.toDeleteId)
+                        model.entities
                 , error = Nothing
               }
             , Cmd.none
@@ -227,11 +246,6 @@ updateSchemaName schema name =
 -- ENTITIES UPDATE
 
 
-addEntity : Schema -> Entity -> Schema
-addEntity schema entity =
-    { schema | entities = schema.entities ++ [ entity ] }
-
-
 getEditingEntity : Int -> List Entity -> Maybe Entity
 getEditingEntity id =
     List.filter (.id >> (==) id) >> List.head
@@ -242,25 +256,12 @@ updateEntityName name entity =
     { entity | name = name }
 
 
-updateEntity : Schema -> Entity -> Schema
-updateEntity schema entity =
-    { schema | entities = List.map (replaceEntity entity) schema.entities }
-
-
 replaceEntity : Entity -> Entity -> Entity
 replaceEntity newEntity entity =
     if entity.id == newEntity.id then
-        Debug.log ";lkj" newEntity
+        newEntity
     else
         entity
-
-
-removeEntity : Schema -> Maybe Int -> Schema
-removeEntity schema maybeId =
-    { schema
-        | entities =
-            List.filter (.id >> Just >> (/=) maybeId) schema.entities
-    }
 
 
 
@@ -277,11 +278,11 @@ subscriptions model =
 
 
 view : Model -> Html Msg
-view { schema, editingName, newEntityInput, editingEntity } =
+view { schema, entities, editingName, newEntityInput, editingEntity } =
     main_ []
         [ breadCrumbs schema
         , nameView editingName schema.name
-        , entitiesView editingEntity schema.entities newEntityInput
+        , entitiesView editingEntity entities newEntityInput
         ]
 
 

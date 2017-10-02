@@ -1,6 +1,17 @@
-module Request.Entity exposing (all, create, destroy, one, oneWithFields, update)
+module Request.Entity
+    exposing
+        ( all
+        , create
+        , destroy
+        , one
+        , oneWithAll
+        , oneWithFields
+        , oneWithSchema
+        , update
+        )
 
 import Data.Entity as Entity exposing (Entity)
+import Data.Schema as Schema exposing (Schema)
 import Http exposing (Request)
 import Json.Decode as JD
 import Json.Encode as JE
@@ -12,9 +23,19 @@ entitiesUrl =
     baseUrl ++ "entities/"
 
 
-embedFields : String -> String
-embedFields =
-    flip (++) "?_embed=fields"
+withAssociations : String -> String
+withAssociations =
+    flip (++) "?"
+
+
+withFields : String -> String
+withFields =
+    flip (++) "&entities=show"
+
+
+withSchema : String -> String
+withSchema =
+    flip (++) "&schema=show"
 
 
 entityUrl : Int -> String
@@ -22,19 +43,8 @@ entityUrl =
     toString >> (++) entitiesUrl
 
 
-all : Request (List Entity)
-all =
-    Http.get entitiesUrl (JD.list Entity.decoder)
 
-
-one : Int -> Request Entity
-one id =
-    Http.get (entityUrl id) Entity.decoder
-
-
-oneWithFields : Int -> Http.Request Entity
-oneWithFields id =
-    Http.get (entityUrl id |> embedFields) Entity.decoder
+-- CREATE
 
 
 create : String -> Int -> Request Entity
@@ -49,9 +59,43 @@ create name schemaId =
         Entity.decoder
 
 
-destroy : Int -> Request ()
-destroy id =
-    delete (entityUrl id)
+
+-- READ
+
+
+all : Request (List Entity)
+all =
+    Http.get entitiesUrl (JD.list Entity.decoder)
+
+
+one : Int -> Request Entity
+one id =
+    Http.get (entityUrl id) Entity.decoder
+
+
+oneWithSchema : Int -> Http.Request Entity
+oneWithSchema id =
+    Http.get
+        (entityUrl id |> withAssociations |> withSchema)
+        Entity.decoder
+
+
+oneWithFields : Int -> Http.Request Entity
+oneWithFields id =
+    Http.get
+        (entityUrl id |> withAssociations |> withFields)
+        Entity.decoder
+
+
+oneWithAll : Int -> Http.Request Entity
+oneWithAll id =
+    Http.get
+        (entityUrl id |> withAssociations |> withSchema |> withFields)
+        Entity.decoder
+
+
+
+-- UPDATE
 
 
 update : Entity -> Request Entity
@@ -60,3 +104,12 @@ update entity =
         (entityUrl entity.id)
         (Entity.encode entity |> Http.jsonBody)
         Entity.decoder
+
+
+
+-- DELETE
+
+
+destroy : Int -> Request ()
+destroy id =
+    delete (entityUrl id)

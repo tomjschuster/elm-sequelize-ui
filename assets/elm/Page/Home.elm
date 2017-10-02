@@ -67,6 +67,10 @@ update msg model =
             ( { model | schemas = schemas, error = Nothing }, Cmd.none )
 
         LoadSchemas (Err error) ->
+            let
+                x =
+                    Debug.log "a" error
+            in
             ( { model | error = Just "Error loading schemas" }, Cmd.none )
 
         -- CREATE SCHEMA

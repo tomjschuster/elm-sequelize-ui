@@ -1,7 +1,7 @@
-module Utils.Http exposing (baseUrl, delete, put)
+module Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
 import Http
-import Json.Decode as JD
+import Json.Decode as JD exposing (Decoder)
 
 
 delete : String -> Http.Request ()
@@ -32,4 +32,9 @@ put url body decoder =
 
 baseUrl : String
 baseUrl =
-    "http://localhost:4001/"
+    "http://localhost:4000/api/"
+
+
+dataDecoder : Decoder a -> Decoder a
+dataDecoder decoder =
+    JD.field "data" decoder
