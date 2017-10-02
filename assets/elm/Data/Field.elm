@@ -22,12 +22,12 @@ decoder =
     decode Field
         |> required "id" int
         |> required "name" string
-        |> required "entityId" int
+        |> required "entity_id" int
 
 
 encode : Field -> Value
 encode { name, entityId } =
     JE.object
         [ ( "name", JE.string name )
-        , ( "entityId", JE.int entityId )
+        , ( "entity_id", JE.int entityId )
         ]

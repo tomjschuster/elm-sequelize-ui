@@ -1,4 +1,4 @@
-module Data.Entity exposing (Entity, decoder, empty, encode)
+module Data.Entity exposing (Entity, decoder, empty, encode, encodeNewEntity)
 
 import Data.Field as Field exposing (Field)
 import Json.Decode as JD exposing (Decoder, int, string)
@@ -10,7 +10,6 @@ type alias Entity =
     { id : Int
     , name : String
     , schemaId : Int
-    , fields : List Field
     }
 
 
@@ -19,7 +18,6 @@ empty =
     { id = 0
     , name = ""
     , schemaId = 0
-    , fields = []
     }
 
 
@@ -29,12 +27,27 @@ decoder =
         |> required "id" int
         |> required "name" string
         |> required "schemaId" int
-        |> optional "fields" (JD.list Field.decoder) []
 
 
 encode : Entity -> Value
 encode entity =
     JE.object
-        [ ( "name", JE.string entity.name )
-        , ( "schemaId", JE.int entity.schemaId )
+        [ ( "entity"
+          , JE.object
+                [ ( "name", JE.string entity.name )
+                , ( "schema_id", JE.int entity.schemaId )
+                ]
+          )
+        ]
+
+
+encodeNewEntity : String -> Int -> Value
+encodeNewEntity name schemaId =
+    JE.object
+        [ ( "entity"
+          , JE.object
+                [ ( "name", JE.string name )
+                , ( "schema_id", JE.int schemaId )
+                ]
+          )
         ]

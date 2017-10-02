@@ -1,5 +1,6 @@
 module Page.Entity exposing (Model, Msg, init, initialModel, update, view)
 
+import Data.Combined as Combined exposing (EntityWithAll)
 import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
 import Data.Schema as Schema exposing (Schema)
@@ -21,6 +22,7 @@ import Views.Breadcrumbs as BC
 type alias Model =
     { schema : Schema
     , entity : Entity
+    , fields : List Field
     , editingName : Maybe String
     , newFieldInput : String
     , editingField : Maybe Field
@@ -31,7 +33,7 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model Schema.empty Entity.empty Nothing "" Nothing Nothing Nothing
+    Model Schema.empty Entity.empty [] Nothing "" Nothing Nothing Nothing
 
 
 type alias InitialData =
@@ -42,11 +44,9 @@ type alias InitialData =
 
 init : Int -> Int -> Cmd Msg
 init schemaId id =
-    Task.map2
-        InitialData
-        (RS.one schemaId |> Http.toTask)
-        (RE.oneWithFields id |> Http.toTask)
-        |> Task.attempt LoadInitialData
+    RE.oneWithAll id
+        |> Http.toTask
+        |> Task.attempt LoadEntityWithAll
 
 
 
@@ -55,7 +55,7 @@ init schemaId id =
 
 type Msg
     = Goto Route
-    | LoadInitialData (Result Http.Error InitialData)
+    | LoadEntityWithAll (Result Http.Error EntityWithAll)
       -- ENTITY
     | LoadEntity (Result Http.Error Entity)
     | EditEntityName
@@ -83,16 +83,17 @@ update msg model =
         Goto route ->
             ( model, Router.goto route )
 
-        LoadInitialData (Ok { schema, entity }) ->
+        LoadEntityWithAll (Ok { schema, entity, fields }) ->
             ( { model
                 | entity = entity
                 , schema = schema
+                , fields = fields
                 , error = Nothing
               }
             , Cmd.none
             )
 
-        LoadInitialData (Err error) ->
+        LoadEntityWithAll (Err error) ->
             ( { model | error = Just "Error loading model" }, Cmd.none )
 
         -- ENTITY
@@ -149,7 +150,7 @@ update msg model =
 
         LoadNewField (Ok field) ->
             ( { model
-                | entity = addNewField model.entity field
+                | fields = model.fields ++ [ field ]
                 , newFieldInput = ""
                 , error = Nothing
               }
@@ -162,7 +163,7 @@ update msg model =
         EditFieldName id ->
             ( { model
                 | editingField =
-                    model.entity.fields
+                    model.fields
                         |> List.filter (.id >> (==) id)
                         |> List.head
               }
@@ -189,7 +190,7 @@ update msg model =
 
         UpdateField (Ok field) ->
             ( { model
-                | entity = updateField model.entity field
+                | fields = List.map (replaceField field) model.fields
                 , editingField = Nothing
                 , error = Nothing
               }
@@ -206,10 +207,10 @@ update msg model =
 
         RemoveField (Ok ()) ->
             ( { model
-                | entity =
+                | fields =
                     model.toDeleteId
-                        |> Maybe.map (removeField model.entity)
-                        |> Maybe.withDefault model.entity
+                        |> Maybe.map (removeField model.fields)
+                        |> Maybe.withDefault model.fields
               }
             , Cmd.none
             )
@@ -223,19 +224,9 @@ updateEntityName entity name =
     { entity | name = name }
 
 
-addNewField : Entity -> Field -> Entity
-addNewField entity field =
-    { entity | fields = entity.fields ++ [ field ] }
-
-
 updateFieldName : String -> Field -> Field
 updateFieldName name field =
     { field | name = name }
-
-
-updateField : Entity -> Field -> Entity
-updateField entity field =
-    { entity | fields = List.map (replaceField field) entity.fields }
 
 
 replaceField : Field -> Field -> Field
@@ -246,9 +237,9 @@ replaceField newField field =
         field
 
 
-removeField : Entity -> Int -> Entity
-removeField entity id =
-    { entity | fields = List.filter (.id >> (/=) id) entity.fields }
+removeField : List Field -> Int -> List Field
+removeField fields id =
+    List.filter (.id >> (/=) id) fields
 
 
 
@@ -256,11 +247,11 @@ removeField entity id =
 
 
 view : Model -> Html Msg
-view { schema, entity, editingName, newFieldInput, editingField } =
+view { schema, entity, fields, editingName, newFieldInput, editingField } =
     main_ []
         [ breadCrumbs schema entity
         , nameView editingName entity.name
-        , fieldsView newFieldInput editingField schema.id entity.fields
+        , fieldsView newFieldInput editingField schema.id fields
         ]
 
 

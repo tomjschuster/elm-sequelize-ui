@@ -21,7 +21,7 @@ defmodule SequelizeUiWeb.SchemaController do
   end
 
   def show(conn, %{"id" => id} = params) do
-    if params["entities"] == "true" do
+    if params["entities"] == "show" do
       schema = DbDesign.get_schema_with_entities!(id)
       render(conn, "show-with-entities.json", schema: schema)
     else

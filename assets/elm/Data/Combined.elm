@@ -1,11 +1,13 @@
 module Data.Combined
     exposing
         ( EntityWithAll
+        , EntityWithFields
         , EntityWithSchema
         , FieldWithAll
         , FieldWithEntity
         , SchemaWithEntities
         , entityWithAllDecoder
+        , entityWithFieldsDecoder
         , entityWithSchemaDecoder
         , fieldWithAllDecoder
         , fieldWithEntityDecoder
@@ -41,8 +43,19 @@ entityWithSchemaDecoder =
         |> required "schema" Schema.decoder
 
 
+type alias EntityWithFields =
+    { entity : Entity, fields : List Field }
+
+
+entityWithFieldsDecoder : Decoder EntityWithFields
+entityWithFieldsDecoder =
+    decode EntityWithFields
+        |> required "entity" Entity.decoder
+        |> required "fields" (JD.list Field.decoder)
+
+
 type alias EntityWithAll =
-    { entity : Entity, schema : Schema, field : List Field }
+    { entity : Entity, schema : Schema, fields : List Field }
 
 
 entityWithAllDecoder : Decoder EntityWithAll

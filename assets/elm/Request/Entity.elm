@@ -10,12 +10,11 @@ module Request.Entity
         , update
         )
 
+import Data.Combined as Combined exposing (EntityWithAll, EntityWithFields, EntityWithSchema)
 import Data.Entity as Entity exposing (Entity)
-import Data.Schema as Schema exposing (Schema)
 import Http exposing (Request)
 import Json.Decode as JD
-import Json.Encode as JE
-import Utils.Http exposing (baseUrl, delete, put)
+import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
 
 entitiesUrl : String
@@ -30,12 +29,17 @@ withAssociations =
 
 withFields : String -> String
 withFields =
-    flip (++) "&entities=show"
+    flip (++) "?" >> flip (++) "&fields=show"
 
 
 withSchema : String -> String
 withSchema =
-    flip (++) "&schema=show"
+    flip (++) "?" >> flip (++) "&schema=show"
+
+
+withAll : String -> String
+withAll =
+    flip (++) "?" >> flip (++) "&schema=show" >> flip (++) "&fields=show"
 
 
 entityUrl : Int -> String
@@ -50,13 +54,8 @@ entityUrl =
 create : String -> Int -> Request Entity
 create name schemaId =
     Http.post entitiesUrl
-        (JE.object
-            [ ( "name", JE.string name )
-            , ( "schemaId", JE.int schemaId )
-            ]
-            |> Http.jsonBody
-        )
-        Entity.decoder
+        (Entity.encodeNewEntity name schemaId |> Http.jsonBody)
+        (dataDecoder Entity.decoder)
 
 
 
@@ -73,25 +72,25 @@ one id =
     Http.get (entityUrl id) Entity.decoder
 
 
-oneWithSchema : Int -> Http.Request Entity
+oneWithSchema : Int -> Http.Request EntityWithSchema
 oneWithSchema id =
     Http.get
-        (entityUrl id |> withAssociations |> withSchema)
-        Entity.decoder
+        (entityUrl id |> withSchema)
+        (dataDecoder Combined.entityWithSchemaDecoder)
 
 
-oneWithFields : Int -> Http.Request Entity
+oneWithFields : Int -> Http.Request EntityWithFields
 oneWithFields id =
     Http.get
-        (entityUrl id |> withAssociations |> withFields)
-        Entity.decoder
+        (entityUrl id |> withFields)
+        (dataDecoder Combined.entityWithFieldsDecoder)
 
 
-oneWithAll : Int -> Http.Request Entity
+oneWithAll : Int -> Http.Request EntityWithAll
 oneWithAll id =
     Http.get
-        (entityUrl id |> withAssociations |> withSchema |> withFields)
-        Entity.decoder
+        (entityUrl id |> withAll)
+        (dataDecoder Combined.entityWithAllDecoder)
 
 
 
@@ -103,7 +102,7 @@ update entity =
     put
         (entityUrl entity.id)
         (Entity.encode entity |> Http.jsonBody)
-        Entity.decoder
+        (dataDecoder Entity.decoder)
 
 
 

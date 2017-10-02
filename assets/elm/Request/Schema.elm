@@ -39,7 +39,9 @@ all =
 
 oneWithEntities : Int -> Http.Request SchemaWithEntities
 oneWithEntities id =
-    Http.get (schemaUrl id |> withEntities) Combined.schemaWithEntitiesDecoder
+    Http.get
+        (schemaUrl id |> withEntities)
+        (dataDecoder Combined.schemaWithEntitiesDecoder)
 
 
 one : Int -> Http.Request Schema

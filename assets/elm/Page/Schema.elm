@@ -106,6 +106,10 @@ update msg model =
             )
 
         LoadSchemaWithEntities (Err error) ->
+            let
+                a =
+                    Debug.log "a" error
+            in
             ( { model | error = Just "Error loading schema" }, Cmd.none )
 
         LoadSchema (Ok schema) ->

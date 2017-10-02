@@ -7,6 +7,7 @@ defmodule SequelizeUiWeb.FallbackController do
   use SequelizeUiWeb, :controller
 
   def call(conn, {:error, %Ecto.Changeset{} = changeset}) do
+    IO.inspect changeset
     conn
     |> put_status(:unprocessable_entity)
     |> render(SequelizeUiWeb.ChangesetView, "error.json", changeset: changeset)
