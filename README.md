@@ -1,13 +1,9 @@
 # TODO
-* Set up Navigation program
-* Move Schemas to new module/page
-* Create SingleSchema page
-* Create SingleModel page
-* Model fields
-* Node server
+* Field properties
 * Template builder
+* Elm CSS
+* UI/UX
 * Deployment
-* Persistence
 * Users/Sessions
 * Github integration
 * Testing
