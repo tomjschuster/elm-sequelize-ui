@@ -22,11 +22,6 @@ entitiesUrl =
     baseUrl ++ "entities/"
 
 
-withAssociations : String -> String
-withAssociations =
-    flip (++) "?"
-
-
 withFields : String -> String
 withFields =
     flip (++) "?" >> flip (++) "&fields=show"
