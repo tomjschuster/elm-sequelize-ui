@@ -6,8 +6,9 @@ defmodule SequelizeUi.DbDesign.Field do
 
   schema "field" do
     field :name, :string
+    field :entity_id, :integer
 
-    belongs_to :entity, Entity
+    belongs_to :entity, Entity, define_field: false
 
     timestamps()
   end

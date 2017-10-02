@@ -64,12 +64,12 @@ create name schemaId =
 
 all : Request (List Entity)
 all =
-    Http.get entitiesUrl (JD.list Entity.decoder)
+    Http.get entitiesUrl (dataDecoder (JD.list Entity.decoder))
 
 
 one : Int -> Request Entity
 one id =
-    Http.get (entityUrl id) Entity.decoder
+    Http.get (entityUrl id) (dataDecoder Entity.decoder)
 
 
 oneWithSchema : Int -> Http.Request EntityWithSchema

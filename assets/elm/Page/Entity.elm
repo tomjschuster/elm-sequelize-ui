@@ -10,7 +10,6 @@ import Html.Events exposing (onClick, onInput)
 import Http
 import Request.Entity as RE
 import Request.Field as RF
-import Request.Schema as RS
 import Router exposing (Route)
 import Task
 import Views.Breadcrumbs as BC
@@ -94,6 +93,10 @@ update msg model =
             )
 
         LoadEntityWithAll (Err error) ->
+            let
+                a =
+                    Debug.log "a" error
+            in
             ( { model | error = Just "Error loading model" }, Cmd.none )
 
         -- ENTITY

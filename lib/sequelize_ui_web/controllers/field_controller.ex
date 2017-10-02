@@ -22,10 +22,10 @@ defmodule SequelizeUiWeb.FieldController do
 
   def show(conn, %{"id" => id} = params) do
     case {params["schema"], params["entity"]} do
-      {"true", "true"} ->
+      {"show", "show"} ->
         field = DbDesign.get_field_with_all!(id)
         render(conn, "show-with-all.json", field: field)
-      {_, "true"} ->
+      {_, "show"} ->
         field = DbDesign.get_field_with_entity!(id)
         render(conn, "show-with-entity.json", field: field)
       {_, _} ->
