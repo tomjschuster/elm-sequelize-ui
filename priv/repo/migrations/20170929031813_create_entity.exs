@@ -4,7 +4,7 @@ defmodule SequelizeUi.Repo.Migrations.CreateEntity do
   def change do
     create table(:entity) do
       add :name, :string, null: false
-      add :schema_id, references(:schema, on_delete: :nothing), null: false
+      add :schema_id, references(:schema, on_delete: :delete_all), null: false
 
       timestamps()
     end
