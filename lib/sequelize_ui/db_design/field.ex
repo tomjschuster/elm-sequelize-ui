@@ -19,5 +19,6 @@ defmodule SequelizeUi.DbDesign.Field do
     |> cast(attrs, [:name, :entity_id])
     |> validate_required([:name, :entity_id])
     |> assoc_constraint(:entity)
+    |> unique_constraint(:entity_id, name: :field_entity_id_name_index)
   end
 end

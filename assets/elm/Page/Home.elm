@@ -42,15 +42,13 @@ type Msg
     | LoadSchemas (Result Http.Error (List Schema))
       -- CREATE SCHEMA
     | InputSchemaName String
-    | ValidateNewSchema
-    | CreateSchema (Result String Schema)
+    | CreateSchema
     | LoadNewSchema (Result Http.Error Schema)
       -- EDIT SCHEMA
     | EditSchema Int
     | InputEditingSchemaName String
     | CancelEditSchemaName
-    | ValidateUpdatedSchema
-    | UpdateSchema (Result String Schema)
+    | UpdateSchema
     | LoadUpdatedSchema (Result Http.Error Schema)
       -- DELETE SCHEMA
     | DestroySchema Int
@@ -77,19 +75,10 @@ update msg model =
         InputSchemaName name ->
             ( { model | schemaNameInput = name }, Cmd.none )
 
-        ValidateNewSchema ->
-            ( model
-            , validateSchema model.schemas (draftSchema model.schemaNameInput)
-                |> Task.attempt CreateSchema
-            )
-
-        CreateSchema (Ok _) ->
+        CreateSchema ->
             ( { model | schemaNameInput = "" }
             , RS.create model.schemaNameInput |> Http.send LoadNewSchema
             )
-
-        CreateSchema (Err error) ->
-            ( { model | error = Just error }, Cmd.none )
 
         LoadNewSchema (Ok schema) ->
             ( { model
@@ -121,15 +110,7 @@ update msg model =
         CancelEditSchemaName ->
             ( { model | editingSchema = Nothing }, Cmd.none )
 
-        ValidateUpdatedSchema ->
-            ( model
-            , model.editingSchema
-                |> Maybe.map
-                    (validateSchema model.schemas >> Task.attempt UpdateSchema)
-                |> Maybe.withDefault Cmd.none
-            )
-
-        UpdateSchema (Ok _) ->
+        UpdateSchema ->
             case model.editingSchema of
                 Just schema ->
                     ( { model | error = Nothing }
@@ -138,9 +119,6 @@ update msg model =
 
                 Nothing ->
                     model ! []
-
-        UpdateSchema (Err error) ->
-            ( { model | error = Just error }, Cmd.none )
 
         LoadUpdatedSchema (Ok schema) ->
             ( { model
@@ -299,7 +277,7 @@ createSchemaInput name =
 
 createSchemaButton : Html Msg
 createSchemaButton =
-    button [ onClick ValidateNewSchema ] [ text "Add Schema" ]
+    button [ onClick CreateSchema ] [ text "Add Schema" ]
 
 
 
@@ -359,7 +337,7 @@ cancelEditSchemaNameButton =
 
 saveSchemaNameButton : Html Msg
 saveSchemaNameButton =
-    button [ onClick ValidateUpdatedSchema ] [ text "Save" ]
+    button [ onClick UpdateSchema ] [ text "Save" ]
 
 
 editSchemaNameButton : Int -> Html Msg

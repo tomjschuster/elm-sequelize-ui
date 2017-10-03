@@ -7,7 +7,7 @@
     <meta name="description" content="GUI for designing database schemas and exporting as Sequelize config files.">
     <meta name="author" content="Tom Schuster">
 
-    <title>Hello SequelizeUi!</title>
+    <title>Sequelize UI</title>
     <link rel="stylesheet" href="<%= static_path(@conn, "/css/app.css") %>">
   </head>
 

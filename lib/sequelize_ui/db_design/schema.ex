@@ -17,5 +17,6 @@ defmodule SequelizeUi.DbDesign.Schema do
     schema
     |> cast(attrs, [:name])
     |> validate_required([:name])
+    |> unique_constraint(:name)
   end
 end
