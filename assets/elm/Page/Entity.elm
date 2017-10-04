@@ -123,7 +123,11 @@ update msg model =
             )
 
         EditEntityName ->
-            ( { model | editingName = Just model.entity.name }
+            ( { model
+                | editingName = Just model.entity.name
+                , editingField = Nothing
+                , errors = []
+              }
             , Cmd.none
             , AppUpdate.none
             )
@@ -135,7 +139,7 @@ update msg model =
             )
 
         CancelEditEntityName ->
-            ( { model | editingName = Nothing }
+            ( { model | editingName = Nothing, errors = [] }
             , Cmd.none
             , AppUpdate.none
             )
@@ -159,7 +163,7 @@ update msg model =
             )
 
         RemoveEntity (Ok ()) ->
-            ( model
+            ( { model | errors = [] }
             , Router.goto (Router.Schema model.schema.id)
             , AppUpdate.none
             )
@@ -202,10 +206,12 @@ update msg model =
 
         EditFieldName id ->
             ( { model
-                | editingField =
+                | editingName = Nothing
+                , editingField =
                     model.fields
                         |> List.filter (.id >> (==) id)
                         |> List.head
+                , errors = []
               }
             , Cmd.none
             , AppUpdate.none
@@ -221,7 +227,7 @@ update msg model =
             )
 
         CancelEditFieldName ->
-            ( { model | editingField = Nothing }
+            ( { model | editingField = Nothing, errors = [] }
             , Cmd.none
             , AppUpdate.none
             )
@@ -258,7 +264,8 @@ update msg model =
 
         RemoveField (Ok ()) ->
             ( { model
-                | fields =
+                | errors = []
+                , fields =
                     model.toDeleteId
                         |> Maybe.map (removeField model.fields)
                         |> Maybe.withDefault model.fields

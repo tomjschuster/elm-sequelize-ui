@@ -20,6 +20,6 @@ defmodule SequelizeUi.DbDesign.Entity do
     |> cast(attrs, [:name, :schema_id])
     |> validate_required([:name, :schema_id])
     |> assoc_constraint(:schema)
-    |> unique_constraint(:schema_id, name: :entity_schema_id_name_index)
+    |> unique_constraint(:name, name: :entity_schema_id_name_index)
   end
 end

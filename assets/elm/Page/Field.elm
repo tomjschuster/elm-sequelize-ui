@@ -1,6 +1,7 @@
 module Page.Field exposing (Model, Msg, init, initialModel, update, view)
 
 import AppUpdate exposing (AppUpdate)
+import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Combined as Combined exposing (FieldWithAll)
 import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
@@ -13,6 +14,7 @@ import Request.Field as RF
 import Router exposing (Route)
 import Task exposing (Task)
 import Views.Breadcrumbs as BC
+import Views.ChangesetError as CE
 
 
 -- MODEL
@@ -23,13 +25,13 @@ type alias Model =
     , entity : Entity
     , field : Field
     , editingName : Maybe String
-    , error : Maybe String
+    , errors : List ChangesetError
     }
 
 
 initialModel : Model
 initialModel =
-    Model Schema.empty Entity.empty Field.empty Nothing Nothing
+    Model Schema.empty Entity.empty Field.empty Nothing []
 
 
 init : Int -> Int -> Int -> Cmd Msg
@@ -69,7 +71,7 @@ update msg model =
                 | schema = schema
                 , entity = entity
                 , field = field
-                , error = Nothing
+                , errors = []
               }
             , Cmd.none
             , AppUpdate.none
@@ -77,7 +79,7 @@ update msg model =
 
         LoadFieldWithAll (Err error) ->
             ( { model
-                | error = Just "Error loading initial data"
+                | errors = ChangesetError.parseHttpError error
                 , editingName = Nothing
               }
             , Cmd.none
@@ -89,14 +91,14 @@ update msg model =
             ( { model
                 | field = field
                 , editingName = Nothing
-                , error = Nothing
+                , errors = []
               }
             , Cmd.none
             , AppUpdate.none
             )
 
         LoadField (Err error) ->
-            ( { model | error = Just "Error loading field" }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -144,7 +146,7 @@ update msg model =
             )
 
         RemoveField (Err error) ->
-            ( { model | error = Just "Error deleting field" }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -164,7 +166,7 @@ view { schema, entity, field, editingName } =
     main_
         []
         [ breadcrumbs schema entity field
-        , nameView editingName field.name
+        , title editingName field.name
         ]
 
 
@@ -178,8 +180,8 @@ breadcrumbs schema entity field =
 -- FIELD VIEW
 
 
-nameView : Maybe String -> String -> Html Msg
-nameView editingName name =
+title : Maybe String -> String -> Html Msg
+title editingName name =
     section [] (nameViewChildren name editingName)
 
 

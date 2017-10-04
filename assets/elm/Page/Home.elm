@@ -103,14 +103,15 @@ update msg model =
             )
 
         CreateSchema ->
-            ( { model | schemaNameInput = "" }
+            ( { model | editingSchema = Nothing }
             , RS.create model.schemaNameInput |> Http.send LoadNewSchema
             , AppUpdate.none
             )
 
         LoadNewSchema (Ok schema) ->
             ( { model
-                | schemas = model.schemas ++ [ schema ]
+                | schemaNameInput = ""
+                , schemas = model.schemas ++ [ schema ]
                 , errors = []
               }
             , Cmd.none
@@ -128,6 +129,7 @@ update msg model =
             ( { model
                 | editingSchema =
                     model.schemas |> List.filter (.id >> (==) id) |> List.head
+                , errors = []
               }
             , Cmd.none
             , AppUpdate.none
@@ -143,7 +145,7 @@ update msg model =
             )
 
         CancelEditSchemaName ->
-            ( { model | editingSchema = Nothing }
+            ( { model | editingSchema = Nothing, errors = [] }
             , Cmd.none
             , AppUpdate.none
             )
@@ -188,7 +190,7 @@ update msg model =
 
         -- DELETE SCHEMA
         DestroySchema id ->
-            ( { model | toDeleteId = Just id }
+            ( { model | editingSchema = Nothing, toDeleteId = Just id }
             , RS.destroy id |> Http.send RemoveSchema
             , AppUpdate.none
             )
@@ -204,7 +206,10 @@ update msg model =
             )
 
         RemoveSchema (Err error) ->
-            ( { model | errors = ChangesetError.parseHttpError error, toDeleteId = Nothing }
+            ( { model
+                | errors = ChangesetError.parseHttpError error
+                , toDeleteId = Nothing
+              }
             , Cmd.none
             , AppUpdate.none
             )

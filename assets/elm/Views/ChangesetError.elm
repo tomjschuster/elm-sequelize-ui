@@ -19,7 +19,7 @@ view : List ChangesetError -> Html msg
 view errors =
     section
         [ class "changeset-errors" ]
-        (heading :: List.map errorView errors)
+        [ heading, ul [] (List.map errorList errors |> List.concat) ]
 
 
 heading : Html msg
@@ -27,15 +27,11 @@ heading =
     h3 [] [ text "Errors" ]
 
 
-errorView : ChangesetError -> Html msg
-errorView { field, messages } =
-    section
-        [ class "changeset-field-error" ]
-        [ h4 [] [ text field ]
-        , ul [] (List.map messageView messages)
-        ]
+errorList : ChangesetError -> List (Html msg)
+errorList { field, messages } =
+    List.map (messageView field) messages
 
 
-messageView : String -> Html msg
-messageView message =
-    li [] [ text message ]
+messageView : String -> String -> Html msg
+messageView string message =
+    li [] [ text (string ++ " " ++ message) ]
