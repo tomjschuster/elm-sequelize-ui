@@ -1,7 +1,25 @@
 module Page.Home exposing (Model, Msg, init, initialModel, subscriptions, update, view)
 
+import AppUpdate exposing (AppUpdate)
+import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Schema as Schema exposing (Schema)
-import Html exposing (Html, a, aside, button, div, h2, input, li, main_, p, text, ul)
+import Html
+    exposing
+        ( Html
+        , a
+        , aside
+        , button
+        , div
+        , h2
+        , h3
+        , input
+        , li
+        , main_
+        , p
+        , section
+        , text
+        , ul
+        )
 import Html.Attributes exposing (href, value)
 import Html.Events as Events exposing (onClick, onInput)
 import Http
@@ -9,6 +27,7 @@ import Request.Schema as RS
 import Router exposing (Route)
 import Task exposing (Task)
 import Views.Breadcrumbs as BC
+import Views.ChangesetError as CE
 
 
 -- MODEL
@@ -19,13 +38,13 @@ type alias Model =
     , schemaNameInput : String
     , editingSchema : Maybe Schema
     , toDeleteId : Maybe Int
-    , error : Maybe String
+    , errors : List ChangesetError
     }
 
 
 initialModel : Model
 initialModel =
-    Model [] "" Nothing Nothing Nothing
+    Model [] "" Nothing Nothing []
 
 
 init : Cmd Msg
@@ -55,49 +74,64 @@ type Msg
     | RemoveSchema (Result Http.Error ())
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, AppUpdate )
 update msg model =
     case msg of
         Goto route ->
-            ( model, Router.goto route )
+            ( model
+            , Router.goto route
+            , AppUpdate.none
+            )
 
         LoadSchemas (Ok schemas) ->
-            ( { model | schemas = schemas, error = Nothing }, Cmd.none )
+            ( { model | schemas = schemas, errors = [] }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         LoadSchemas (Err error) ->
-            let
-                x =
-                    Debug.log "a" error
-            in
-            ( { model | error = Just "Error loading schemas" }, Cmd.none )
+            ( { model | errors = changesetError error }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         -- CREATE SCHEMA
         InputSchemaName name ->
-            ( { model | schemaNameInput = name }, Cmd.none )
+            ( { model | schemaNameInput = name }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         CreateSchema ->
             ( { model | schemaNameInput = "" }
             , RS.create model.schemaNameInput |> Http.send LoadNewSchema
+            , AppUpdate.none
             )
 
         LoadNewSchema (Ok schema) ->
             ( { model
                 | schemas = model.schemas ++ [ schema ]
-                , error = Nothing
+                , errors = []
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         LoadNewSchema (Err error) ->
-            ( { model | error = Just "Error creating schema" }, Cmd.none )
+            ( { model | errors = changesetError error }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         -- EDIT SCHEMA
         EditSchema id ->
-            let
-                schema =
+            ( { model
+                | editingSchema =
                     model.schemas |> List.filter (.id >> (==) id) |> List.head
-            in
-            ( { model | editingSchema = schema }, Cmd.none )
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         InputEditingSchemaName name ->
             ( { model
@@ -105,24 +139,32 @@ update msg model =
                     Maybe.map (\s -> { s | name = name }) model.editingSchema
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         CancelEditSchemaName ->
-            ( { model | editingSchema = Nothing }, Cmd.none )
+            ( { model | editingSchema = Nothing }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         UpdateSchema ->
             case model.editingSchema of
                 Just schema ->
-                    ( { model | error = Nothing }
+                    ( { model | errors = [] }
                     , RS.update schema |> Http.send LoadUpdatedSchema
+                    , AppUpdate.none
                     )
 
                 Nothing ->
-                    model ! []
+                    ( model
+                    , Cmd.none
+                    , AppUpdate.none
+                    )
 
         LoadUpdatedSchema (Ok schema) ->
             ( { model
-                | error = Nothing
+                | errors = []
                 , editingSchema = Nothing
                 , schemas =
                     List.map
@@ -135,26 +177,37 @@ update msg model =
                         model.schemas
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         LoadUpdatedSchema (Err error) ->
-            ( { model | error = Just "Error editing schema" }, Cmd.none )
+            ( { model | errors = changesetError error }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         -- DELETE SCHEMA
         DestroySchema id ->
-            ( { model | toDeleteId = Just id }, RS.destroy id |> Http.send RemoveSchema )
+            ( { model | toDeleteId = Just id }
+            , RS.destroy id |> Http.send RemoveSchema
+            , AppUpdate.none
+            )
 
         RemoveSchema (Ok ()) ->
             ( { model
                 | schemas = List.filter (.id >> Just >> (/=) model.toDeleteId) model.schemas
                 , toDeleteId = Nothing
-                , error = Nothing
+                , errors = []
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         RemoveSchema (Err error) ->
-            ( { model | error = Just "Error deleting schema", toDeleteId = Nothing }, Cmd.none )
+            ( { model | errors = changesetError error, toDeleteId = Nothing }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
 
 emptySchema : Schema
@@ -167,41 +220,9 @@ draftSchema name =
     { emptySchema | name = name }
 
 
-
--- SCHEMA NAME VALIDATION
-
-
-validateSchema : List Schema -> Schema -> Task String Schema
-validateSchema schemas schema =
-    Task.succeed schema
-        |> Task.andThen validateNameExists
-        |> Task.andThen (validateNameNotTaken schemas)
-
-
-validateNameExists : Schema -> Task String Schema
-validateNameExists schema =
-    if schema.name == "" then
-        Task.fail "Please enter a name"
-    else
-        Task.succeed schema
-
-
-validateNameNotTaken : List Schema -> Schema -> Task String Schema
-validateNameNotTaken schemas schema =
-    if nameTaken schema schemas then
-        Task.fail ("Schema named '" ++ schema.name ++ "' alread exists.")
-    else
-        Task.succeed schema
-
-
-nameTaken : Schema -> List Schema -> Bool
-nameTaken schema =
-    List.filter (nameConflict schema) >> List.head >> (/=) Nothing
-
-
-nameConflict : Schema -> Schema -> Bool
-nameConflict current schema =
-    current.name == schema.name && current.id /= schema.id
+changesetError : Http.Error -> List ChangesetError
+changesetError =
+    ChangesetError.parseHttpError >> Result.withDefault []
 
 
 
@@ -243,14 +264,12 @@ content model =
 
 contentChildrenView : Model -> List (Html Msg)
 contentChildrenView model =
-    model.error
-        |> Maybe.map (errorContentChildren model)
-        |> Maybe.withDefault (normalContentChildren model)
+    case model.errors of
+        [] ->
+            normalContentChildren model
 
-
-errorContentChildren : Model -> String -> List (Html Msg)
-errorContentChildren model =
-    errorMessage >> flip (::) (normalContentChildren model)
+        x :: xs ->
+            CE.view model.errors :: normalContentChildren model
 
 
 normalContentChildren : Model -> List (Html Msg)
@@ -259,11 +278,6 @@ normalContentChildren model =
     , createSchemaButton
     , schemaList model.schemas model.editingSchema
     ]
-
-
-errorMessage : String -> Html Msg
-errorMessage message =
-    aside [] [ p [] [ text message ] ]
 
 
 

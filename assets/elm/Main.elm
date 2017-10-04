@@ -1,5 +1,6 @@
 module Main exposing (..)
 
+import AppUpdate exposing (AppUpdate)
 import Html exposing (Html, div, footer, h1, header, text)
 import Navigation exposing (Location)
 import Page.Entity as Entity
@@ -26,6 +27,7 @@ main =
 type alias Model =
     { navState : ( Location, Route )
     , page : Page
+    , error : Maybe String
     }
 
 
@@ -45,7 +47,7 @@ init location =
         ( page, cmd ) =
             setRoute route
     in
-    ( Model ( location, route ) page, Cmd.map PageMsg cmd )
+    ( Model ( location, route ) page Nothing, Cmd.map PageMsg cmd )
 
 
 
@@ -82,13 +84,36 @@ update msg model =
 
         PageMsg pageMsg ->
             let
-                ( page, pageCmd ) =
+                ( page, pageCmd, appUpdate ) =
                     updatePage pageMsg model.page
             in
-            ( { model | page = page }, Cmd.map PageMsg pageCmd )
+            handleAppUpdate
+                appUpdate
+                { model | page = page }
+                (Cmd.map PageMsg pageCmd)
 
         Goto route ->
             ( model, Router.goto route )
+
+
+handleAppUpdate : AppUpdate -> Model -> Cmd Msg -> ( Model, Cmd Msg )
+handleAppUpdate appUpdate model cmd =
+    case appUpdate of
+        AppUpdate.DisplayError error ->
+            ( { model | error = Just error }, cmd )
+
+        AppUpdate.HideError ->
+            ( { model | error = Nothing }, cmd )
+
+        AppUpdate.None ->
+            ( model, cmd )
+
+
+
+--DisplayError error ->
+--    ( { model | error = Just error }, Cmd.none )
+--HideError ->
+--    ( { model | error = Nothing }, Cmd.none )
 
 
 setRoute : Route -> ( Page, Cmd PageMsg )
@@ -120,7 +145,7 @@ setRoute route =
             )
 
 
-updatePage : PageMsg -> Page -> ( Page, Cmd PageMsg )
+updatePage : PageMsg -> Page -> ( Page, Cmd PageMsg, AppUpdate )
 updatePage msg page =
     case ( msg, page ) of
         ( HomeMsg subMsg, Home subModel ) ->
@@ -136,22 +161,22 @@ updatePage msg page =
             updatePageHelper Field FieldMsg Field.update subMsg subModel
 
         ( _, _ ) ->
-            ( page, Cmd.none )
+            ( page, Cmd.none, AppUpdate.none )
 
 
 updatePageHelper :
     (model -> Page)
     -> (msg -> PageMsg)
-    -> (msg -> model -> ( model, Cmd msg ))
+    -> (msg -> model -> ( model, Cmd msg, AppUpdate ))
     -> msg
     -> model
-    -> ( Page, Cmd PageMsg )
+    -> ( Page, Cmd PageMsg, AppUpdate )
 updatePageHelper toModel toMsg pageUpdate msg model =
     let
-        ( updatedModel, cmd ) =
+        ( updatedModel, cmd, appUpdate ) =
             pageUpdate msg model
     in
-    ( toModel updatedModel, Cmd.map toMsg cmd )
+    ( toModel updatedModel, Cmd.map toMsg cmd, appUpdate )
 
 
 

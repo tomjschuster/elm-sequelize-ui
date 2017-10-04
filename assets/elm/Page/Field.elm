@@ -1,5 +1,6 @@
 module Page.Field exposing (Model, Msg, init, initialModel, update, view)
 
+import AppUpdate exposing (AppUpdate)
 import Data.Combined as Combined exposing (FieldWithAll)
 import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
@@ -54,11 +55,14 @@ type Msg
     | RemoveField (Result Http.Error ())
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, AppUpdate )
 update msg model =
     case msg of
         Goto route ->
-            ( model, Router.goto route )
+            ( model
+            , Router.goto route
+            , AppUpdate.none
+            )
 
         LoadFieldWithAll (Ok { schema, entity, field }) ->
             ( { model
@@ -68,6 +72,7 @@ update msg model =
                 , error = Nothing
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         LoadFieldWithAll (Err error) ->
@@ -76,6 +81,7 @@ update msg model =
                 , editingName = Nothing
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         -- FIELD
@@ -86,19 +92,32 @@ update msg model =
                 , error = Nothing
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         LoadField (Err error) ->
-            ( { model | error = Just "Error loading field" }, Cmd.none )
+            ( { model | error = Just "Error loading field" }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         EditFieldName ->
-            ( { model | editingName = Just model.field.name }, Cmd.none )
+            ( { model | editingName = Just model.field.name }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         InputEditFieldName name ->
-            ( { model | editingName = Just name }, Cmd.none )
+            ( { model | editingName = Just name }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         CancelEditFieldName ->
-            ( { model | editingName = Nothing }, Cmd.none )
+            ( { model | editingName = Nothing }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         SaveFieldName ->
             ( model
@@ -109,16 +128,26 @@ update msg model =
                         >> Http.send LoadField
                     )
                 |> Maybe.withDefault Cmd.none
+            , AppUpdate.none
             )
 
         Destroy ->
-            ( model, RF.destroy model.field.id |> Http.send RemoveField )
+            ( model
+            , RF.destroy model.field.id |> Http.send RemoveField
+            , AppUpdate.none
+            )
 
         RemoveField (Ok ()) ->
-            ( model, Router.goto (Router.Entity model.schema.id model.entity.id) )
+            ( model
+            , Router.goto (Router.Entity model.schema.id model.entity.id)
+            , AppUpdate.none
+            )
 
         RemoveField (Err error) ->
-            ( { model | error = Just "Error deleting field" }, Cmd.none )
+            ( { model | error = Just "Error deleting field" }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
 
 updateFieldName : Field -> String -> Field

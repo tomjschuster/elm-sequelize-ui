@@ -9,6 +9,7 @@ module Page.Schema
         , view
         )
 
+import AppUpdate exposing (AppUpdate)
 import Data.Combined exposing (SchemaWithEntities)
 import Data.Entity exposing (Entity)
 import Data.Schema as Schema exposing (Schema)
@@ -88,11 +89,14 @@ type Msg
     | RemoveEntity (Result Http.Error ())
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, AppUpdate )
 update msg model =
     case msg of
         Goto route ->
-            ( model, Router.goto route )
+            ( model
+            , Router.goto route
+            , AppUpdate.none
+            )
 
         -- SCHEMA
         LoadSchemaWithEntities (Ok { schema, entities }) ->
@@ -103,14 +107,14 @@ update msg model =
                 , error = Nothing
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         LoadSchemaWithEntities (Err error) ->
-            let
-                a =
-                    Debug.log "a" error
-            in
-            ( { model | error = Just "Error loading schema" }, Cmd.none )
+            ( { model | error = Just "Error loading schema" }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         LoadSchema (Ok schema) ->
             ( { model
@@ -119,19 +123,32 @@ update msg model =
                 , error = Nothing
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         LoadSchema (Err error) ->
-            ( { model | error = Just "Error loading schema" }, Cmd.none )
+            ( { model | error = Just "Error loading schema" }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         EditSchemaName ->
-            ( { model | editingName = Just model.schema.name }, Cmd.none )
+            ( { model | editingName = Just model.schema.name }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         InputSchemaName name ->
-            ( { model | editingName = Just name }, Cmd.none )
+            ( { model | editingName = Just name }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         CancelEditSchemaName ->
-            ( { model | editingName = Nothing }, Cmd.none )
+            ( { model | editingName = Nothing }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         SaveSchemaName ->
             ( model
@@ -139,25 +156,39 @@ update msg model =
                 |> saveSchemaName model.schema
                 |> RS.update
                 |> Http.send LoadSchema
+            , AppUpdate.none
             )
 
         Destroy ->
-            ( model, RS.destroy model.schema.id |> Http.send RemoveSchema )
+            ( model
+            , RS.destroy model.schema.id |> Http.send RemoveSchema
+            , AppUpdate.none
+            )
 
         RemoveSchema (Ok ()) ->
-            ( model, Router.goto Router.Home )
+            ( model
+            , Router.goto Router.Home
+            , AppUpdate.none
+            )
 
         RemoveSchema (Err error) ->
-            ( { model | error = Just "Error deleting schema" }, Cmd.none )
+            ( { model | error = Just "Error deleting schema" }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         -- ENTITIES
         InputNewEntityName newEntityInput ->
-            ( { model | newEntityInput = newEntityInput }, Cmd.none )
+            ( { model | newEntityInput = newEntityInput }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         CreateEntity ->
             ( model
             , RE.create model.newEntityInput model.schema.id
                 |> Http.send LoadEntity
+            , AppUpdate.none
             )
 
         LoadEntity (Ok entity) ->
@@ -167,16 +198,21 @@ update msg model =
                 , error = Nothing
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         LoadEntity (Err error) ->
-            ( { model | error = Just "Error creating entity" }, Cmd.none )
+            ( { model | error = Just "Error creating entity" }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         EditEntityName id ->
             ( { model
                 | editingEntity = getEditingEntity id model.entities
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         InputEditingEntityName name ->
@@ -185,16 +221,21 @@ update msg model =
                     Maybe.map (updateEntityName name) model.editingEntity
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         CancelEditEntityName ->
-            ( { model | editingEntity = Nothing }, Cmd.none )
+            ( { model | editingEntity = Nothing }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         SaveEntityName ->
             ( model
             , model.editingEntity
                 |> Maybe.map (RE.update >> Http.send UpdateEntity)
                 |> Maybe.withDefault Cmd.none
+            , AppUpdate.none
             )
 
         UpdateEntity (Ok entity) ->
@@ -204,15 +245,20 @@ update msg model =
                 , error = Nothing
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         UpdateEntity (Err error) ->
-            ( { model | error = Just "Error updating entity" }, Cmd.none )
+            ( { model | error = Just "Error updating entity" }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         DestroyEntity id ->
             ( { model | toDeleteId = Just id }
             , RE.destroy id
                 |> Http.send RemoveEntity
+            , AppUpdate.none
             )
 
         RemoveEntity (Ok ()) ->
@@ -224,10 +270,14 @@ update msg model =
                 , error = Nothing
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         RemoveEntity (Err error) ->
-            ( { model | error = Just "Error deleting model" }, Cmd.none )
+            ( { model | error = Just "Error deleting model" }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
 
 

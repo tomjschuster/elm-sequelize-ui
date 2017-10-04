@@ -1,5 +1,6 @@
 module Page.Entity exposing (Model, Msg, init, initialModel, update, view)
 
+import AppUpdate exposing (AppUpdate)
 import Data.Combined as Combined exposing (EntityWithAll)
 import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
@@ -76,11 +77,14 @@ type Msg
     | RemoveField (Result Http.Error ())
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Cmd Msg, AppUpdate )
 update msg model =
     case msg of
         Goto route ->
-            ( model, Router.goto route )
+            ( model
+            , Router.goto route
+            , AppUpdate.none
+            )
 
         LoadEntityWithAll (Ok { schema, entity, fields }) ->
             ( { model
@@ -90,14 +94,14 @@ update msg model =
                 , error = Nothing
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         LoadEntityWithAll (Err error) ->
-            let
-                a =
-                    Debug.log "a" error
-            in
-            ( { model | error = Just "Error loading model" }, Cmd.none )
+            ( { model | error = Just "Error loading model" }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         -- ENTITY
         LoadEntity (Ok entity) ->
@@ -107,19 +111,32 @@ update msg model =
                 , error = Nothing
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         LoadEntity (Err error) ->
-            ( { model | error = Just "Error loading model" }, Cmd.none )
+            ( { model | error = Just "Error loading model" }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         EditEntityName ->
-            ( { model | editingName = Just model.entity.name }, Cmd.none )
+            ( { model | editingName = Just model.entity.name }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         InputEntityName name ->
-            ( { model | editingName = Just name }, Cmd.none )
+            ( { model | editingName = Just name }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         CancelEditEntityName ->
-            ( { model | editingName = Nothing }, Cmd.none )
+            ( { model | editingName = Nothing }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         SaveEntityName ->
             ( model
@@ -130,25 +147,39 @@ update msg model =
                         >> Http.send LoadEntity
                     )
                 |> Maybe.withDefault Cmd.none
+            , AppUpdate.none
             )
 
         Destroy ->
-            ( model, RE.destroy model.entity.id |> Http.send RemoveEntity )
+            ( model
+            , RE.destroy model.entity.id |> Http.send RemoveEntity
+            , AppUpdate.none
+            )
 
         RemoveEntity (Ok ()) ->
-            ( model, Router.goto (Router.Schema model.schema.id) )
+            ( model
+            , Router.goto (Router.Schema model.schema.id)
+            , AppUpdate.none
+            )
 
         RemoveEntity (Err error) ->
-            ( { model | error = Just "Error deleting model" }, Cmd.none )
+            ( { model | error = Just "Error deleting model" }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         -- FIELDS
         InputNewFieldName name ->
-            ( { model | newFieldInput = name }, Cmd.none )
+            ( { model | newFieldInput = name }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         CreateField ->
             ( model
             , RF.create model.newFieldInput model.entity.id
                 |> Http.send LoadNewField
+            , AppUpdate.none
             )
 
         LoadNewField (Ok field) ->
@@ -158,10 +189,14 @@ update msg model =
                 , error = Nothing
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         LoadNewField (Err error) ->
-            ( { model | error = Just "Error creating field" }, Cmd.none )
+            ( { model | error = Just "Error creating field" }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         EditFieldName id ->
             ( { model
@@ -171,6 +206,7 @@ update msg model =
                         |> List.head
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         InputEditingFieldName name ->
@@ -179,16 +215,21 @@ update msg model =
                     Maybe.map (updateFieldName name) model.editingField
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         CancelEditFieldName ->
-            ( { model | editingField = Nothing }, Cmd.none )
+            ( { model | editingField = Nothing }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         SaveFieldName ->
             ( model
             , model.editingField
                 |> Maybe.map (RF.update >> Http.send UpdateField)
                 |> Maybe.withDefault Cmd.none
+            , AppUpdate.none
             )
 
         UpdateField (Ok field) ->
@@ -198,14 +239,19 @@ update msg model =
                 , error = Nothing
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         UpdateField (Err error) ->
-            ( { model | error = Just "Error updating field" }, Cmd.none )
+            ( { model | error = Just "Error updating field" }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         DestroyField id ->
             ( { model | toDeleteId = Just id }
             , RF.destroy id |> Http.send RemoveField
+            , AppUpdate.none
             )
 
         RemoveField (Ok ()) ->
@@ -216,10 +262,14 @@ update msg model =
                         |> Maybe.withDefault model.fields
               }
             , Cmd.none
+            , AppUpdate.none
             )
 
         RemoveField (Err error) ->
-            ( { model | error = Just "Error deleting field", toDeleteId = Nothing }, Cmd.none )
+            ( { model | error = Just "Error deleting field", toDeleteId = Nothing }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
 
 updateEntityName : Entity -> String -> Entity
