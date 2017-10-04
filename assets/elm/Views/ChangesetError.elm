@@ -1,8 +1,18 @@
-module Views.ChangesetError exposing (view)
+module Views.ChangesetError exposing (prependIfErrors, view)
 
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Html exposing (Html, h3, h4, li, section, text, ul)
 import Html.Attributes exposing (class)
+
+
+prependIfErrors : List ChangesetError -> List (Html msg) -> List (Html msg)
+prependIfErrors errors content =
+    case errors of
+        [] ->
+            content
+
+        x :: xs ->
+            view errors :: content
 
 
 view : List ChangesetError -> Html msg

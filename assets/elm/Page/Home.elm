@@ -259,17 +259,12 @@ breadCrumbs =
 
 content : Model -> Html Msg
 content model =
-    div [] (contentChildrenView model)
+    div [] (contentChildren model)
 
 
-contentChildrenView : Model -> List (Html Msg)
-contentChildrenView model =
-    case model.errors of
-        [] ->
-            normalContentChildren model
-
-        x :: xs ->
-            CE.view model.errors :: normalContentChildren model
+contentChildren : Model -> List (Html Msg)
+contentChildren model =
+    CE.prependIfErrors model.errors (normalContentChildren model)
 
 
 normalContentChildren : Model -> List (Html Msg)
