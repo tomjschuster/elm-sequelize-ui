@@ -9,11 +9,12 @@ type alias ChangesetError =
     { field : String, messages : List String }
 
 
-parseHttpError : Http.Error -> Result String (List ChangesetError)
+parseHttpError : Http.Error -> List ChangesetError
 parseHttpError =
     unprocessableEntityBody
         >> Result.fromMaybe "error parsing HTTP error body"
         >> Result.andThen decodeErrorBody
+        >> Result.withDefault []
 
 
 

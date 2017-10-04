@@ -10,6 +10,7 @@ module Page.Schema
         )
 
 import AppUpdate exposing (AppUpdate)
+import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Combined exposing (SchemaWithEntities)
 import Data.Entity exposing (Entity)
 import Data.Schema as Schema exposing (Schema)
@@ -35,6 +36,7 @@ import Request.Entity as RE
 import Request.Schema as RS
 import Router exposing (Route)
 import Views.Breadcrumbs as BC
+import Views.ChangesetError as CE
 
 
 -- MODEL
@@ -47,13 +49,13 @@ type alias Model =
     , newEntityInput : String
     , editingEntity : Maybe Entity
     , toDeleteId : Maybe Int
-    , error : Maybe String
+    , errors : List ChangesetError
     }
 
 
 initialModel : Model
 initialModel =
-    Model Schema.empty [] Nothing "" Nothing Nothing Nothing
+    Model Schema.empty [] Nothing "" Nothing Nothing []
 
 
 init : Int -> Cmd Msg
@@ -104,14 +106,14 @@ update msg model =
                 | schema = schema
                 , entities = entities
                 , editingName = Nothing
-                , error = Nothing
+                , errors = []
               }
             , Cmd.none
             , AppUpdate.none
             )
 
         LoadSchemaWithEntities (Err error) ->
-            ( { model | error = Just "Error loading schema" }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -120,14 +122,14 @@ update msg model =
             ( { model
                 | schema = schema
                 , editingName = Nothing
-                , error = Nothing
+                , errors = []
               }
             , Cmd.none
             , AppUpdate.none
             )
 
         LoadSchema (Err error) ->
-            ( { model | error = Just "Error loading schema" }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -172,7 +174,7 @@ update msg model =
             )
 
         RemoveSchema (Err error) ->
-            ( { model | error = Just "Error deleting schema" }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -195,14 +197,14 @@ update msg model =
             ( { model
                 | entities = model.entities ++ [ entity ]
                 , newEntityInput = ""
-                , error = Nothing
+                , errors = []
               }
             , Cmd.none
             , AppUpdate.none
             )
 
         LoadEntity (Err error) ->
-            ( { model | error = Just "Error creating entity" }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -242,14 +244,14 @@ update msg model =
             ( { model
                 | entities = List.map (replaceEntity entity) model.entities
                 , editingEntity = Nothing
-                , error = Nothing
+                , errors = []
               }
             , Cmd.none
             , AppUpdate.none
             )
 
         UpdateEntity (Err error) ->
-            ( { model | error = Just "Error updating entity" }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -267,14 +269,14 @@ update msg model =
                     List.filter
                         (.id >> Just >> (/=) model.toDeleteId)
                         model.entities
-                , error = Nothing
+                , errors = []
               }
             , Cmd.none
             , AppUpdate.none
             )
 
         RemoveEntity (Err error) ->
-            ( { model | error = Just "Error deleting model" }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -332,11 +334,11 @@ subscriptions model =
 
 
 view : Model -> Html Msg
-view { schema, entities, editingName, newEntityInput, editingEntity } =
+view model =
     main_ []
-        [ breadCrumbs schema
-        , nameView editingName schema.name
-        , entitiesView editingEntity entities newEntityInput
+        [ breadCrumbs model.schema
+        , title model.editingName model.schema.name
+        , content model
         ]
 
 
@@ -350,8 +352,8 @@ breadCrumbs schema =
 -- NAME VIEW
 
 
-nameView : Maybe String -> String -> Html Msg
-nameView editingName name =
+title : Maybe String -> String -> Html Msg
+title editingName name =
     section [] (nameChildren editingName name)
 
 
@@ -412,11 +414,22 @@ saveSchemaNameButton =
 -- ENTITIES VIEW
 
 
-entitiesView : Maybe Entity -> List Entity -> String -> Html Msg
-entitiesView editingEntity entities newEntityInput =
+content : Model -> Html Msg
+content model =
     section []
-        [ h3 [] [ text "Models" ]
-        , createEntityView newEntityInput
+        (entitiesTitle :: contentChildren model)
+
+
+entitiesTitle : Html msg
+entitiesTitle =
+    h3 [] [ text "Models" ]
+
+
+contentChildren : Model -> List (Html Msg)
+contentChildren { editingEntity, entities, newEntityInput, errors } =
+    CE.prependIfErrors
+        errors
+        [ createEntityView newEntityInput
         , entitiesListView editingEntity entities
         ]
 

@@ -90,7 +90,7 @@ update msg model =
             )
 
         LoadSchemas (Err error) ->
-            ( { model | errors = changesetError error }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -118,7 +118,7 @@ update msg model =
             )
 
         LoadNewSchema (Err error) ->
-            ( { model | errors = changesetError error }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -181,7 +181,7 @@ update msg model =
             )
 
         LoadUpdatedSchema (Err error) ->
-            ( { model | errors = changesetError error }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -204,7 +204,7 @@ update msg model =
             )
 
         RemoveSchema (Err error) ->
-            ( { model | errors = changesetError error, toDeleteId = Nothing }
+            ( { model | errors = ChangesetError.parseHttpError error, toDeleteId = Nothing }
             , Cmd.none
             , AppUpdate.none
             )
@@ -218,11 +218,6 @@ emptySchema =
 draftSchema : String -> Schema
 draftSchema name =
     { emptySchema | name = name }
-
-
-changesetError : Http.Error -> List ChangesetError
-changesetError =
-    ChangesetError.parseHttpError >> Result.withDefault []
 
 
 
