@@ -410,28 +410,28 @@ saveSchemaNameButton =
     button [ onClick SaveSchemaName ] [ text "Save" ]
 
 
-
--- ENTITIES VIEW
-
-
 content : Model -> Html Msg
 content model =
-    section []
-        (entitiesTitle :: contentChildren model)
+    section [] (contentChildren model)
 
 
-entitiesTitle : Html msg
-entitiesTitle =
-    h3 [] [ text "Models" ]
+
+-- ENTITIES VIEW
 
 
 contentChildren : Model -> List (Html Msg)
 contentChildren { editingEntity, entities, newEntityInput, errors } =
     CE.prependIfErrors
         errors
-        [ createEntityView newEntityInput
+        [ entitiesTitle
+        , createEntityView newEntityInput
         , entitiesListView editingEntity entities
         ]
+
+
+entitiesTitle : Html msg
+entitiesTitle =
+    h3 [] [ text "Models" ]
 
 
 createEntityView : String -> Html Msg

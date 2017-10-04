@@ -1,6 +1,7 @@
 module Page.Entity exposing (Model, Msg, init, initialModel, update, view)
 
 import AppUpdate exposing (AppUpdate)
+import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Combined as Combined exposing (EntityWithAll)
 import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
@@ -14,6 +15,7 @@ import Request.Field as RF
 import Router exposing (Route)
 import Task
 import Views.Breadcrumbs as BC
+import Views.ChangesetError as CE
 
 
 -- MODEL
@@ -27,13 +29,13 @@ type alias Model =
     , newFieldInput : String
     , editingField : Maybe Field
     , toDeleteId : Maybe Int
-    , error : Maybe String
+    , errors : List ChangesetError
     }
 
 
 initialModel : Model
 initialModel =
-    Model Schema.empty Entity.empty [] Nothing "" Nothing Nothing Nothing
+    Model Schema.empty Entity.empty [] Nothing "" Nothing Nothing []
 
 
 type alias InitialData =
@@ -91,14 +93,14 @@ update msg model =
                 | entity = entity
                 , schema = schema
                 , fields = fields
-                , error = Nothing
+                , errors = []
               }
             , Cmd.none
             , AppUpdate.none
             )
 
         LoadEntityWithAll (Err error) ->
-            ( { model | error = Just "Error loading model" }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -108,14 +110,14 @@ update msg model =
             ( { model
                 | entity = entity
                 , editingName = Nothing
-                , error = Nothing
+                , errors = []
               }
             , Cmd.none
             , AppUpdate.none
             )
 
         LoadEntity (Err error) ->
-            ( { model | error = Just "Error loading model" }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -163,7 +165,7 @@ update msg model =
             )
 
         RemoveEntity (Err error) ->
-            ( { model | error = Just "Error deleting model" }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -186,14 +188,14 @@ update msg model =
             ( { model
                 | fields = model.fields ++ [ field ]
                 , newFieldInput = ""
-                , error = Nothing
+                , errors = []
               }
             , Cmd.none
             , AppUpdate.none
             )
 
         LoadNewField (Err error) ->
-            ( { model | error = Just "Error creating field" }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -236,14 +238,14 @@ update msg model =
             ( { model
                 | fields = List.map (replaceField field) model.fields
                 , editingField = Nothing
-                , error = Nothing
+                , errors = []
               }
             , Cmd.none
             , AppUpdate.none
             )
 
         UpdateField (Err error) ->
-            ( { model | error = Just "Error updating field" }
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
             )
@@ -266,7 +268,10 @@ update msg model =
             )
 
         RemoveField (Err error) ->
-            ( { model | error = Just "Error deleting field", toDeleteId = Nothing }
+            ( { model
+                | errors = ChangesetError.parseHttpError error
+                , toDeleteId = Nothing
+              }
             , Cmd.none
             , AppUpdate.none
             )
@@ -300,11 +305,11 @@ removeField fields id =
 
 
 view : Model -> Html Msg
-view { schema, entity, fields, editingName, newFieldInput, editingField } =
+view model =
     main_ []
-        [ breadCrumbs schema entity
-        , nameView editingName entity.name
-        , fieldsView newFieldInput editingField schema.id fields
+        [ breadCrumbs model.schema model.entity
+        , title model.editingName model.entity.name
+        , content model
         ]
 
 
@@ -317,8 +322,8 @@ breadCrumbs schema entity =
 -- ENTITY NAME VIEW
 
 
-nameView : Maybe String -> String -> Html Msg
-nameView editingName name =
+title : Maybe String -> String -> Html Msg
+title editingName name =
     section [] (nameChildren editingName name)
 
 
@@ -379,15 +384,24 @@ saveEditEntityNameButton =
 -- FIELDS VIEW
 
 
-fieldsView : String -> Maybe Field -> Int -> List Field -> Html Msg
-fieldsView newFieldInput editingField schemaId fields =
-    section
-        []
-        [ h3 [] [ text "Fields" ]
-        , createFieldInput newFieldInput
+content : Model -> Html Msg
+content model =
+    section [] (contentChildren model)
+
+
+contentChildren : Model -> List (Html Msg)
+contentChildren model =
+    CE.prependIfErrors model.errors
+        [ fieldsTitle
+        , createFieldInput model.newFieldInput
         , createFieldButton
-        , fieldList editingField schemaId fields
+        , fieldList model.editingField model.schema.id model.fields
         ]
+
+
+fieldsTitle : Html msg
+fieldsTitle =
+    h3 [] [ text "Fields" ]
 
 
 createFieldInput : String -> Html Msg
