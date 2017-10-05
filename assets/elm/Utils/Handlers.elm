@@ -1,14 +1,12 @@
 module Utils.Handlers
     exposing
-        ( onEnter
+        ( customOnKeyDown
+        , onEnter
         , onEscape
         , onKeyDown
         , onPreventDefaultClick
         )
 
---import Json.Decode.Pipeline exposing
-
-import Dict exposing (Dict)
 import Html exposing (Attribute)
 import Html.Events exposing (defaultOptions, on, onWithOptions)
 import Json.Decode as JD exposing (Decoder)
