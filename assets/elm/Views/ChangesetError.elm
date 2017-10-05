@@ -33,5 +33,5 @@ errorList { field, messages } =
 
 
 messageView : String -> String -> Html msg
-messageView string message =
-    li [] [ text (string ++ " " ++ message) ]
+messageView field message =
+    li [] [ text (ChangesetError.fieldToText field ++ " " ++ message) ]

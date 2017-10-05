@@ -25,7 +25,8 @@ import Html.Events as Events exposing (onClick, onInput)
 import Http
 import Request.Schema as RS
 import Router exposing (Route)
-import Task exposing (Task)
+import Utils.Handlers exposing (onKeyDown)
+import Utils.Keys as Key exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
 
@@ -281,7 +282,12 @@ normalContentChildren model =
 
 createSchemaInput : String -> Html Msg
 createSchemaInput name =
-    input [ value name, onInput InputSchemaName ] []
+    input
+        [ value name
+        , onInput InputSchemaName
+        , onKeyDown [ Enter ] CreateSchema
+        ]
+        []
 
 
 createSchemaButton : Html Msg
@@ -336,7 +342,13 @@ schemaLink { id, name } =
 
 editSchemaNameInput : String -> Html Msg
 editSchemaNameInput name =
-    input [ value name, onInput InputEditingSchemaName ] []
+    input
+        [ value name
+        , onInput InputEditingSchemaName
+        , onKeyDown [ Enter ] UpdateSchema
+        , onKeyDown [ Escape ] CancelEditSchemaName
+        ]
+        []
 
 
 cancelEditSchemaNameButton : Html Msg
