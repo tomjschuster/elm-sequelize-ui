@@ -13,8 +13,8 @@ import Http
 import Request.Field as RF
 import Router exposing (Route)
 import Task exposing (Task)
+import Utils.Handlers exposing (onEnter, onEscape)
 import Views.Breadcrumbs as BC
-import Views.ChangesetError as CE
 
 
 -- MODEL
@@ -218,7 +218,13 @@ deleteFieldButton =
 
 fieldNameInput : String -> Html Msg
 fieldNameInput name =
-    input [ value name, onInput InputEditFieldName ] []
+    input
+        [ value name
+        , onInput InputEditFieldName
+        , onEnter SaveFieldName
+        , onEscape CancelEditFieldName
+        ]
+        []
 
 
 cancelUpdateFieldName : Html Msg

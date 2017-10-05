@@ -35,6 +35,8 @@ import Http
 import Request.Entity as RE
 import Request.Schema as RS
 import Router exposing (Route)
+import Utils.Handlers exposing (customOnKeyDown, onEnter, onEscape)
+import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
 
@@ -397,7 +399,13 @@ deleteSchemaButton =
 
 editSchemaNameInput : String -> Html Msg
 editSchemaNameInput name =
-    input [ value name, onInput InputSchemaName ] []
+    input
+        [ value name
+        , onInput InputSchemaName
+        , onEnter SaveSchemaName
+        , onEscape CancelEditSchemaName
+        ]
+        []
 
 
 cancelEditSchemaNameButton : Html Msg
@@ -437,7 +445,12 @@ entitiesTitle =
 createEntityView : String -> Html Msg
 createEntityView newEntityInput =
     div []
-        [ input [ value newEntityInput, onInput InputNewEntityName ] []
+        [ input
+            [ value newEntityInput
+            , onInput InputNewEntityName
+            , onEnter CreateEntity
+            ]
+            []
         , button [ onClick CreateEntity ] [ text "Create Model" ]
         ]
 
@@ -499,7 +512,25 @@ deleteEntityButton id =
 
 editEntityNameInput : String -> Html Msg
 editEntityNameInput name =
-    input [ value name, onInput InputEditingEntityName ] []
+    input
+        [ value name
+        , onInput InputEditingEntityName
+        , customOnKeyDown onEntityNameKeyDown
+        ]
+        []
+
+
+onEntityNameKeyDown : Key -> Maybe Msg
+onEntityNameKeyDown key =
+    case key of
+        Enter ->
+            Just SaveEntityName
+
+        Escape ->
+            Just CancelEditEntityName
+
+        _ ->
+            Nothing
 
 
 cancelEditEntityNameButton : Html Msg

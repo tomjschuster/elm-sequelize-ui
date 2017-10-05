@@ -14,6 +14,8 @@ import Request.Entity as RE
 import Request.Field as RF
 import Router exposing (Route)
 import Task
+import Utils.Handlers exposing (customOnKeyDown, onEnter, onEscape)
+import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
 
@@ -374,7 +376,13 @@ deleteEntityButton =
 
 editEntityNameInput : String -> Html Msg
 editEntityNameInput name =
-    input [ value name, onInput InputEntityName ] []
+    input
+        [ value name
+        , onInput InputEntityName
+        , onEnter SaveEntityName
+        , onEscape CancelEditEntityName
+        ]
+        []
 
 
 cancelEditEntityNameButton : Html Msg
@@ -413,7 +421,7 @@ fieldsTitle =
 
 createFieldInput : String -> Html Msg
 createFieldInput name =
-    input [ value name, onInput InputNewFieldName ] []
+    input [ value name, onInput InputNewFieldName, onEnter CreateField ] []
 
 
 createFieldButton : Html Msg
@@ -471,7 +479,25 @@ editFieldButton id =
 
 editFieldNameInput : String -> Html Msg
 editFieldNameInput name =
-    input [ value name, onInput InputEditingFieldName ] []
+    input
+        [ value name
+        , onInput InputEditingFieldName
+        , customOnKeyDown onFieldNameKeyDown
+        ]
+        []
+
+
+onFieldNameKeyDown : Key -> Maybe Msg
+onFieldNameKeyDown key =
+    case key of
+        Enter ->
+            Just SaveFieldName
+
+        Escape ->
+            Just CancelEditFieldName
+
+        _ ->
+            Nothing
 
 
 cancelEditFieldNameButton : Html Msg

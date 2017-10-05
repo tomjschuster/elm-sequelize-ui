@@ -25,7 +25,7 @@ import Html.Events as Events exposing (onClick, onInput)
 import Http
 import Request.Schema as RS
 import Router exposing (Route)
-import Utils.Handlers exposing (onKeyDown)
+import Utils.Handlers exposing (customOnKeyDown, onEnter, onEscape)
 import Utils.Keys as Key exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
@@ -285,7 +285,7 @@ createSchemaInput name =
     input
         [ value name
         , onInput InputSchemaName
-        , onKeyDown [ Enter ] CreateSchema
+        , onEnter CreateSchema
         ]
         []
 
@@ -345,10 +345,22 @@ editSchemaNameInput name =
     input
         [ value name
         , onInput InputEditingSchemaName
-        , onKeyDown [ Enter ] UpdateSchema
-        , onKeyDown [ Escape ] CancelEditSchemaName
+        , customOnKeyDown onSchemaNameKeyDown
         ]
         []
+
+
+onSchemaNameKeyDown : Key -> Maybe Msg
+onSchemaNameKeyDown key =
+    case key of
+        Enter ->
+            Just UpdateSchema
+
+        Escape ->
+            Just CancelEditSchemaName
+
+        _ ->
+            Nothing
 
 
 cancelEditSchemaNameButton : Html Msg
