@@ -1,11 +1,46 @@
-module Utils.Handlers exposing (onPreventDefaultClick)
+module Utils.Handlers
+    exposing
+        ( onEnter
+        , onEscape
+        , onKeyDown
+        , onPreventDefaultClick
+        )
 
 --import Json.Decode.Pipeline exposing
 
+import Dict exposing (Dict)
 import Html exposing (Attribute)
 import Html.Events exposing (defaultOptions, on, onWithOptions)
 import Json.Decode as JD exposing (Decoder)
-import Utils.Keys as Keys exposing (Key)
+import Utils.Keys as Keys exposing (Key(..))
+
+
+onKeyDown : List Key -> msg -> Attribute msg
+onKeyDown keys msg =
+    on "keydown" (keyCodeDecoder keys |> JD.andThen (msgBoolDecoder msg))
+
+
+customOnKeyDown : (Key -> Maybe msg) -> Attribute msg
+customOnKeyDown toMsg =
+    on "keydown"
+        (JD.field "keyCode" JD.int
+            |> JD.andThen
+                (Keys.fromKeyCode
+                    >> Maybe.andThen toMsg
+                    >> Maybe.map JD.succeed
+                    >> Maybe.withDefault (JD.fail "invalid key")
+                )
+        )
+
+
+onEnter : msg -> Attribute msg
+onEnter =
+    onKeyDown [ Enter ]
+
+
+onEscape : msg -> Attribute msg
+onEscape =
+    onKeyDown [ Escape ]
 
 
 isKeyCode : List Key -> Int -> Bool
@@ -19,11 +54,6 @@ keyCodeDecoder : List Key -> Decoder Bool
 keyCodeDecoder keys =
     JD.field "keyCode" JD.int
         |> JD.map (isKeyCode keys)
-
-
-onKeyDown : List Key -> msg -> Attribute msg
-onKeyDown keys msg =
-    on "keydown" (keyCodeDecoder keys |> JD.andThen (msgBoolDecoder msg))
 
 
 onPreventDefaultClick : msg -> Attribute msg
