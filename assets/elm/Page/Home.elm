@@ -61,7 +61,7 @@ init =
 
 type Msg
     = NoOp
-    | Focus (Result Dom.Error ())
+    | FocuseResult (Result Dom.Error ())
     | Goto Route
     | LoadSchemas (Result Http.Error (List Schema))
       -- CREATE SCHEMA
@@ -85,10 +85,10 @@ update msg model =
         NoOp ->
             ( model, Cmd.none, AppUpdate.none )
 
-        Focus (Ok ()) ->
+        FocuseResult (Ok ()) ->
             ( model, Cmd.none, AppUpdate.none )
 
-        Focus (Err _) ->
+        FocuseResult (Err _) ->
             ( model, Cmd.none, AppUpdate.none )
 
         Goto route ->
@@ -128,13 +128,13 @@ update msg model =
                 , schemas = model.schemas ++ [ schema ]
                 , errors = []
               }
-            , Cmd.none
+            , Dom.focus "create-schema" |> Task.attempt FocuseResult
             , AppUpdate.none
             )
 
         LoadNewSchema (Err error) ->
             ( { model | errors = ChangesetError.parseHttpError error }
-            , Cmd.none
+            , Dom.focus "create-schema" |> Task.attempt FocuseResult
             , AppUpdate.none
             )
 
@@ -145,7 +145,7 @@ update msg model =
                     model.schemas |> List.filter (.id >> (==) id) |> List.head
                 , errors = []
               }
-            , Dom.focus "edit-schema-name" |> Task.attempt Focus
+            , Dom.focus "edit-schema-name" |> Task.attempt FocuseResult
             , AppUpdate.none
             )
 
@@ -198,7 +198,7 @@ update msg model =
 
         LoadUpdatedSchema (Err error) ->
             ( { model | errors = ChangesetError.parseHttpError error }
-            , Cmd.none
+            , Dom.focus "edit-schema-name" |> Task.attempt FocuseResult
             , AppUpdate.none
             )
 
@@ -296,7 +296,8 @@ normalContentChildren model =
 createSchemaInput : String -> Html Msg
 createSchemaInput name =
     input
-        [ value name
+        [ id "create-schema"
+        , value name
         , onInput InputSchemaName
         , onEnter CreateSchema
         ]

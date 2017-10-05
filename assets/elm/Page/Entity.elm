@@ -15,7 +15,7 @@ import Request.Entity as RE
 import Request.Field as RF
 import Router exposing (Route)
 import Task
-import Utils.Handlers exposing (customOnKeyDown, onEnter, onEscape)
+import Utils.Handlers exposing (customOnKeyDown, onEnter)
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
@@ -60,7 +60,7 @@ init schemaId id =
 
 type Msg
     = NoOp
-    | Focus (Result Dom.Error ())
+    | FocusResult (Result Dom.Error ())
     | Goto Route
     | LoadEntityWithAll (Result Http.Error EntityWithAll)
       -- ENTITY
@@ -90,10 +90,10 @@ update msg model =
         NoOp ->
             ( model, Cmd.none, AppUpdate.none )
 
-        Focus (Ok ()) ->
+        FocusResult (Ok ()) ->
             ( model, Cmd.none, AppUpdate.none )
 
-        Focus (Err _) ->
+        FocusResult (Err _) ->
             ( model, Cmd.none, AppUpdate.none )
 
         Goto route ->
@@ -142,7 +142,7 @@ update msg model =
                 , editingField = Nothing
                 , errors = []
               }
-            , Cmd.none
+            , Dom.focus "edit-entity-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
@@ -208,13 +208,13 @@ update msg model =
                 , newFieldInput = ""
                 , errors = []
               }
-            , Cmd.none
+            , Dom.focus "create-field" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
         LoadNewField (Err error) ->
             ( { model | errors = ChangesetError.parseHttpError error }
-            , Cmd.none
+            , Dom.focus "create-field" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
@@ -227,7 +227,7 @@ update msg model =
                         |> List.head
                 , errors = []
               }
-            , Dom.focus "edit-field-name" |> Task.attempt Focus
+            , Dom.focus "edit-field-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
@@ -266,7 +266,7 @@ update msg model =
 
         UpdateField (Err error) ->
             ( { model | errors = ChangesetError.parseHttpError error }
-            , Cmd.none
+            , Dom.focus "edit-field-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
@@ -389,12 +389,25 @@ deleteEntityButton =
 editEntityNameInput : String -> Html Msg
 editEntityNameInput name =
     input
-        [ value name
+        [ id "edit-entity-name"
+        , value name
         , onInput InputEntityName
-        , onEnter SaveEntityName
-        , onEscape CancelEditEntityName
+        , customOnKeyDown onEntityNameKeyDown
         ]
         []
+
+
+onEntityNameKeyDown : Key -> Maybe Msg
+onEntityNameKeyDown key =
+    case key of
+        Enter ->
+            Just SaveEntityName
+
+        Escape ->
+            Just CancelEditEntityName
+
+        _ ->
+            Nothing
 
 
 cancelEditEntityNameButton : Html Msg
@@ -433,7 +446,13 @@ fieldsTitle =
 
 createFieldInput : String -> Html Msg
 createFieldInput name =
-    input [ value name, onInput InputNewFieldName, onEnter CreateField ] []
+    input
+        [ id "create-field"
+        , value name
+        , onInput InputNewFieldName
+        , onEnter CreateField
+        ]
+        []
 
 
 createFieldButton : Html Msg

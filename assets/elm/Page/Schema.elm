@@ -37,7 +37,7 @@ import Request.Entity as RE
 import Request.Schema as RS
 import Router exposing (Route)
 import Task
-import Utils.Handlers exposing (customOnKeyDown, onEnter, onEscape)
+import Utils.Handlers exposing (customOnKeyDown, onEnter)
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
@@ -73,7 +73,7 @@ init id =
 
 type Msg
     = NoOp
-    | Focus (Result Dom.Error ())
+    | FocusResult (Result Dom.Error ())
     | Goto Route
       -- SCHEMA
     | LoadSchemaWithEntities (Result Http.Error SchemaWithEntities)
@@ -103,10 +103,10 @@ update msg model =
         NoOp ->
             ( model, Cmd.none, AppUpdate.none )
 
-        Focus (Ok ()) ->
+        FocusResult (Ok ()) ->
             ( model, Cmd.none, AppUpdate.none )
 
-        Focus (Err _) ->
+        FocusResult (Err _) ->
             ( model, Cmd.none, AppUpdate.none )
 
         Goto route ->
@@ -151,7 +151,7 @@ update msg model =
 
         EditSchemaName ->
             ( { model | editingName = Just model.schema.name }
-            , Cmd.none
+            , Dom.focus "edit-schema-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
@@ -214,13 +214,13 @@ update msg model =
                 , newEntityInput = ""
                 , errors = []
               }
-            , Cmd.none
+            , Dom.focus "create-entity" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
         LoadEntity (Err error) ->
             ( { model | errors = ChangesetError.parseHttpError error }
-            , Cmd.none
+            , Dom.focus "create-entity" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
@@ -228,7 +228,7 @@ update msg model =
             ( { model
                 | editingEntity = getEditingEntity id model.entities
               }
-            , Dom.focus "edit-entity-name" |> Task.attempt Focus
+            , Dom.focus "edit-entity-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
@@ -267,7 +267,7 @@ update msg model =
 
         UpdateEntity (Err error) ->
             ( { model | errors = ChangesetError.parseHttpError error }
-            , Cmd.none
+            , Dom.focus "edit-entity-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
@@ -413,12 +413,25 @@ deleteSchemaButton =
 editSchemaNameInput : String -> Html Msg
 editSchemaNameInput name =
     input
-        [ value name
+        [ id "edit-schema-name"
+        , value name
         , onInput InputSchemaName
-        , onEnter SaveSchemaName
-        , onEscape CancelEditSchemaName
+        , customOnKeyDown onSchemaNameKeyDown
         ]
         []
+
+
+onSchemaNameKeyDown : Key -> Maybe Msg
+onSchemaNameKeyDown key =
+    case key of
+        Enter ->
+            Just SaveSchemaName
+
+        Escape ->
+            Just CancelEditSchemaName
+
+        _ ->
+            Nothing
 
 
 cancelEditSchemaNameButton : Html Msg
@@ -459,7 +472,8 @@ createEntityView : String -> Html Msg
 createEntityView newEntityInput =
     div []
         [ input
-            [ value newEntityInput
+            [ id "create-entity"
+            , value newEntityInput
             , onInput InputNewEntityName
             , onEnter CreateEntity
             ]

@@ -6,14 +6,16 @@ import Data.Combined as Combined exposing (FieldWithAll)
 import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
 import Data.Schema as Schema exposing (Schema)
+import Dom
 import Html exposing (Html, button, div, h2, input, main_, section, text)
-import Html.Attributes exposing (value)
+import Html.Attributes exposing (id, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Request.Field as RF
 import Router exposing (Route)
 import Task exposing (Task)
-import Utils.Handlers exposing (onEnter, onEscape)
+import Utils.Handlers exposing (customOnKeyDown, onEnter, onEscape)
+import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 
 
@@ -45,7 +47,9 @@ init schemaId entityId id =
 
 
 type Msg
-    = Goto Route
+    = NoOp
+    | FocusResult (Result Dom.Error ())
+    | Goto Route
     | LoadFieldWithAll (Result Http.Error FieldWithAll)
       -- FIELD
     | LoadField (Result Http.Error Field)
@@ -60,11 +64,17 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg, AppUpdate )
 update msg model =
     case msg of
+        NoOp ->
+            ( model, Cmd.none, AppUpdate.none )
+
+        FocusResult (Ok ()) ->
+            ( model, Cmd.none, AppUpdate.none )
+
+        FocusResult (Err _) ->
+            ( model, Cmd.none, AppUpdate.none )
+
         Goto route ->
-            ( model
-            , Router.goto route
-            , AppUpdate.none
-            )
+            ( model, Router.goto route, AppUpdate.none )
 
         LoadFieldWithAll (Ok { schema, entity, field }) ->
             ( { model
@@ -105,7 +115,7 @@ update msg model =
 
         EditFieldName ->
             ( { model | editingName = Just model.field.name }
-            , Cmd.none
+            , Dom.focus "edit-field-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
@@ -219,12 +229,25 @@ deleteFieldButton =
 fieldNameInput : String -> Html Msg
 fieldNameInput name =
     input
-        [ value name
+        [ id "edit-field-name"
+        , value name
         , onInput InputEditFieldName
-        , onEnter SaveFieldName
-        , onEscape CancelEditFieldName
+        , customOnKeyDown onFieldNameKeyDown
         ]
         []
+
+
+onFieldNameKeyDown : Key -> Maybe Msg
+onFieldNameKeyDown key =
+    case key of
+        Enter ->
+            Just SaveFieldName
+
+        Escape ->
+            Just CancelEditFieldName
+
+        _ ->
+            Nothing
 
 
 cancelUpdateFieldName : Html Msg
