@@ -3,6 +3,7 @@ module Page.Home exposing (Model, Msg, init, initialModel, subscriptions, update
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Schema as Schema exposing (Schema)
+import Dom
 import Html
     exposing
         ( Html
@@ -20,11 +21,12 @@ import Html
         , text
         , ul
         )
-import Html.Attributes exposing (href, value)
+import Html.Attributes exposing (href, id, value)
 import Html.Events as Events exposing (onClick, onInput)
 import Http
 import Request.Schema as RS
 import Router exposing (Route)
+import Task
 import Utils.Handlers exposing (customOnKeyDown, onEnter, onEscape)
 import Utils.Keys as Key exposing (Key(..))
 import Views.Breadcrumbs as BC
@@ -58,7 +60,9 @@ init =
 
 
 type Msg
-    = Goto Route
+    = NoOp
+    | Focus (Result Dom.Error ())
+    | Goto Route
     | LoadSchemas (Result Http.Error (List Schema))
       -- CREATE SCHEMA
     | InputSchemaName String
@@ -78,6 +82,15 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg, AppUpdate )
 update msg model =
     case msg of
+        NoOp ->
+            ( model, Cmd.none, AppUpdate.none )
+
+        Focus (Ok ()) ->
+            ( model, Cmd.none, AppUpdate.none )
+
+        Focus (Err _) ->
+            ( model, Cmd.none, AppUpdate.none )
+
         Goto route ->
             ( model
             , Router.goto route
@@ -132,7 +145,7 @@ update msg model =
                     model.schemas |> List.filter (.id >> (==) id) |> List.head
                 , errors = []
               }
-            , Cmd.none
+            , Dom.focus "edit-schema-name" |> Task.attempt Focus
             , AppUpdate.none
             )
 
@@ -343,7 +356,8 @@ schemaLink { id, name } =
 editSchemaNameInput : String -> Html Msg
 editSchemaNameInput name =
     input
-        [ value name
+        [ id "edit-schema-name"
+        , value name
         , onInput InputEditingSchemaName
         , customOnKeyDown onSchemaNameKeyDown
         ]

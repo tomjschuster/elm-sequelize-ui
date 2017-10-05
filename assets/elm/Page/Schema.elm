@@ -14,6 +14,7 @@ import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Combined exposing (SchemaWithEntities)
 import Data.Entity exposing (Entity)
 import Data.Schema as Schema exposing (Schema)
+import Dom
 import Html
     exposing
         ( Html
@@ -29,12 +30,13 @@ import Html
         , text
         , ul
         )
-import Html.Attributes exposing (value)
+import Html.Attributes exposing (id, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Request.Entity as RE
 import Request.Schema as RS
 import Router exposing (Route)
+import Task
 import Utils.Handlers exposing (customOnKeyDown, onEnter, onEscape)
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
@@ -70,7 +72,9 @@ init id =
 
 
 type Msg
-    = Goto Route
+    = NoOp
+    | Focus (Result Dom.Error ())
+    | Goto Route
       -- SCHEMA
     | LoadSchemaWithEntities (Result Http.Error SchemaWithEntities)
     | LoadSchema (Result Http.Error Schema)
@@ -96,6 +100,15 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg, AppUpdate )
 update msg model =
     case msg of
+        NoOp ->
+            ( model, Cmd.none, AppUpdate.none )
+
+        Focus (Ok ()) ->
+            ( model, Cmd.none, AppUpdate.none )
+
+        Focus (Err _) ->
+            ( model, Cmd.none, AppUpdate.none )
+
         Goto route ->
             ( model
             , Router.goto route
@@ -215,7 +228,7 @@ update msg model =
             ( { model
                 | editingEntity = getEditingEntity id model.entities
               }
-            , Cmd.none
+            , Dom.focus "edit-entity-name" |> Task.attempt Focus
             , AppUpdate.none
             )
 
@@ -513,7 +526,8 @@ deleteEntityButton id =
 editEntityNameInput : String -> Html Msg
 editEntityNameInput name =
     input
-        [ value name
+        [ id "edit-entity-name"
+        , value name
         , onInput InputEditingEntityName
         , customOnKeyDown onEntityNameKeyDown
         ]

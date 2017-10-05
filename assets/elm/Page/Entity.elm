@@ -6,8 +6,9 @@ import Data.Combined as Combined exposing (EntityWithAll)
 import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
 import Data.Schema as Schema exposing (Schema)
+import Dom
 import Html exposing (Html, button, h2, h3, input, li, main_, section, text, ul)
-import Html.Attributes exposing (value)
+import Html.Attributes exposing (id, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Request.Entity as RE
@@ -58,7 +59,9 @@ init schemaId id =
 
 
 type Msg
-    = Goto Route
+    = NoOp
+    | Focus (Result Dom.Error ())
+    | Goto Route
     | LoadEntityWithAll (Result Http.Error EntityWithAll)
       -- ENTITY
     | LoadEntity (Result Http.Error Entity)
@@ -84,6 +87,15 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg, AppUpdate )
 update msg model =
     case msg of
+        NoOp ->
+            ( model, Cmd.none, AppUpdate.none )
+
+        Focus (Ok ()) ->
+            ( model, Cmd.none, AppUpdate.none )
+
+        Focus (Err _) ->
+            ( model, Cmd.none, AppUpdate.none )
+
         Goto route ->
             ( model
             , Router.goto route
@@ -215,7 +227,7 @@ update msg model =
                         |> List.head
                 , errors = []
               }
-            , Cmd.none
+            , Dom.focus "edit-field-name" |> Task.attempt Focus
             , AppUpdate.none
             )
 
@@ -480,7 +492,8 @@ editFieldButton id =
 editFieldNameInput : String -> Html Msg
 editFieldNameInput name =
     input
-        [ value name
+        [ id "edit-field-name"
+        , value name
         , onInput InputEditingFieldName
         , customOnKeyDown onFieldNameKeyDown
         ]
