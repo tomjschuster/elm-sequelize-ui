@@ -1,28 +1,43 @@
 module Data.Field exposing (Field, decoder, empty, encode, encodeNewField)
 
 import Json.Decode as JD exposing (Decoder, int, string)
-import Json.Decode.Pipeline exposing (decode, required)
+import Json.Decode.Pipeline exposing (decode, required, hardcoded)
 import Json.Encode as JE exposing (Value)
+import Data.DataType as DataType exposing (DataType)
+
+
+{-
+
+   DataType (Lookup)
+   Constraint (Primary Key, Not Null, Default, Unique, Auto-increment)
+   Comment VARCHAR(255)
+-}
 
 
 type alias Field =
     { id : Int
-    , name : String
     , entityId : Int
+    , name : String
+    , dataType : Maybe DataType
     }
 
 
 empty : Field
 empty =
-    Field 0 "" 0
+    { id = 0
+    , entityId = 0
+    , name = ""
+    , dataType = Nothing
+    }
 
 
 decoder : Decoder Field
 decoder =
     decode Field
         |> required "id" int
-        |> required "name" string
         |> required "entityId" int
+        |> required "name" string
+        |> hardcoded Nothing
 
 
 encode : Field -> Value
@@ -31,8 +46,8 @@ encode { id, name, entityId } =
         [ ( "field"
           , JE.object
                 [ ( "id", JE.int id )
-                , ( "name", JE.string name )
                 , ( "entity_id", JE.int entityId )
+                , ( "name", JE.string name )
                 ]
           )
         ]
@@ -43,8 +58,8 @@ encodeNewField name entityId =
     JE.object
         [ ( "field"
           , JE.object
-                [ ( "name", JE.string name )
-                , ( "entity_id", JE.int entityId )
+                [ ( "entity_id", JE.int entityId )
+                , ( "name", JE.string name )
                 ]
           )
         ]

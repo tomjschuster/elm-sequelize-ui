@@ -27,10 +27,6 @@ parseHttpError =
         >> Result.withDefault []
 
 
-
--->> Result.toMaybe
-
-
 unprocessableEntityBody : Http.Error -> Maybe String
 unprocessableEntityBody error =
     if isUnprocessableEntity error then

@@ -6,8 +6,21 @@ import Data.Combined as Combined exposing (FieldWithAll)
 import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
 import Data.Schema as Schema exposing (Schema)
+import Data.DataType as DataType exposing (DataType)
 import Dom
-import Html exposing (Html, button, div, h2, input, main_, section, text)
+import Html
+    exposing
+        ( Html
+        , button
+        , div
+        , h2
+        , input
+        , main_
+        , section
+        , text
+        , select
+        , option
+        )
 import Html.Attributes exposing (id, value)
 import Html.Events exposing (onClick, onInput)
 import Http
@@ -258,3 +271,12 @@ cancelUpdateFieldName =
 saveFieldNameButton : Html Msg
 saveFieldNameButton =
     button [ onClick SaveFieldName ] [ text "Save" ]
+
+
+
+-- DataType
+
+
+dataTypeDropDown : Html Msg
+dataTypeDropDown =
+    select [] []
