@@ -1,162 +1,312 @@
 module Data.DataType
     exposing
         ( DataType(..)
-        , defaultList
+        , all
+        , decoder
+        , encode
+        , fromId
+        , none
+        , toId
         , toString
         )
 
+import Json.Decode as JD exposing (Decoder)
+import Json.Encode as JE exposing (Value)
+
 
 type DataType
-    = Char Int
-    | VarChar Int
+    = None
+    | Char
+    | VarChar
     | Text
-    | Bit Int
-    | VarBit Int
+    | Bit
+    | VarBit
     | SmallInt
     | Integer
     | BigInt
     | SmallSerial
     | Serial
     | BigSerial
-    | Numeric ( Int, Int )
+    | Numeric
     | Double
     | Real
     | Money
     | Boolean
     | Date
-    | TimeStamp Bool
-    | Time Bool
+    | TimeStamp
+    | Time
+
+
+none : DataType
+none =
+    None
+
+
+type Option
+    = NoOption
+    | Size
+    | Precision
+    | TimeZone
 
 
 type alias DataTypeConfig =
     { dataType : DataType
-    , string : String
+    , id : Int
+    , stringValue : String
+    , options : List Option
     }
 
 
-defaultList : List DataType
-defaultList =
-    [ Char 255
-    , VarChar 255
+all : List DataType
+all =
+    [ Char
+    , VarChar
     , Text
-    , Bit 255
-    , VarBit 255
+    , Bit
+    , VarBit
     , SmallInt
     , Integer
     , BigInt
     , SmallSerial
     , Serial
     , BigSerial
-    , Numeric ( 52, 2 )
+    , Numeric
     , Double
     , Real
     , Money
     , Boolean
     , Date
-    , TimeStamp False
-    , Time False
+    , TimeStamp
+    , Time
     ]
 
 
 toConfig : DataType -> DataTypeConfig
 toConfig dataType =
     case dataType of
-        Char size ->
-            { dataType = Char size
-            , string = "char"
+        None ->
+            { dataType = None
+            , id = 0
+            , stringValue = "None"
+            , options = []
             }
 
-        VarChar size ->
-            { dataType = VarChar size
-            , string = "varchar"
+        Char ->
+            { dataType = Char
+            , id = 1
+            , stringValue = "char"
+            , options = [ Size ]
+            }
+
+        VarChar ->
+            { dataType = VarChar
+            , id = 2
+            , stringValue = "varchar"
+            , options = [ Size ]
             }
 
         Text ->
             { dataType = Text
-            , string = "text"
+            , id = 3
+            , stringValue = "text"
+            , options = []
             }
 
-        Bit size ->
-            { dataType = Bit size
-            , string = "bit"
+        Bit ->
+            { dataType = Bit
+            , id = 4
+            , stringValue = "bit"
+            , options = [ Size ]
             }
 
-        VarBit size ->
-            { dataType = VarBit size
-            , string = "varbit"
+        VarBit ->
+            { dataType = VarBit
+            , id = 5
+            , stringValue = "varbit"
+            , options = [ Size ]
             }
 
         SmallInt ->
             { dataType = SmallInt
-            , string = "smallint"
+            , id = 6
+            , stringValue = "smallint"
+            , options = []
             }
 
         Integer ->
             { dataType = Integer
-            , string = "int"
+            , id = 7
+            , stringValue = "int"
+            , options = []
             }
 
         BigInt ->
             { dataType = BigInt
-            , string = "bigint"
+            , id = 8
+            , stringValue = "bigint"
+            , options = []
             }
 
         SmallSerial ->
             { dataType = SmallSerial
-            , string = "smallserial"
+            , id = 9
+            , stringValue = "smallserial"
+            , options = []
             }
 
         Serial ->
             { dataType = Serial
-            , string = "serial"
+            , id = 10
+            , stringValue = "serial"
+            , options = []
             }
 
         BigSerial ->
             { dataType = BigSerial
-            , string = "bigserial"
+            , id = 11
+            , stringValue = "bigserial"
+            , options = []
             }
 
-        Numeric ( m, d ) ->
-            { dataType = Numeric ( m, d )
-            , string = "numeric"
+        Numeric ->
+            { dataType = Numeric
+            , id = 12
+            , stringValue = "numeric"
+            , options = [ Precision ]
             }
 
         Double ->
             { dataType = Double
-            , string = "double"
+            , id = 13
+            , stringValue = "double"
+            , options = []
             }
 
         Real ->
             { dataType = Real
-            , string = "real"
+            , id = 14
+            , stringValue = "real"
+            , options = []
             }
 
         Money ->
             { dataType = Money
-            , string = "money"
+            , id = 15
+            , stringValue = "money"
+            , options = []
             }
 
         Boolean ->
             { dataType = Boolean
-            , string = "bool"
+            , id = 16
+            , stringValue = "bool"
+            , options = []
             }
 
         Date ->
             { dataType = Date
-            , string = "date"
+            , id = 17
+            , stringValue = "date"
+            , options = []
             }
 
-        TimeStamp withTimeZone ->
-            { dataType = TimeStamp withTimeZone
-            , string = "timestamp"
+        TimeStamp ->
+            { dataType = TimeStamp
+            , id = 18
+            , stringValue = "timestamp"
+            , options = [ TimeZone ]
             }
 
-        Time withTimeZone ->
-            { dataType = Time withTimeZone
-            , string = "time"
+        Time ->
+            { dataType = Time
+            , id = 19
+            , stringValue = "time"
+            , options = [ TimeZone ]
             }
+
+
+toId : DataType -> Int
+toId =
+    toConfig >> .id
 
 
 toString : DataType -> String
 toString =
-    toConfig >> .string
+    toConfig >> .stringValue
+
+
+fromId : Int -> Maybe DataType
+fromId id =
+    case id of
+        1 ->
+            Just Char
+
+        2 ->
+            Just VarChar
+
+        3 ->
+            Just Text
+
+        4 ->
+            Just Bit
+
+        5 ->
+            Just VarBit
+
+        6 ->
+            Just SmallInt
+
+        7 ->
+            Just Integer
+
+        8 ->
+            Just BigInt
+
+        9 ->
+            Just SmallSerial
+
+        10 ->
+            Just Serial
+
+        11 ->
+            Just BigSerial
+
+        12 ->
+            Just Numeric
+
+        13 ->
+            Just Double
+
+        14 ->
+            Just Real
+
+        15 ->
+            Just Money
+
+        16 ->
+            Just Boolean
+
+        17 ->
+            Just Date
+
+        18 ->
+            Just TimeStamp
+
+        19 ->
+            Just Time
+
+        _ ->
+            Nothing
+
+
+decoder : Decoder DataType
+decoder =
+    JD.map (fromId >> Maybe.withDefault None) JD.int
+
+
+encode : DataType -> Value
+encode dataType =
+    if dataType == None then
+        JE.null
+    else
+        JE.int (toId dataType)

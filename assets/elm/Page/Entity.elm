@@ -3,19 +3,35 @@ module Page.Entity exposing (Model, Msg, init, initialModel, update, view)
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Combined as Combined exposing (EntityWithAll)
+import Data.DataType as DataType exposing (DataType)
 import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
 import Data.Schema as Schema exposing (Schema)
 import Dom
-import Html exposing (Html, button, h2, h3, input, li, main_, section, text, ul)
-import Html.Attributes exposing (id, value)
+import Html
+    exposing
+        ( Html
+        , button
+        , div
+        , h2
+        , h3
+        , input
+        , li
+        , main_
+        , option
+        , section
+        , select
+        , text
+        , ul
+        )
+import Html.Attributes exposing (id, selected, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Request.Entity as RE
 import Request.Field as RF
 import Router exposing (Route)
 import Task
-import Utils.Handlers exposing (customOnKeyDown, onEnter)
+import Utils.Handlers exposing (customOnKeyDown, onChangeInt, onEnter)
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
@@ -30,6 +46,7 @@ type alias Model =
     , fields : List Field
     , editingName : Maybe String
     , newFieldInput : String
+    , newFieldDataType : DataType
     , editingField : Maybe Field
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
@@ -38,7 +55,7 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model Schema.empty Entity.empty [] Nothing "" Nothing Nothing []
+    Model Schema.empty Entity.empty [] Nothing "" DataType.none Nothing Nothing []
 
 
 type alias InitialData =
@@ -73,6 +90,7 @@ type Msg
     | RemoveEntity (Result Http.Error ())
       -- FIELDS
     | InputNewFieldName String
+    | SelectNewFieldDataType (Maybe Int)
     | CreateField
     | LoadNewField (Result Http.Error Field)
     | EditFieldName Int
@@ -195,9 +213,23 @@ update msg model =
             , AppUpdate.none
             )
 
+        SelectNewFieldDataType maybeId ->
+            ( { model
+                | newFieldDataType =
+                    maybeId
+                        |> Maybe.andThen DataType.fromId
+                        |> Maybe.withDefault DataType.none
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
         CreateField ->
             ( model
-            , RF.create model.newFieldInput model.entity.id
+            , RF.create
+                model.entity.id
+                model.newFieldInput
+                model.newFieldDataType
                 |> Http.send LoadNewField
             , AppUpdate.none
             )
@@ -206,6 +238,7 @@ update msg model =
             ( { model
                 | fields = model.fields ++ [ field ]
                 , newFieldInput = ""
+                , newFieldDataType = DataType.none
                 , errors = []
               }
             , Dom.focus "create-field" |> Task.attempt FocusResult
@@ -433,8 +466,7 @@ contentChildren : Model -> List (Html Msg)
 contentChildren model =
     CE.prependIfErrors model.errors
         [ fieldsTitle
-        , createFieldInput model.newFieldInput
-        , createFieldButton
+        , createField model.newFieldInput model.newFieldDataType
         , fieldList model.editingField model.schema.id model.fields
         ]
 
@@ -442,6 +474,16 @@ contentChildren model =
 fieldsTitle : Html msg
 fieldsTitle =
     h3 [] [ text "Fields" ]
+
+
+createField : String -> DataType -> Html Msg
+createField name dataType =
+    div
+        []
+        [ createFieldInput name
+        , dataTypeSelect dataType
+        , createFieldButton
+        ]
 
 
 createFieldInput : String -> Html Msg
@@ -453,6 +495,22 @@ createFieldInput name =
         , onEnter CreateField
         ]
         []
+
+
+dataTypeSelect : DataType -> Html Msg
+dataTypeSelect currentType =
+    select
+        [ onChangeInt SelectNewFieldDataType ]
+        (option [] [] :: List.map (dataTypeOption currentType) DataType.all)
+
+
+dataTypeOption : DataType -> DataType -> Html Msg
+dataTypeOption currentType dataType =
+    option
+        [ selected (currentType == dataType)
+        , value (DataType.toId dataType |> toString)
+        ]
+        [ text (DataType.toString dataType) ]
 
 
 createFieldButton : Html Msg

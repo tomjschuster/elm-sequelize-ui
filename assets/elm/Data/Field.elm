@@ -9,20 +9,18 @@ module Data.Field
         )
 
 import Data.DataType as DataType exposing (DataType)
-import Json.Decode as JD exposing (Decoder, int, string)
-import Json.Decode.Pipeline exposing (decode, hardcoded, required)
+import Json.Decode as JD exposing (Decoder, int, maybe, string)
+import Json.Decode.Pipeline exposing (decode, optional, required)
 import Json.Encode as JE exposing (Value)
 
 
 {-
 
-   DataType (Lookup)
    Constraint (Primary Key, Not Null, Default, Unique, Auto-increment)
    Comment VARCHAR(255)
 -}
 {-
 
-   DataType (Lookup)
    Constraint (Primary Key, Not Null, Default, Unique, Auto-increment)
    Comment VARCHAR(255)
 -}
@@ -32,7 +30,7 @@ type alias Field =
     { id : Int
     , entityId : Int
     , name : String
-    , dataType : Maybe DataType
+    , dataType : DataType
     }
 
 
@@ -41,13 +39,13 @@ empty =
     { id = 0
     , entityId = 0
     , name = ""
-    , dataType = Nothing
+    , dataType = DataType.None
     }
 
 
 updateDataType : Field -> DataType -> Field
 updateDataType field dataType =
-    { field | dataType = Just dataType }
+    { field | dataType = dataType }
 
 
 decoder : Decoder Field
@@ -56,29 +54,31 @@ decoder =
         |> required "id" int
         |> required "entityId" int
         |> required "name" string
-        |> hardcoded Nothing
+        |> optional "dataTypeId" DataType.decoder DataType.none
 
 
 encode : Field -> Value
-encode { id, name, entityId } =
+encode { id, entityId, name, dataType } =
     JE.object
         [ ( "field"
           , JE.object
                 [ ( "id", JE.int id )
                 , ( "entity_id", JE.int entityId )
                 , ( "name", JE.string name )
+                , ( "data_type_id", DataType.encode dataType )
                 ]
           )
         ]
 
 
-encodeNewField : String -> Int -> Value
-encodeNewField name entityId =
+encodeNewField : Int -> String -> DataType -> Value
+encodeNewField entityId name dataType =
     JE.object
         [ ( "field"
           , JE.object
                 [ ( "entity_id", JE.int entityId )
                 , ( "name", JE.string name )
+                , ( "data_type_id", DataType.encode dataType )
                 ]
           )
         ]

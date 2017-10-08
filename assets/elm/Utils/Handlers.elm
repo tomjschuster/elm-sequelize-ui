@@ -1,6 +1,7 @@
 module Utils.Handlers
     exposing
         ( customOnKeyDown
+        , onChangeInt
         , onEnter
         , onEscape
         , onKeyDown
@@ -79,3 +80,16 @@ msgBoolDecoder msg preventDefault =
 
         False ->
             JD.fail "Normal link"
+
+
+onChangeInt : (Maybe Int -> msg) -> Attribute msg
+onChangeInt toMsg =
+    on "change" (targetValueIntDecoder |> JD.map toMsg)
+
+
+targetValueIntDecoder : Decoder (Maybe Int)
+targetValueIntDecoder =
+    JD.field "target"
+        (JD.field "value"
+            (JD.map (String.toInt >> Result.toMaybe) JD.string)
+        )

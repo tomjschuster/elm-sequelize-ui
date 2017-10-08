@@ -206,7 +206,8 @@ view { schema, entity, field, editingName } =
         []
         [ breadcrumbs schema entity field
         , title editingName field.name
-        , fieldOptions field
+
+        --, fieldOptions field
         ]
 
 
@@ -292,26 +293,20 @@ saveFieldNameButton =
 
 
 -- FIELD OPTIONS
-
-
-fieldOptions : Field -> Html Msg
-fieldOptions field =
-    section []
-        [ h3 [] [ text "Options" ]
-        , dataTypeDropDown field.dataType
-        ]
-
-
-dataTypeDropDown : Maybe DataType -> Html Msg
-dataTypeDropDown currentDataType =
-    select
-        []
-        (List.map (dataTypeOption currentDataType) DataType.defaultList)
-
-
-dataTypeOption : Maybe DataType -> DataType -> Html Msg
-dataTypeOption currentDataType dataType =
-    option
-        [ selected (currentDataType == Just dataType)
-        ]
-        [ text (DataType.toString dataType) ]
+--fieldOptions : Field -> Html Msg
+--fieldOptions field =
+--    section []
+--        [ h3 [] [ text "Options" ]
+--        , dataTypeDropDown field.dataType
+--        ]
+--dataTypeDropDown : Maybe DataType -> Html Msg
+--dataTypeDropDown currentDataType =
+--    select
+--        []
+--        (List.map (dataTypeOption currentDataType) DataType.defaultList)
+--dataTypeOption : Maybe DataType -> DataType -> Html Msg
+--dataTypeOption currentDataType dataType =
+--    option
+--        [ selected (currentDataType == Just dataType)
+--        ]
+--        [ text (DataType.toString dataType) ]

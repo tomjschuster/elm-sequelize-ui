@@ -24,6 +24,7 @@ defmodule SequelizeUiWeb.FieldView do
   def render("field.json", %{field: field}) do
     %{id: field.id,
       name: field.name,
-      entityId: field.entity_id}
+      entityId: field.entity_id,
+      dataTypeId: field.data_type_id}
   end
 end

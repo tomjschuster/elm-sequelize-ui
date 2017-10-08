@@ -23,7 +23,7 @@ defmodule SequelizeUi.DbDesign.Field do
   def changeset(%Field{} = field, attrs) do
     field
     |> cast(attrs, [:entity_id, :name, :data_type_id])
-    |> validate_required([:entity_id, :name])
+    |> validate_required([:entity_id, :name, :data_type_id])
     |> assoc_constraint(:entity)
     |> assoc_constraint(:data_type)
     |> unique_constraint(:name, name: :field_entity_id_name_index)
