@@ -3,10 +3,10 @@ module Page.Field exposing (Model, Msg, init, initialModel, update, view)
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Combined as Combined exposing (FieldWithAll)
+import Data.DataType as DataType exposing (DataType)
 import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
 import Data.Schema as Schema exposing (Schema)
-import Data.DataType as DataType exposing (DataType)
 import Dom
 import Html
     exposing
@@ -14,20 +14,27 @@ import Html
         , button
         , div
         , h2
+        , h3
         , input
         , main_
-        , section
-        , text
-        , select
         , option
+        , section
+        , select
+        , text
         )
-import Html.Attributes exposing (id, value)
+import Html.Attributes exposing (id, selected, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Request.Field as RF
 import Router exposing (Route)
 import Task exposing (Task)
-import Utils.Handlers exposing (customOnKeyDown, onEnter, onEscape)
+import Utils.Handlers
+    exposing
+        ( customOnKeyDown
+        , onEnter
+        , onEscape
+        , onPreventDefaultClick
+        )
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 
@@ -72,6 +79,8 @@ type Msg
     | SaveFieldName
     | Destroy
     | RemoveField (Result Http.Error ())
+      -- DataType
+    | UpdateDataType DataType
 
 
 update : Msg -> Model -> ( Model, Cmd Msg, AppUpdate )
@@ -174,6 +183,13 @@ update msg model =
             , AppUpdate.none
             )
 
+        -- DATA TYPE
+        UpdateDataType dataType ->
+            ( { model | field = Field.updateDataType model.field dataType }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
 
 updateFieldName : Field -> String -> Field
 updateFieldName field name =
@@ -190,6 +206,7 @@ view { schema, entity, field, editingName } =
         []
         [ breadcrumbs schema entity field
         , title editingName field.name
+        , fieldOptions field
         ]
 
 
@@ -274,9 +291,27 @@ saveFieldNameButton =
 
 
 
--- DataType
+-- FIELD OPTIONS
 
 
-dataTypeDropDown : Html Msg
-dataTypeDropDown =
-    select [] []
+fieldOptions : Field -> Html Msg
+fieldOptions field =
+    section []
+        [ h3 [] [ text "Options" ]
+        , dataTypeDropDown field.dataType
+        ]
+
+
+dataTypeDropDown : Maybe DataType -> Html Msg
+dataTypeDropDown currentDataType =
+    select
+        []
+        (List.map (dataTypeOption currentDataType) DataType.defaultList)
+
+
+dataTypeOption : Maybe DataType -> DataType -> Html Msg
+dataTypeOption currentDataType dataType =
+    option
+        [ selected (currentDataType == Just dataType)
+        ]
+        [ text (DataType.toString dataType) ]

@@ -1,4 +1,9 @@
-module Data.DataType exposing (DataType(..), toString)
+module Data.DataType
+    exposing
+        ( DataType(..)
+        , defaultList
+        , toString
+        )
 
 
 type DataType
@@ -29,102 +34,126 @@ type alias DataTypeConfig =
     }
 
 
+defaultList : List DataType
+defaultList =
+    [ Char 255
+    , VarChar 255
+    , Text
+    , Bit 255
+    , VarBit 255
+    , SmallInt
+    , Integer
+    , BigInt
+    , SmallSerial
+    , Serial
+    , BigSerial
+    , Numeric ( 52, 2 )
+    , Double
+    , Real
+    , Money
+    , Boolean
+    , Date
+    , TimeStamp False
+    , Time False
+    ]
+
+
 toConfig : DataType -> DataTypeConfig
 toConfig dataType =
     case dataType of
         Char size ->
             { dataType = Char size
-            , string = ""
+            , string = "char"
             }
 
         VarChar size ->
             { dataType = VarChar size
-            , string = ""
+            , string = "varchar"
             }
 
         Text ->
             { dataType = Text
-            , string = ""
+            , string = "text"
             }
 
         Bit size ->
             { dataType = Bit size
-            , string = ""
+            , string = "bit"
             }
 
         VarBit size ->
             { dataType = VarBit size
-            , string = ""
+            , string = "varbit"
             }
 
         SmallInt ->
             { dataType = SmallInt
-            , string = ""
+            , string = "smallint"
             }
 
         Integer ->
             { dataType = Integer
-            , string = ""
+            , string = "int"
             }
 
         BigInt ->
             { dataType = BigInt
-            , string = ""
+            , string = "bigint"
             }
 
         SmallSerial ->
             { dataType = SmallSerial
-            , string = ""
+            , string = "smallserial"
             }
 
         Serial ->
             { dataType = Serial
-            , string = ""
+            , string = "serial"
             }
 
         BigSerial ->
             { dataType = BigSerial
-            , string = ""
+            , string = "bigserial"
             }
 
         Numeric ( m, d ) ->
             { dataType = Numeric ( m, d )
-            , string = ""
+            , string = "numeric"
             }
 
         Double ->
             { dataType = Double
-            , string = ""
+            , string = "double"
             }
 
         Real ->
             { dataType = Real
-            , string = ""
+            , string = "real"
             }
 
         Money ->
             { dataType = Money
-            , string = ""
+            , string = "money"
             }
 
         Boolean ->
             { dataType = Boolean
-            , string = ""
+            , string = "bool"
             }
 
         Date ->
             { dataType = Date
-            , string = ""
+            , string = "date"
             }
 
         TimeStamp withTimeZone ->
             { dataType = TimeStamp withTimeZone
-            , string = ""
+            , string = "timestamp"
             }
 
         Time withTimeZone ->
             { dataType = Time withTimeZone
-            , string = ""
+            , string = "time"
             }
 
 

@@ -1,11 +1,25 @@
-module Data.Field exposing (Field, decoder, empty, encode, encodeNewField)
+module Data.Field
+    exposing
+        ( Field
+        , decoder
+        , empty
+        , encode
+        , encodeNewField
+        , updateDataType
+        )
 
-import Json.Decode as JD exposing (Decoder, int, string)
-import Json.Decode.Pipeline exposing (decode, required, hardcoded)
-import Json.Encode as JE exposing (Value)
 import Data.DataType as DataType exposing (DataType)
+import Json.Decode as JD exposing (Decoder, int, string)
+import Json.Decode.Pipeline exposing (decode, hardcoded, required)
+import Json.Encode as JE exposing (Value)
 
 
+{-
+
+   DataType (Lookup)
+   Constraint (Primary Key, Not Null, Default, Unique, Auto-increment)
+   Comment VARCHAR(255)
+-}
 {-
 
    DataType (Lookup)
@@ -29,6 +43,11 @@ empty =
     , name = ""
     , dataType = Nothing
     }
+
+
+updateDataType : Field -> DataType -> Field
+updateDataType field dataType =
+    { field | dataType = Just dataType }
 
 
 decoder : Decoder Field
