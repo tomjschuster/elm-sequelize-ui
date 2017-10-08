@@ -1,6 +1,5 @@
 module Data.Entity exposing (Entity, decoder, empty, encode, encodeNewEntity)
 
-import Data.Field as Field exposing (Field)
 import Json.Decode as JD exposing (Decoder, int, string)
 import Json.Decode.Pipeline exposing (decode, optional, required)
 import Json.Encode as JE exposing (Value)

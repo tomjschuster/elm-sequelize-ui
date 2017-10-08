@@ -35,6 +35,7 @@ import Utils.Handlers exposing (customOnKeyDown, onChangeInt, onEnter)
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
+import Views.DataTypeSelect as DataTypeSelect
 
 
 -- MODEL
@@ -47,6 +48,7 @@ type alias Model =
     , editingName : Maybe String
     , newFieldInput : String
     , newFieldDataType : DataType
+    , newFieldModifier : DataType.Modifier
     , editingField : Maybe Field
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
@@ -55,7 +57,17 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model Schema.empty Entity.empty [] Nothing "" DataType.none Nothing Nothing []
+    Model
+        Schema.empty
+        Entity.empty
+        []
+        Nothing
+        ""
+        DataType.none
+        DataType.NoModifier
+        Nothing
+        Nothing
+        []
 
 
 type alias InitialData =
@@ -91,6 +103,9 @@ type Msg
       -- FIELDS
     | InputNewFieldName String
     | SelectNewFieldDataType (Maybe Int)
+    | UpdateNewFieldSize (Maybe Int)
+    | UpdateNewFieldPrecision (Maybe Int) (Maybe Int)
+    | UpdateNewFieldWithTimezone Bool
     | CreateField
     | LoadNewField (Result Http.Error Field)
     | EditFieldName Int
@@ -214,11 +229,42 @@ update msg model =
             )
 
         SelectNewFieldDataType maybeId ->
-            ( { model
-                | newFieldDataType =
+            let
+                dataType =
                     maybeId
                         |> Maybe.andThen DataType.fromId
                         |> Maybe.withDefault DataType.none
+            in
+            ( { model
+                | newFieldDataType = dataType
+                , newFieldModifier = DataType.toInitialModifier dataType
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        UpdateNewFieldSize size ->
+            ( { model
+                | newFieldModifier =
+                    DataType.updateSize model.newFieldModifier size
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        UpdateNewFieldPrecision precision decimals ->
+            ( { model
+                | newFieldModifier =
+                    DataType.updatePrecision model.newFieldModifier precision decimals
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        UpdateNewFieldWithTimezone withTimezone ->
+            ( { model
+                | newFieldModifier =
+                    DataType.updateWithTimezone model.newFieldModifier withTimezone
               }
             , Cmd.none
             , AppUpdate.none
@@ -466,7 +512,7 @@ contentChildren : Model -> List (Html Msg)
 contentChildren model =
     CE.prependIfErrors model.errors
         [ fieldsTitle
-        , createField model.newFieldInput model.newFieldDataType
+        , createField model.newFieldInput model.newFieldDataType model.newFieldModifier
         , fieldList model.editingField model.schema.id model.fields
         ]
 
@@ -476,14 +522,23 @@ fieldsTitle =
     h3 [] [ text "Fields" ]
 
 
-createField : String -> DataType -> Html Msg
-createField name dataType =
+createField : String -> DataType -> DataType.Modifier -> Html Msg
+createField name dataType modifier =
     div
         []
         [ createFieldInput name
-        , dataTypeSelect dataType
+        , DataTypeSelect.view selectDataTypeConfig dataType modifier
         , createFieldButton
         ]
+
+
+selectDataTypeConfig : DataTypeSelect.Config Msg
+selectDataTypeConfig =
+    { handleChange = SelectNewFieldDataType
+    , handleSizeInput = UpdateNewFieldSize
+    , handlePrecisionInput = UpdateNewFieldPrecision
+    , handleTimezoneCheck = UpdateNewFieldWithTimezone
+    }
 
 
 createFieldInput : String -> Html Msg
@@ -495,22 +550,6 @@ createFieldInput name =
         , onEnter CreateField
         ]
         []
-
-
-dataTypeSelect : DataType -> Html Msg
-dataTypeSelect currentType =
-    select
-        [ onChangeInt SelectNewFieldDataType ]
-        (option [] [] :: List.map (dataTypeOption currentType) DataType.all)
-
-
-dataTypeOption : DataType -> DataType -> Html Msg
-dataTypeOption currentType dataType =
-    option
-        [ selected (currentType == dataType)
-        , value (DataType.toId dataType |> toString)
-        ]
-        [ text (DataType.toString dataType) ]
 
 
 createFieldButton : Html Msg

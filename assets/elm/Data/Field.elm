@@ -10,7 +10,7 @@ module Data.Field
 
 import Data.DataType as DataType exposing (DataType)
 import Json.Decode as JD exposing (Decoder, int, maybe, string)
-import Json.Decode.Pipeline exposing (decode, optional, required)
+import Json.Decode.Pipeline exposing (decode, hardcoded, optional, required)
 import Json.Encode as JE exposing (Value)
 
 
@@ -31,6 +31,7 @@ type alias Field =
     , entityId : Int
     , name : String
     , dataType : DataType
+    , dataTypeModifier : DataType.Modifier
     }
 
 
@@ -39,7 +40,8 @@ empty =
     { id = 0
     , entityId = 0
     , name = ""
-    , dataType = DataType.None
+    , dataType = DataType.none
+    , dataTypeModifier = DataType.NoModifier
     }
 
 
@@ -55,6 +57,7 @@ decoder =
         |> required "entityId" int
         |> required "name" string
         |> optional "dataTypeId" DataType.decoder DataType.none
+        |> hardcoded DataType.NoModifier
 
 
 encode : Field -> Value

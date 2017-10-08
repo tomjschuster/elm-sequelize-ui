@@ -1,4 +1,4 @@
-module Utils.Keys exposing (Key(..), fromKeyCode, toKeyCode)
+module Utils.Keys exposing (Key(..), fromKeyCode, isKeyCode, toKeyCode)
 
 
 type Key
@@ -153,3 +153,10 @@ fromKeyCode keyCode =
 
         _ ->
             Nothing
+
+
+isKeyCode : List Key -> Int -> Bool
+isKeyCode keys =
+    fromKeyCode
+        >> Maybe.map (flip List.member keys)
+        >> Maybe.withDefault False

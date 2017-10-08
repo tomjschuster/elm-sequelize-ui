@@ -1,9 +1,11 @@
 module Utils.Handlers
     exposing
         ( customOnKeyDown
+        , onChangeBool
         , onChangeInt
         , onEnter
         , onEscape
+        , onIntInput
         , onKeyDown
         , onPreventDefaultClick
         )
@@ -12,6 +14,9 @@ import Html exposing (Attribute)
 import Html.Events exposing (defaultOptions, on, onWithOptions)
 import Json.Decode as JD exposing (Decoder)
 import Utils.Keys as Keys exposing (Key(..))
+
+
+-- KEYS
 
 
 onKeyDown : List Key -> msg -> Attribute msg
@@ -42,17 +47,8 @@ onEscape =
     onKeyDown [ Escape ]
 
 
-isKeyCode : List Key -> Int -> Bool
-isKeyCode keys =
-    Keys.fromKeyCode
-        >> Maybe.map (flip List.member keys)
-        >> Maybe.withDefault False
 
-
-keyCodeDecoder : List Key -> Decoder Bool
-keyCodeDecoder keys =
-    JD.field "keyCode" JD.int
-        |> JD.map (isKeyCode keys)
+-- CLICK
 
 
 onPreventDefaultClick : msg -> Attribute msg
@@ -62,6 +58,39 @@ onPreventDefaultClick message =
         (notModifierKeyDecoder
             |> JD.andThen (msgBoolDecoder message)
         )
+
+
+
+-- CHANGE
+
+
+onChangeInt : (Maybe Int -> msg) -> Attribute msg
+onChangeInt toMsg =
+    on "change" (JD.map toMsg targetValueIntDecoder)
+
+
+onChangeBool : (Bool -> msg) -> Attribute msg
+onChangeBool toMsg =
+    on "change" (targetCheckedDecoder |> JD.map toMsg)
+
+
+
+-- INPUT
+
+
+onIntInput : (Maybe Int -> msg) -> Attribute msg
+onIntInput toMsg =
+    on "input" (targetValueIntDecoder |> JD.map toMsg)
+
+
+
+-- HELPER DECODERS
+
+
+keyCodeDecoder : List Key -> Decoder Bool
+keyCodeDecoder keys =
+    JD.field "keyCode" JD.int
+        |> JD.map (Keys.isKeyCode keys)
 
 
 notModifierKeyDecoder : Decoder Bool
@@ -82,14 +111,42 @@ msgBoolDecoder msg preventDefault =
             JD.fail "Normal link"
 
 
-onChangeInt : (Maybe Int -> msg) -> Attribute msg
-onChangeInt toMsg =
-    on "change" (targetValueIntDecoder |> JD.map toMsg)
-
-
 targetValueIntDecoder : Decoder (Maybe Int)
 targetValueIntDecoder =
     JD.field "target"
         (JD.field "value"
-            (JD.map (String.toInt >> Result.toMaybe) JD.string)
+            (JD.string
+                |> JD.andThen
+                    (stringToMaybe
+                        >> Maybe.map (String.toInt >> failOnErrorDecoder >> JD.map Just)
+                        >> Maybe.withDefault (JD.succeed Nothing)
+                    )
+            )
         )
+
+
+targetCheckedDecoder : Decoder Bool
+targetCheckedDecoder =
+    JD.field "target" (JD.field "checked" JD.bool)
+
+
+failOnNothingDecoder : Maybe a -> Decoder a
+failOnNothingDecoder =
+    Maybe.map JD.succeed >> Maybe.withDefault (JD.fail "Nothing")
+
+
+failOnErrorDecoder : Result a b -> Decoder b
+failOnErrorDecoder =
+    Result.map JD.succeed >> Result.withDefault (JD.fail "Error")
+
+
+
+-- UTILS
+
+
+stringToMaybe : String -> Maybe String
+stringToMaybe string =
+    if string == "" then
+        Nothing
+    else
+        Just string

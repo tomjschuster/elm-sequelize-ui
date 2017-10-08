@@ -1,13 +1,18 @@
 module Data.DataType
     exposing
         ( DataType(..)
+        , Modifier(..)
         , all
         , decoder
         , encode
         , fromId
         , none
         , toId
+        , toInitialModifier
         , toString
+        , updatePrecision
+        , updateSize
+        , updateWithTimezone
         )
 
 import Json.Decode as JD exposing (Decoder)
@@ -37,26 +42,6 @@ type DataType
     | Time
 
 
-none : DataType
-none =
-    None
-
-
-type Option
-    = NoOption
-    | Size
-    | Precision
-    | TimeZone
-
-
-type alias DataTypeConfig =
-    { dataType : DataType
-    , id : Int
-    , stringValue : String
-    , options : List Option
-    }
-
-
 all : List DataType
 all =
     [ Char
@@ -81,6 +66,64 @@ all =
     ]
 
 
+none : DataType
+none =
+    None
+
+
+
+-- OPTIONS
+
+
+type Modifier
+    = NoModifier
+    | Size (Maybe Int)
+    | Precision (Maybe Int) (Maybe Int)
+    | WithTimezone Bool
+
+
+updateSize : Modifier -> Maybe Int -> Modifier
+updateSize modifier size =
+    case modifier of
+        Size _ ->
+            Size size
+
+        _ ->
+            modifier
+
+
+updatePrecision : Modifier -> Maybe Int -> Maybe Int -> Modifier
+updatePrecision modifier precision decimals =
+    case modifier of
+        Precision _ _ ->
+            Precision precision decimals
+
+        _ ->
+            modifier
+
+
+updateWithTimezone : Modifier -> Bool -> Modifier
+updateWithTimezone modifier withTimezone =
+    case modifier of
+        WithTimezone _ ->
+            WithTimezone withTimezone
+
+        _ ->
+            modifier
+
+
+
+-- CONFIG
+
+
+type alias DataTypeConfig =
+    { dataType : DataType
+    , id : Int
+    , stringValue : String
+    , initialModifier : Modifier
+    }
+
+
 toConfig : DataType -> DataTypeConfig
 toConfig dataType =
     case dataType of
@@ -88,140 +131,140 @@ toConfig dataType =
             { dataType = None
             , id = 0
             , stringValue = "None"
-            , options = []
+            , initialModifier = NoModifier
             }
 
         Char ->
             { dataType = Char
             , id = 1
             , stringValue = "char"
-            , options = [ Size ]
+            , initialModifier = Size Nothing
             }
 
         VarChar ->
             { dataType = VarChar
             , id = 2
             , stringValue = "varchar"
-            , options = [ Size ]
+            , initialModifier = Size Nothing
             }
 
         Text ->
             { dataType = Text
             , id = 3
             , stringValue = "text"
-            , options = []
+            , initialModifier = NoModifier
             }
 
         Bit ->
             { dataType = Bit
             , id = 4
             , stringValue = "bit"
-            , options = [ Size ]
+            , initialModifier = Size Nothing
             }
 
         VarBit ->
             { dataType = VarBit
             , id = 5
             , stringValue = "varbit"
-            , options = [ Size ]
+            , initialModifier = Size Nothing
             }
 
         SmallInt ->
             { dataType = SmallInt
             , id = 6
             , stringValue = "smallint"
-            , options = []
+            , initialModifier = NoModifier
             }
 
         Integer ->
             { dataType = Integer
             , id = 7
             , stringValue = "int"
-            , options = []
+            , initialModifier = NoModifier
             }
 
         BigInt ->
             { dataType = BigInt
             , id = 8
             , stringValue = "bigint"
-            , options = []
+            , initialModifier = NoModifier
             }
 
         SmallSerial ->
             { dataType = SmallSerial
             , id = 9
             , stringValue = "smallserial"
-            , options = []
+            , initialModifier = NoModifier
             }
 
         Serial ->
             { dataType = Serial
             , id = 10
             , stringValue = "serial"
-            , options = []
+            , initialModifier = NoModifier
             }
 
         BigSerial ->
             { dataType = BigSerial
             , id = 11
             , stringValue = "bigserial"
-            , options = []
+            , initialModifier = NoModifier
             }
 
         Numeric ->
             { dataType = Numeric
             , id = 12
             , stringValue = "numeric"
-            , options = [ Precision ]
+            , initialModifier = Precision Nothing Nothing
             }
 
         Double ->
             { dataType = Double
             , id = 13
             , stringValue = "double"
-            , options = []
+            , initialModifier = NoModifier
             }
 
         Real ->
             { dataType = Real
             , id = 14
             , stringValue = "real"
-            , options = []
+            , initialModifier = NoModifier
             }
 
         Money ->
             { dataType = Money
             , id = 15
             , stringValue = "money"
-            , options = []
+            , initialModifier = NoModifier
             }
 
         Boolean ->
             { dataType = Boolean
             , id = 16
             , stringValue = "bool"
-            , options = []
+            , initialModifier = NoModifier
             }
 
         Date ->
             { dataType = Date
             , id = 17
             , stringValue = "date"
-            , options = []
+            , initialModifier = NoModifier
             }
 
         TimeStamp ->
             { dataType = TimeStamp
             , id = 18
             , stringValue = "timestamp"
-            , options = [ TimeZone ]
+            , initialModifier = WithTimezone False
             }
 
         Time ->
             { dataType = Time
             , id = 19
             , stringValue = "time"
-            , options = [ TimeZone ]
+            , initialModifier = WithTimezone False
             }
 
 
@@ -233,6 +276,11 @@ toId =
 toString : DataType -> String
 toString =
     toConfig >> .stringValue
+
+
+toInitialModifier : DataType -> Modifier
+toInitialModifier =
+    toConfig >> .initialModifier
 
 
 fromId : Int -> Maybe DataType
