@@ -37,6 +37,7 @@ import Utils.Handlers
         )
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
+import Views.ChangesetError as CE
 
 
 -- MODEL
@@ -46,6 +47,7 @@ type alias Model =
     { schema : Schema
     , entity : Entity
     , field : Field
+    , editing : Bool
     , editingName : Maybe String
     , errors : List ChangesetError
     }
@@ -53,7 +55,7 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model Schema.empty Entity.empty Field.empty Nothing []
+    Model Schema.empty Entity.empty Field.empty False Nothing []
 
 
 init : Int -> Int -> Int -> Cmd Msg
@@ -73,10 +75,14 @@ type Msg
     | LoadFieldWithAll (Result Http.Error FieldWithAll)
       -- FIELD
     | LoadField (Result Http.Error Field)
-    | EditFieldName
-    | InputEditFieldName String
-    | CancelEditFieldName
-    | SaveFieldName
+    | EditField
+    | InputFieldName String
+    | SelectDataType (Maybe Int)
+    | UpdateSize (Maybe Int)
+    | UpdatePrecision (Maybe Int) (Maybe Int)
+    | UpdateWithTimezone Bool
+    | CancelEditField
+    | SaveField
     | Destroy
     | RemoveField (Result Http.Error ())
       -- DataType
@@ -123,6 +129,7 @@ update msg model =
             ( { model
                 | field = field
                 , editingName = Nothing
+                , editing = False
                 , errors = []
               }
             , Cmd.none
@@ -135,33 +142,75 @@ update msg model =
             , AppUpdate.none
             )
 
-        EditFieldName ->
-            ( { model | editingName = Just model.field.name }
+        EditField ->
+            ( { model | editingName = Just model.field.name, editing = True }
             , Dom.focus "edit-field-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
-        InputEditFieldName name ->
-            ( { model | editingName = Just name }
+        InputFieldName name ->
+            ( { model | editingName = Just name, field = updateFieldName model.field name }
             , Cmd.none
             , AppUpdate.none
             )
 
-        CancelEditFieldName ->
+        CancelEditField ->
             ( { model | editingName = Nothing }
+            , RF.one model.field.id |> Http.send LoadField
+            , AppUpdate.none
+            )
+
+        SelectDataType maybeId ->
+            let
+                dataType =
+                    maybeId
+                        |> Maybe.andThen DataType.fromId
+                        |> Maybe.withDefault DataType.none
+            in
+            ( { model
+                | field =
+                    model.field
+                        |> Field.updateDataType dataType
+                        |> Field.updateDataTypeModifier
+                            (DataType.toInitialModifier dataType)
+              }
             , Cmd.none
             , AppUpdate.none
             )
 
-        SaveFieldName ->
+        UpdateSize size ->
+            let
+                modifier =
+                    model.field.dataTypeModifier |> DataType.updateSize size
+            in
+            ( { model | field = Field.updateDataTypeModifier modifier model.field }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        UpdatePrecision precision decimal ->
+            let
+                modifier =
+                    model.field.dataTypeModifier |> DataType.updatePrecision precision decimal
+            in
+            ( { model | field = Field.updateDataTypeModifier modifier model.field }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        UpdateWithTimezone withTimezone ->
+            let
+                modifier =
+                    model.field.dataTypeModifier |> DataType.updateWithTimezone withTimezone
+            in
+            ( { model | field = Field.updateDataTypeModifier modifier model.field }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        SaveField ->
             ( model
-            , model.editingName
-                |> Maybe.map
-                    (updateFieldName model.field
-                        >> RF.update
-                        >> Http.send LoadField
-                    )
-                |> Maybe.withDefault Cmd.none
+            , RF.update model.field |> Http.send LoadField
             , AppUpdate.none
             )
 
@@ -201,13 +250,13 @@ updateFieldName field name =
 
 
 view : Model -> Html Msg
-view { schema, entity, field, editingName } =
+view { schema, entity, field, editing, errors } =
     main_
         []
         [ breadcrumbs schema entity field
-        , title editingName field.name
-
-        --, fieldOptions field
+        , fieldButtons editing
+        , div [] (CE.prependIfErrors errors [])
+        , nameView editing field.name
         ]
 
 
@@ -218,28 +267,48 @@ breadcrumbs schema entity field =
 
 
 
--- FIELD VIEW
+-- NAME
 
 
-title : Maybe String -> String -> Html Msg
-title editingName name =
-    section [] (nameViewChildren name editingName)
+cancelUpdateField : Html Msg
+cancelUpdateField =
+    button [ onClick CancelEditField ] [ text "Cancel" ]
 
 
-nameViewChildren : String -> Maybe String -> List (Html Msg)
-nameViewChildren name =
-    Maybe.map editingNameChildren
-        >> Maybe.withDefault (normalNameChildren name)
+saveFieldButton : Html Msg
+saveFieldButton =
+    button [ onClick SaveField ] [ text "Save" ]
+
+
+nameView : Bool -> String -> Html Msg
+nameView editing name =
+    section [] (nameViewChildren name editing)
+
+
+nameViewChildren : String -> Bool -> List (Html Msg)
+nameViewChildren name editing =
+    if editing then
+        editingNameChildren name
+    else
+        normalNameChildren name
+
+
+fieldButtons : Bool -> Html Msg
+fieldButtons editing =
+    if editing then
+        div [] [ saveFieldButton, cancelUpdateField ]
+    else
+        div [] [ editFieldNameButton, deleteFieldButton ]
 
 
 editingNameChildren : String -> List (Html Msg)
 editingNameChildren name =
-    [ fieldNameInput name, saveFieldNameButton, cancelUpdateFieldName ]
+    [ fieldNameInput name ]
 
 
 normalNameChildren : String -> List (Html Msg)
 normalNameChildren name =
-    [ nameTitle name, editFieldNameButton, deleteFieldButton ]
+    [ nameTitle name ]
 
 
 nameTitle : String -> Html Msg
@@ -249,7 +318,7 @@ nameTitle name =
 
 editFieldNameButton : Html Msg
 editFieldNameButton =
-    button [ onClick EditFieldName ] [ text "Edit Field Name" ]
+    button [ onClick EditField ] [ text "Edit" ]
 
 
 deleteFieldButton : Html Msg
@@ -262,7 +331,7 @@ fieldNameInput name =
     input
         [ id "edit-field-name"
         , value name
-        , onInput InputEditFieldName
+        , onInput InputFieldName
         , customOnKeyDown onFieldNameKeyDown
         ]
         []
@@ -272,41 +341,10 @@ onFieldNameKeyDown : Key -> Maybe Msg
 onFieldNameKeyDown key =
     case key of
         Enter ->
-            Just SaveFieldName
+            Just SaveField
 
         Escape ->
-            Just CancelEditFieldName
+            Just CancelEditField
 
         _ ->
             Nothing
-
-
-cancelUpdateFieldName : Html Msg
-cancelUpdateFieldName =
-    button [ onClick CancelEditFieldName ] [ text "Cancel" ]
-
-
-saveFieldNameButton : Html Msg
-saveFieldNameButton =
-    button [ onClick SaveFieldName ] [ text "Save" ]
-
-
-
--- FIELD OPTIONS
---fieldOptions : Field -> Html Msg
---fieldOptions field =
---    section []
---        [ h3 [] [ text "Options" ]
---        , dataTypeDropDown field.dataType
---        ]
---dataTypeDropDown : Maybe DataType -> Html Msg
---dataTypeDropDown currentDataType =
---    select
---        []
---        (List.map (dataTypeOption currentDataType) DataType.defaultList)
---dataTypeOption : Maybe DataType -> DataType -> Html Msg
---dataTypeOption currentDataType dataType =
---    option
---        [ selected (currentDataType == Just dataType)
---        ]
---        [ text (DataType.toString dataType) ]
