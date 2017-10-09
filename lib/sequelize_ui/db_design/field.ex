@@ -22,7 +22,7 @@ defmodule SequelizeUi.DbDesign.Field do
   @doc false
   def changeset(%Field{} = field, attrs) do
     field
-    |> cast(attrs, [:entity_id, :name, :data_type_id])
+    |> cast(attrs, [:entity_id, :name, :data_type_id, :size, :precision, :decimals, :with_timezone])
     |> validate_required([:entity_id, :name, :data_type_id])
     |> assoc_constraint(:entity)
     |> assoc_constraint(:data_type)

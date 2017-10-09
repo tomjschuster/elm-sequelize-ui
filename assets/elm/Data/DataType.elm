@@ -5,7 +5,9 @@ module Data.DataType
         , all
         , decoder
         , encode
+        , encodeModifier
         , fromId
+        , noModifier
         , none
         , toId
         , toInitialModifier
@@ -72,7 +74,7 @@ none =
 
 
 
--- OPTIONS
+-- MODIFIERS
 
 
 type Modifier
@@ -80,6 +82,11 @@ type Modifier
     | Size (Maybe Int)
     | Precision (Maybe Int) (Maybe Int)
     | WithTimezone Bool
+
+
+noModifier : Modifier
+noModifier =
+    NoModifier
 
 
 updateSize : Modifier -> Maybe Int -> Modifier
@@ -358,3 +365,26 @@ encode dataType =
         JE.null
     else
         JE.int (toId dataType)
+
+
+encodeModifier : Modifier -> List ( String, Value )
+encodeModifier modifier =
+    case modifier of
+        NoModifier ->
+            []
+
+        Size size ->
+            Debug.log "abc" [ ( "size", encodeNullableInt size ) ]
+
+        Precision precision decimals ->
+            [ ( "precision", encodeNullableInt precision )
+            , ( "decimals", encodeNullableInt decimals )
+            ]
+
+        WithTimezone withTimezone ->
+            [ ( "with_timezone", JE.bool withTimezone ) ]
+
+
+encodeNullableInt : Maybe Int -> Value
+encodeNullableInt =
+    Maybe.map JE.int >> Maybe.withDefault JE.null

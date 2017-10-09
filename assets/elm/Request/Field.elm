@@ -32,11 +32,11 @@ fieldUrl =
     toString >> (++) fieldsUrl
 
 
-create : Int -> String -> DataType -> Request Field
-create entityId name dataType =
+create : Int -> String -> DataType -> DataType.Modifier -> Request Field
+create entityId name dataType modifier =
     Http.post
         fieldsUrl
-        (Field.encodeNewField entityId name dataType |> Http.jsonBody)
+        (Field.encodeNewField entityId name dataType modifier |> Http.jsonBody)
         (dataDecoder Field.decoder)
 
 

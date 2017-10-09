@@ -74,14 +74,16 @@ encode { id, entityId, name, dataType } =
         ]
 
 
-encodeNewField : Int -> String -> DataType -> Value
-encodeNewField entityId name dataType =
+encodeNewField : Int -> String -> DataType -> DataType.Modifier -> Value
+encodeNewField entityId name dataType modifier =
     JE.object
         [ ( "field"
           , JE.object
-                [ ( "entity_id", JE.int entityId )
-                , ( "name", JE.string name )
-                , ( "data_type_id", DataType.encode dataType )
-                ]
+                ([ ( "entity_id", JE.int entityId )
+                 , ( "name", JE.string name )
+                 , ( "data_type_id", DataType.encode dataType )
+                 ]
+                    ++ DataType.encodeModifier modifier
+                )
           )
         ]

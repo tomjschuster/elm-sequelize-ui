@@ -276,6 +276,7 @@ update msg model =
                 model.entity.id
                 model.newFieldInput
                 model.newFieldDataType
+                model.newFieldModifier
                 |> Http.send LoadNewField
             , AppUpdate.none
             )
@@ -285,6 +286,7 @@ update msg model =
                 | fields = model.fields ++ [ field ]
                 , newFieldInput = ""
                 , newFieldDataType = DataType.none
+                , newFieldModifier = DataType.noModifier
                 , errors = []
               }
             , Dom.focus "create-field" |> Task.attempt FocusResult
