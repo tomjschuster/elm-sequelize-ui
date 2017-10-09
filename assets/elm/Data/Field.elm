@@ -57,7 +57,7 @@ decoder =
         |> required "entityId" int
         |> required "name" string
         |> optional "dataTypeId" DataType.decoder DataType.none
-        |> hardcoded DataType.NoModifier
+        |> optional "modifier" DataType.modifierDecoder DataType.noModifier
 
 
 encode : Field -> Value

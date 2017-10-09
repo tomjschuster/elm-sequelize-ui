@@ -7,6 +7,7 @@ module Data.DataType
         , encode
         , encodeModifier
         , fromId
+        , modifierDecoder
         , noModifier
         , none
         , toId
@@ -354,9 +355,42 @@ fromId id =
             Nothing
 
 
+
+-- DECODERS
+
+
 decoder : Decoder DataType
 decoder =
     JD.map (fromId >> Maybe.withDefault None) JD.int
+
+
+modifierDecoder : Decoder Modifier
+modifierDecoder =
+    JD.oneOf
+        [ sizeDecoder
+        , precisionDecoder
+        , withTimezoneDecoder
+        , JD.succeed NoModifier
+        ]
+
+
+sizeDecoder : Decoder Modifier
+sizeDecoder =
+    JD.field "size" (JD.maybe JD.int |> JD.map Size)
+
+
+precisionDecoder : Decoder Modifier
+precisionDecoder =
+    JD.field "precision" (JD.map2 Precision (JD.maybe JD.int) (JD.maybe JD.int))
+
+
+withTimezoneDecoder : Decoder Modifier
+withTimezoneDecoder =
+    JD.field "withTimezone" (JD.bool |> JD.map WithTimezone)
+
+
+
+-- ENCODERS
 
 
 encode : DataType -> Value

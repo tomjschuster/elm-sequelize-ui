@@ -22,9 +22,21 @@ defmodule SequelizeUiWeb.FieldView do
   end
 
   def render("field.json", %{field: field}) do
+    modifier =
+      case {field.size, field.precision, field.decimals, field.with_timezone} do
+        {nil, nil, nil, nil} ->
+          nil
+        {size, nil, nil, nil} ->
+          %{size: size}
+        {nil, precision, decimals, nil} ->
+          %{precision: %{precision: precision, decimals: decimals}}
+        {nil, nil, nil, with_timezone} ->
+          %{withTimezone: true}
+      end
     %{id: field.id,
       name: field.name,
       entityId: field.entity_id,
-      dataTypeId: field.data_type_id}
+      dataTypeId: field.data_type_id,
+      modifier: modifier}
   end
 end
