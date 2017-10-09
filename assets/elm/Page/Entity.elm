@@ -21,6 +21,7 @@ import Html
         , option
         , section
         , select
+        , span
         , text
         , ul
         )
@@ -35,7 +36,7 @@ import Utils.Handlers exposing (customOnKeyDown, onChangeInt, onEnter)
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
-import Views.DataTypeSelect as DataTypeSelect
+import Views.DataType.Select as DTSelect
 
 
 -- MODEL
@@ -529,12 +530,12 @@ createField name dataType modifier =
     div
         []
         [ createFieldInput name
-        , DataTypeSelect.view selectDataTypeConfig dataType modifier
+        , DTSelect.view selectDataTypeConfig dataType modifier
         , createFieldButton
         ]
 
 
-selectDataTypeConfig : DataTypeSelect.Config Msg
+selectDataTypeConfig : DTSelect.Config Msg
 selectDataTypeConfig =
     { handleChange = SelectNewFieldDataType
     , handleSizeInput = UpdateNewFieldSize
@@ -578,7 +579,11 @@ fieldItemChildren editingField schemaId field =
 
 normalFieldItemChildren : Int -> Field -> List (Html Msg)
 normalFieldItemChildren schemaId field =
-    [ fieldLink schemaId field, editFieldButton field.id, deleteFieldButton field.id ]
+    [ fieldLink schemaId field
+    , dataType field.dataType field.dataTypeModifier
+    , editFieldButton field.id
+    , deleteFieldButton field.id
+    ]
 
 
 getEditingFieldItemChildren : Field -> Field -> List (Html Msg)
@@ -600,6 +605,21 @@ editingFieldItemChildren field =
 fieldLink : Int -> Field -> Html Msg
 fieldLink schemaId { entityId, id, name } =
     Router.link Goto (Router.Field schemaId entityId id) [] [ text name ]
+
+
+dataType : DataType -> DataType.Modifier -> Html msg
+dataType dataType modifier =
+    span []
+        [ text
+            (" ("
+                ++ DataType.toStringValue dataType
+                ++ (DataType.modifierToString modifier
+                        |> Maybe.map ((++) " ")
+                        |> Maybe.withDefault ""
+                   )
+                ++ ")"
+            )
+        ]
 
 
 editFieldButton : Int -> Html Msg

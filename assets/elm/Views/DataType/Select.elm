@@ -1,4 +1,4 @@
-module Views.DataTypeSelect exposing (Config, view)
+module Views.DataType.Select exposing (Config, view)
 
 import Data.DataType as DataType exposing (DataType)
 import Html as Html exposing (Html, div, input, label, option, select, text)
@@ -39,7 +39,7 @@ selectOption config currentType dataType =
         [ selected (currentType == dataType)
         , value (DataType.toId dataType |> toString)
         ]
-        [ text (DataType.toString dataType) ]
+        [ text (DataType.toStringValue dataType) ]
 
 
 modifierView : Config msg -> DataType.Modifier -> Maybe (Html msg)

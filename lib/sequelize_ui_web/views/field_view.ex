@@ -31,7 +31,7 @@ defmodule SequelizeUiWeb.FieldView do
         {nil, precision, decimals, nil} ->
           %{precision: %{precision: precision, decimals: decimals}}
         {nil, nil, nil, with_timezone} ->
-          %{withTimezone: true}
+          %{withTimezone: with_timezone}
       end
     %{id: field.id,
       name: field.name,

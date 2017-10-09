@@ -8,11 +8,12 @@ module Data.DataType
         , encodeModifier
         , fromId
         , modifierDecoder
+        , modifierToString
         , noModifier
         , none
         , toId
         , toInitialModifier
-        , toString
+        , toStringValue
         , updatePrecision
         , updateSize
         , updateWithTimezone
@@ -72,52 +73,6 @@ all =
 none : DataType
 none =
     None
-
-
-
--- MODIFIERS
-
-
-type Modifier
-    = NoModifier
-    | Size (Maybe Int)
-    | Precision (Maybe Int) (Maybe Int)
-    | WithTimezone Bool
-
-
-noModifier : Modifier
-noModifier =
-    NoModifier
-
-
-updateSize : Modifier -> Maybe Int -> Modifier
-updateSize modifier size =
-    case modifier of
-        Size _ ->
-            Size size
-
-        _ ->
-            modifier
-
-
-updatePrecision : Modifier -> Maybe Int -> Maybe Int -> Modifier
-updatePrecision modifier precision decimals =
-    case modifier of
-        Precision _ _ ->
-            Precision precision decimals
-
-        _ ->
-            modifier
-
-
-updateWithTimezone : Modifier -> Bool -> Modifier
-updateWithTimezone modifier withTimezone =
-    case modifier of
-        WithTimezone _ ->
-            WithTimezone withTimezone
-
-        _ ->
-            modifier
 
 
 
@@ -281,8 +236,8 @@ toId =
     toConfig >> .id
 
 
-toString : DataType -> String
-toString =
+toStringValue : DataType -> String
+toStringValue =
     toConfig >> .stringValue
 
 
@@ -353,6 +308,74 @@ fromId id =
 
         _ ->
             Nothing
+
+
+
+-- MODIFIERS
+
+
+type Modifier
+    = NoModifier
+    | Size (Maybe Int)
+    | Precision (Maybe Int) (Maybe Int)
+    | WithTimezone Bool
+
+
+noModifier : Modifier
+noModifier =
+    NoModifier
+
+
+updateSize : Modifier -> Maybe Int -> Modifier
+updateSize modifier size =
+    case modifier of
+        Size _ ->
+            Size size
+
+        _ ->
+            modifier
+
+
+updatePrecision : Modifier -> Maybe Int -> Maybe Int -> Modifier
+updatePrecision modifier precision decimals =
+    case modifier of
+        Precision _ _ ->
+            Precision precision decimals
+
+        _ ->
+            modifier
+
+
+updateWithTimezone : Modifier -> Bool -> Modifier
+updateWithTimezone modifier withTimezone =
+    case modifier of
+        WithTimezone _ ->
+            WithTimezone withTimezone
+
+        _ ->
+            modifier
+
+
+modifierToString : Modifier -> Maybe String
+modifierToString modifier =
+    case modifier of
+        NoModifier ->
+            Nothing
+
+        Size size ->
+            Maybe.map (toString >> (++) "(" >> flip (++) ")") size
+
+        Precision precision decimals ->
+            Maybe.map2
+                (\p s -> "(" ++ toString p ++ ", " ++ toString s ++ ")")
+                precision
+                decimals
+
+        WithTimezone withTimezone ->
+            if withTimezone then
+                Just "with time zone"
+            else
+                Just "without time zone"
 
 
 
