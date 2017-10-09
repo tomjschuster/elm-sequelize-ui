@@ -109,9 +109,13 @@ type Msg
     | UpdateNewFieldWithTimezone Bool
     | CreateField
     | LoadNewField (Result Http.Error Field)
-    | EditFieldName Int
+    | EditField Int
     | InputEditingFieldName String
-    | CancelEditFieldName
+    | SelectEditingFieldDataType (Maybe Int)
+    | UpdateEditingFieldSize (Maybe Int)
+    | UpdateEditingFieldPrecision (Maybe Int) (Maybe Int)
+    | UpdateEditingFieldWithTimezone Bool
+    | CancelEditField
     | SaveFieldName
     | UpdateField (Result Http.Error Field)
     | DestroyField Int
@@ -247,7 +251,7 @@ update msg model =
         UpdateNewFieldSize size ->
             ( { model
                 | newFieldModifier =
-                    DataType.updateSize model.newFieldModifier size
+                    DataType.updateSize size model.newFieldModifier
               }
             , Cmd.none
             , AppUpdate.none
@@ -256,7 +260,7 @@ update msg model =
         UpdateNewFieldPrecision precision decimals ->
             ( { model
                 | newFieldModifier =
-                    DataType.updatePrecision model.newFieldModifier precision decimals
+                    DataType.updatePrecision precision decimals model.newFieldModifier
               }
             , Cmd.none
             , AppUpdate.none
@@ -265,7 +269,7 @@ update msg model =
         UpdateNewFieldWithTimezone withTimezone ->
             ( { model
                 | newFieldModifier =
-                    DataType.updateWithTimezone model.newFieldModifier withTimezone
+                    DataType.updateWithTimezone withTimezone model.newFieldModifier
               }
             , Cmd.none
             , AppUpdate.none
@@ -300,7 +304,7 @@ update msg model =
             , AppUpdate.none
             )
 
-        EditFieldName id ->
+        EditField id ->
             ( { model
                 | editingName = Nothing
                 , editingField =
@@ -322,7 +326,75 @@ update msg model =
             , AppUpdate.none
             )
 
-        CancelEditFieldName ->
+        SelectEditingFieldDataType maybeId ->
+            let
+                dataType =
+                    maybeId
+                        |> Maybe.andThen DataType.fromId
+                        |> Maybe.withDefault DataType.none
+            in
+            ( { model
+                | editingField =
+                    Maybe.map
+                        (Field.updateDataType dataType
+                            >> Field.updateDataTypeModifier
+                                (DataType.toInitialModifier dataType)
+                        )
+                        model.editingField
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        UpdateEditingFieldSize size ->
+            let
+                modifier =
+                    Maybe.map
+                        (.dataTypeModifier >> DataType.updateSize size)
+                        model.editingField
+                        |> Maybe.withDefault DataType.noModifier
+            in
+            ( { model
+                | editingField =
+                    Maybe.map (Field.updateDataTypeModifier modifier) model.editingField
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        UpdateEditingFieldPrecision precision decimal ->
+            let
+                modifier =
+                    Maybe.map
+                        (.dataTypeModifier >> DataType.updatePrecision precision decimal)
+                        model.editingField
+                        |> Maybe.withDefault DataType.noModifier
+            in
+            ( { model
+                | editingField =
+                    Maybe.map (Field.updateDataTypeModifier modifier) model.editingField
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        UpdateEditingFieldWithTimezone withTimezone ->
+            let
+                modifier =
+                    Maybe.map
+                        (.dataTypeModifier >> DataType.updateWithTimezone withTimezone)
+                        model.editingField
+                        |> Maybe.withDefault DataType.noModifier
+            in
+            ( { model
+                | editingField =
+                    Maybe.map (Field.updateDataTypeModifier modifier) model.editingField
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        CancelEditField ->
             ( { model | editingField = Nothing, errors = [] }
             , Cmd.none
             , AppUpdate.none
@@ -597,8 +669,9 @@ getEditingFieldItemChildren field editingField =
 editingFieldItemChildren : Field -> List (Html Msg)
 editingFieldItemChildren field =
     [ editFieldNameInput field.name
-    , cancelEditFieldNameButton
-    , saveEditFieldNameButton
+    , DTSelect.view editFieldSelectDataTypeConfig field.dataType field.dataTypeModifier
+    , cancelEditFieldButton
+    , saveEditFieldButton
     ]
 
 
@@ -624,7 +697,7 @@ dataType dataType modifier =
 
 editFieldButton : Int -> Html Msg
 editFieldButton id =
-    button [ onClick (EditFieldName id) ] [ text "Edit" ]
+    button [ onClick (EditField id) ] [ text "Edit" ]
 
 
 editFieldNameInput : String -> Html Msg
@@ -638,6 +711,15 @@ editFieldNameInput name =
         []
 
 
+editFieldSelectDataTypeConfig : DTSelect.Config Msg
+editFieldSelectDataTypeConfig =
+    { handleChange = SelectEditingFieldDataType
+    , handleSizeInput = UpdateEditingFieldSize
+    , handlePrecisionInput = UpdateEditingFieldPrecision
+    , handleTimezoneCheck = UpdateEditingFieldWithTimezone
+    }
+
+
 onFieldNameKeyDown : Key -> Maybe Msg
 onFieldNameKeyDown key =
     case key of
@@ -645,19 +727,19 @@ onFieldNameKeyDown key =
             Just SaveFieldName
 
         Escape ->
-            Just CancelEditFieldName
+            Just CancelEditField
 
         _ ->
             Nothing
 
 
-cancelEditFieldNameButton : Html Msg
-cancelEditFieldNameButton =
-    button [ onClick CancelEditFieldName ] [ text "Cancel" ]
+cancelEditFieldButton : Html Msg
+cancelEditFieldButton =
+    button [ onClick CancelEditField ] [ text "Cancel" ]
 
 
-saveEditFieldNameButton : Html Msg
-saveEditFieldNameButton =
+saveEditFieldButton : Html Msg
+saveEditFieldButton =
     button [ onClick SaveFieldName ] [ text "Save" ]
 
 

@@ -6,6 +6,7 @@ module Data.Field
         , encode
         , encodeNewField
         , updateDataType
+        , updateDataTypeModifier
         )
 
 import Data.DataType as DataType exposing (DataType)
@@ -45,9 +46,14 @@ empty =
     }
 
 
-updateDataType : Field -> DataType -> Field
-updateDataType field dataType =
+updateDataType : DataType -> Field -> Field
+updateDataType dataType field =
     { field | dataType = dataType }
+
+
+updateDataTypeModifier : DataType.Modifier -> Field -> Field
+updateDataTypeModifier dataTypeModifier field =
+    { field | dataTypeModifier = dataTypeModifier }
 
 
 decoder : Decoder Field
@@ -61,15 +67,17 @@ decoder =
 
 
 encode : Field -> Value
-encode { id, entityId, name, dataType } =
+encode { id, entityId, name, dataType, dataTypeModifier } =
     JE.object
         [ ( "field"
           , JE.object
-                [ ( "id", JE.int id )
-                , ( "entity_id", JE.int entityId )
-                , ( "name", JE.string name )
-                , ( "data_type_id", DataType.encode dataType )
-                ]
+                ([ ( "id", JE.int id )
+                 , ( "entity_id", JE.int entityId )
+                 , ( "name", JE.string name )
+                 , ( "data_type_id", DataType.encode dataType )
+                 ]
+                    ++ DataType.encodeModifier dataTypeModifier
+                )
           )
         ]
 

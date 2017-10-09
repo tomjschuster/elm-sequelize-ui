@@ -185,7 +185,7 @@ update msg model =
 
         -- DATA TYPE
         UpdateDataType dataType ->
-            ( { model | field = Field.updateDataType model.field dataType }
+            ( { model | field = Field.updateDataType dataType model.field }
             , Cmd.none
             , AppUpdate.none
             )

@@ -326,8 +326,8 @@ noModifier =
     NoModifier
 
 
-updateSize : Modifier -> Maybe Int -> Modifier
-updateSize modifier size =
+updateSize : Maybe Int -> Modifier -> Modifier
+updateSize size modifier =
     case modifier of
         Size _ ->
             Size size
@@ -336,8 +336,8 @@ updateSize modifier size =
             modifier
 
 
-updatePrecision : Modifier -> Maybe Int -> Maybe Int -> Modifier
-updatePrecision modifier precision decimals =
+updatePrecision : Maybe Int -> Maybe Int -> Modifier -> Modifier
+updatePrecision precision decimals modifier =
     case modifier of
         Precision _ _ ->
             Precision precision decimals
@@ -346,8 +346,8 @@ updatePrecision modifier precision decimals =
             modifier
 
 
-updateWithTimezone : Modifier -> Bool -> Modifier
-updateWithTimezone modifier withTimezone =
+updateWithTimezone : Bool -> Modifier -> Modifier
+updateWithTimezone withTimezone modifier =
     case modifier of
         WithTimezone _ ->
             WithTimezone withTimezone
