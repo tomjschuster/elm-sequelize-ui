@@ -16,13 +16,8 @@ type ConstraintType
 
 
 type SqlConstraint
-    = Check String
+    = PrimaryKey
     | NotNull
-    | Unique (List String)
-    | References ForeignKey
-
-
-type alias ForeignKey =
-    { sourceFieldName : String
-    , targetField : Field
-    }
+    | Unique (List Int)
+    | ForeignKey Int Field
+    | Check String
