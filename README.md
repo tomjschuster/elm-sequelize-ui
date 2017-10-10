@@ -1,6 +1,6 @@
 # TODO
-* Field properties
-* Template builder
+* Constraints
+* Template builder (SQL, Sequelize, Ecto)
 * Elm CSS
 * UI/UX
 * Deployment
