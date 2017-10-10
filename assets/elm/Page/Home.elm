@@ -229,16 +229,6 @@ update msg model =
             )
 
 
-emptySchema : Schema
-emptySchema =
-    Schema.empty
-
-
-draftSchema : String -> Schema
-draftSchema name =
-    { emptySchema | name = name }
-
-
 
 -- SUBSCRIPTIONS
 
@@ -257,7 +247,7 @@ view model =
     main_ []
         [ breadCrumbs
         , title
-        , content model
+        , schemasView model
         ]
 
 
@@ -271,18 +261,13 @@ breadCrumbs =
     BC.view Goto [ BC.home ]
 
 
-content : Model -> Html Msg
-content model =
-    div [] (contentChildren model)
+schemasView : Model -> Html Msg
+schemasView model =
+    div [] (CE.prependIfErrors model.errors (schemaChildren model))
 
 
-contentChildren : Model -> List (Html Msg)
-contentChildren model =
-    CE.prependIfErrors model.errors (normalContentChildren model)
-
-
-normalContentChildren : Model -> List (Html Msg)
-normalContentChildren model =
+schemaChildren : Model -> List (Html Msg)
+schemaChildren model =
     [ createSchemaInput model.newSchema.name
     , createSchemaButton
     , schemaList model.schemas model.editingSchema
@@ -310,7 +295,7 @@ createSchemaButton =
 
 
 
--- SCHEMAS VIEW
+-- LIST SCHEMAS
 
 
 schemaList : List Schema -> Maybe Schema -> Html Msg
@@ -330,15 +315,8 @@ schemaListItemChildren editingSchema schema =
         |> Maybe.withDefault (normalSchemaListItemChildren schema)
 
 
-editingSchemaListItemChildren : Schema -> Schema -> List (Html Msg)
-editingSchemaListItemChildren schema editingSchema =
-    if editingSchema.id == schema.id then
-        [ editSchemaNameInput editingSchema.name
-        , cancelEditSchemaNameButton
-        , saveSchemaNameButton
-        ]
-    else
-        [ text schema.name ]
+
+-- READ SCHEMAS
 
 
 normalSchemaListItemChildren : Schema -> List (Html Msg)
@@ -352,6 +330,31 @@ normalSchemaListItemChildren schema =
 schemaLink : Schema -> Html Msg
 schemaLink { id, name } =
     Router.link Goto (Router.Schema id) [] [ text name ]
+
+
+editSchemaNameButton : Int -> Html Msg
+editSchemaNameButton id =
+    button [ onClick (EditSchema id) ] [ text "Edit Name" ]
+
+
+deleteSchemaButton : Int -> Html Msg
+deleteSchemaButton id =
+    button [ onClick (DestroySchema id) ] [ text "Delete" ]
+
+
+
+-- UPDATE SCHEMAS
+
+
+editingSchemaListItemChildren : Schema -> Schema -> List (Html Msg)
+editingSchemaListItemChildren schema editingSchema =
+    if editingSchema.id == schema.id then
+        [ editSchemaNameInput editingSchema.name
+        , cancelEditSchemaNameButton
+        , saveSchemaNameButton
+        ]
+    else
+        [ text schema.name ]
 
 
 editSchemaNameInput : String -> Html Msg
@@ -386,13 +389,3 @@ cancelEditSchemaNameButton =
 saveSchemaNameButton : Html Msg
 saveSchemaNameButton =
     button [ onClick UpdateSchema ] [ text "Save" ]
-
-
-editSchemaNameButton : Int -> Html Msg
-editSchemaNameButton id =
-    button [ onClick (EditSchema id) ] [ text "Edit Name" ]
-
-
-deleteSchemaButton : Int -> Html Msg
-deleteSchemaButton id =
-    button [ onClick (DestroySchema id) ] [ text "Delete" ]

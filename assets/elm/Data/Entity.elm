@@ -6,6 +6,7 @@ module Data.Entity
         , encode
         , encodeNew
         , init
+        , replaceIfMatch
         , updateName
         )
 
@@ -34,9 +35,25 @@ init schemaId =
     { empty | schemaId = schemaId }
 
 
+
+-- UPDATE
+
+
 updateName : String -> Entity -> Entity
 updateName name entity =
     { entity | name = name }
+
+
+replaceIfMatch : Entity -> Entity -> Entity
+replaceIfMatch newEntity entity =
+    if entity.id == newEntity.id then
+        newEntity
+    else
+        entity
+
+
+
+-- DECODE/ENCODE
 
 
 decoder : Decoder Entity

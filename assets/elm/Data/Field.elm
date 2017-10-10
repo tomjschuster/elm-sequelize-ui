@@ -10,7 +10,6 @@ module Data.Field
         , removeFromList
         , replaceIfMatch
         , updateDataType
-        , updateDataTypeById
         , updateDataTypeModifier
         , updateName
         , updatePrecision
@@ -71,25 +70,15 @@ updateName name field =
 
 updateDataType : DataType -> Field -> Field
 updateDataType dataType field =
-    { field | dataType = dataType }
+    { field
+        | dataType = dataType
+        , dataTypeModifier = DataType.toInitialModifier dataType
+    }
 
 
 updateDataTypeModifier : DataType.Modifier -> Field -> Field
 updateDataTypeModifier dataTypeModifier field =
     { field | dataTypeModifier = dataTypeModifier }
-
-
-updateDataTypeById : Maybe Int -> Field -> Field
-updateDataTypeById maybeId field =
-    let
-        dataType =
-            maybeId
-                |> Maybe.andThen DataType.fromId
-                |> Maybe.withDefault DataType.none
-    in
-    field
-        |> updateDataType dataType
-        |> updateDataTypeModifier (DataType.toInitialModifier dataType)
 
 
 updateSize : Maybe Int -> Field -> Field

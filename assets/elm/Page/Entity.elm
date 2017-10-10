@@ -46,7 +46,7 @@ type alias Model =
     { schema : Schema
     , entity : Entity
     , fields : List Field
-    , editingName : Maybe String
+    , editing : Bool
     , newField : Field
     , editingField : Maybe Field
     , toDeleteId : Maybe Int
@@ -60,7 +60,7 @@ initialModel =
         Schema.empty
         Entity.empty
         []
-        Nothing
+        False
         Field.empty
         Nothing
         Nothing
@@ -91,9 +91,9 @@ type Msg
     | LoadEntityWithAll (Result Http.Error EntityWithAll)
       -- ENTITY
     | LoadEntity (Result Http.Error Entity)
-    | EditEntityName
+    | EditEntity
     | InputEntityName String
-    | CancelEditEntityName
+    | CancelEditEntity
     | SaveEntityName
     | Destroy
     | RemoveEntity (Result Http.Error ())
@@ -154,11 +154,7 @@ update msg model =
 
         -- ENTITY
         LoadEntity (Ok entity) ->
-            ( { model
-                | entity = entity
-                , editingName = Nothing
-                , errors = []
-              }
+            ( { model | entity = entity, editing = False, errors = [] }
             , Cmd.none
             , AppUpdate.none
             )
@@ -169,37 +165,27 @@ update msg model =
             , AppUpdate.none
             )
 
-        EditEntityName ->
-            ( { model
-                | editingName = Just model.entity.name
-                , editingField = Nothing
-                , errors = []
-              }
+        EditEntity ->
+            ( { model | editing = True, editingField = Nothing, errors = [] }
             , Dom.focus "edit-entity-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
         InputEntityName name ->
-            ( { model | editingName = Just name }
+            ( { model | entity = Entity.updateName name model.entity }
             , Cmd.none
             , AppUpdate.none
             )
 
-        CancelEditEntityName ->
-            ( { model | editingName = Nothing, errors = [] }
-            , Cmd.none
+        CancelEditEntity ->
+            ( model
+            , RE.one model.entity.id |> Http.send LoadEntity
             , AppUpdate.none
             )
 
         SaveEntityName ->
             ( model
-            , model.editingName
-                |> Maybe.map
-                    (flip Entity.updateName model.entity
-                        >> RE.update
-                        >> Http.send LoadEntity
-                    )
-                |> Maybe.withDefault Cmd.none
+            , RE.update model.entity |> Http.send LoadEntity
             , AppUpdate.none
             )
 
@@ -268,7 +254,7 @@ update msg model =
         -- EDIT FIELD
         EditField id ->
             ( { model
-                | editingName = Nothing
+                | editing = False
                 , editingField =
                     model.fields
                         |> List.filter (.id >> (==) id)
@@ -372,8 +358,8 @@ view : Model -> Html Msg
 view model =
     main_ []
         [ breadCrumbs model.schema model.entity
-        , title model.editingName model.entity.name
-        , content model
+        , entityView model.editing model.entity
+        , fieldsView model
         ]
 
 
@@ -383,35 +369,30 @@ breadCrumbs schema entity =
 
 
 
--- ENTITY NAME VIEW
+-- ENTITY VIEW
 
 
-title : Maybe String -> String -> Html Msg
-title editingName name =
-    section [] (nameChildren editingName name)
+entityView : Bool -> Entity -> Html Msg
+entityView editing entity =
+    section [] (entityChildren editing entity)
 
 
-nameChildren : Maybe String -> String -> List (Html Msg)
-nameChildren editingName name =
-    editingName
-        |> Maybe.map editingNameChildren
-        |> Maybe.withDefault (normalNameChildren name)
+entityChildren : Bool -> Entity -> List (Html Msg)
+entityChildren editing { name } =
+    if editing then
+        [ editEntityNameInput name
+        , cancelEditEntityButton
+        , saveEditEntityButton
+        ]
+    else
+        [ entityName name
+        , editEntityNameButton
+        , deleteEntityButton
+        ]
 
 
-editingNameChildren : String -> List (Html Msg)
-editingNameChildren name =
-    [ editEntityNameInput name
-    , cancelEditEntityNameButton
-    , saveEditEntityNameButton
-    ]
 
-
-normalNameChildren : String -> List (Html Msg)
-normalNameChildren name =
-    [ entityName name
-    , editEntityNameButton
-    , deleteEntityButton
-    ]
+-- READ ENTITY
 
 
 entityName : String -> Html Msg
@@ -421,12 +402,16 @@ entityName name =
 
 editEntityNameButton : Html Msg
 editEntityNameButton =
-    button [ onClick EditEntityName ] [ text "Edit Name" ]
+    button [ onClick EditEntity ] [ text "Edit Name" ]
 
 
 deleteEntityButton : Html Msg
 deleteEntityButton =
     button [ onClick Destroy ] [ text "Delete Model" ]
+
+
+
+-- UPDATE ENTITY
 
 
 editEntityNameInput : String -> Html Msg
@@ -447,19 +432,19 @@ onEntityNameKeyDown key =
             Just SaveEntityName
 
         Escape ->
-            Just CancelEditEntityName
+            Just CancelEditEntity
 
         _ ->
             Nothing
 
 
-cancelEditEntityNameButton : Html Msg
-cancelEditEntityNameButton =
-    button [ onClick CancelEditEntityName ] [ text "Cancel" ]
+cancelEditEntityButton : Html Msg
+cancelEditEntityButton =
+    button [ onClick CancelEditEntity ] [ text "Cancel" ]
 
 
-saveEditEntityNameButton : Html Msg
-saveEditEntityNameButton =
+saveEditEntityButton : Html Msg
+saveEditEntityButton =
     button [ onClick SaveEntityName ] [ text "Save" ]
 
 
@@ -467,13 +452,13 @@ saveEditEntityNameButton =
 -- FIELDS VIEW
 
 
-content : Model -> Html Msg
-content model =
-    section [] (contentChildren model)
+fieldsView : Model -> Html Msg
+fieldsView model =
+    section [] (fieldsChildren model)
 
 
-contentChildren : Model -> List (Html Msg)
-contentChildren model =
+fieldsChildren : Model -> List (Html Msg)
+fieldsChildren model =
     CE.prependIfErrors model.errors
         [ fieldsTitle
         , createField model.newField
@@ -577,6 +562,16 @@ dataType dataType modifier =
         ]
 
 
+editFieldButton : Int -> Html Msg
+editFieldButton id =
+    button [ onClick (EditField id) ] [ text "Edit" ]
+
+
+deleteFieldButton : Int -> Html Msg
+deleteFieldButton id =
+    button [ onClick (DestroyField id) ] [ text "Delete" ]
+
+
 
 -- UPDATE FIELDS
 
@@ -596,11 +591,6 @@ editingFieldItemChildren field =
     , cancelEditFieldButton
     , saveEditFieldButton
     ]
-
-
-editFieldButton : Int -> Html Msg
-editFieldButton id =
-    button [ onClick (EditField id) ] [ text "Edit" ]
 
 
 editFieldNameInput : String -> Html Msg
@@ -642,8 +632,3 @@ cancelEditFieldButton =
 saveEditFieldButton : Html Msg
 saveEditFieldButton =
     button [ onClick SaveEditingField ] [ text "Save" ]
-
-
-deleteFieldButton : Int -> Html Msg
-deleteFieldButton id =
-    button [ onClick (DestroyField id) ] [ text "Delete" ]

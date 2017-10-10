@@ -46,7 +46,7 @@ oneWithEntities id =
 
 one : Int -> Http.Request Schema
 one id =
-    Http.get (schemaUrl id) Schema.decoder
+    Http.get (schemaUrl id) (dataDecoder Schema.decoder)
 
 
 create : Schema -> Http.Request Schema

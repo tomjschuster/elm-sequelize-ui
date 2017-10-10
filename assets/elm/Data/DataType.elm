@@ -7,9 +7,6 @@ module Data.DataType
         , encode
         , encodeModifier
         , fromId
-        , initPrecision
-        , initSize
-        , initWithTimezone
         , modifierDecoder
         , modifierToString
         , noModifier
@@ -351,10 +348,6 @@ modifierToString modifier =
                 Just "without time zone"
 
 
-
--- SIZE
-
-
 updateSize : Maybe Int -> Modifier -> Modifier
 updateSize size modifier =
     case modifier of
@@ -363,15 +356,6 @@ updateSize size modifier =
 
         _ ->
             modifier
-
-
-initSize : Maybe Int -> Modifier
-initSize =
-    Size
-
-
-
--- PRECISION
 
 
 updatePrecision : Maybe Int -> Maybe Int -> Modifier -> Modifier
@@ -384,15 +368,6 @@ updatePrecision precision decimals modifier =
             modifier
 
 
-initPrecision : Maybe Int -> Maybe Int -> Modifier
-initPrecision =
-    Precision
-
-
-
--- TIMEZONE
-
-
 updateWithTimezone : Bool -> Modifier -> Modifier
 updateWithTimezone withTimezone modifier =
     case modifier of
@@ -401,11 +376,6 @@ updateWithTimezone withTimezone modifier =
 
         _ ->
             modifier
-
-
-initWithTimezone : Bool -> Modifier
-initWithTimezone =
-    WithTimezone
 
 
 
@@ -461,7 +431,7 @@ encodeModifier modifier =
             []
 
         Size size ->
-            Debug.log "abc" [ ( "size", encodeNullableInt size ) ]
+            [ ( "size", encodeNullableInt size ) ]
 
         Precision precision decimals ->
             [ ( "precision", encodeNullableInt precision )

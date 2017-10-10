@@ -49,7 +49,7 @@ import Views.ChangesetError as CE
 type alias Model =
     { schema : Schema
     , entities : List Entity
-    , editingName : Maybe String
+    , editing : Bool
     , newEntity : Entity
     , editingEntity : Maybe Entity
     , toDeleteId : Maybe Int
@@ -59,7 +59,7 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model Schema.empty [] Nothing Entity.empty Nothing Nothing []
+    Model Schema.empty [] False Entity.empty Nothing Nothing []
 
 
 init : Int -> ( Model, Cmd Msg )
@@ -80,9 +80,9 @@ type Msg
       -- SCHEMA
     | LoadSchemaWithEntities (Result Http.Error SchemaWithEntities)
     | LoadSchema (Result Http.Error Schema)
-    | EditSchemaName
+    | EditSchema
     | InputSchemaName String
-    | CancelEditSchemaName
+    | CancelEditSchema
     | SaveSchemaName
     | Destroy
     | RemoveSchema (Result Http.Error ())
@@ -119,12 +119,7 @@ update msg model =
 
         -- SCHEMA
         LoadSchemaWithEntities (Ok { schema, entities }) ->
-            ( { model
-                | schema = schema
-                , entities = entities
-                , editingName = Nothing
-                , errors = []
-              }
+            ( { model | schema = schema, entities = entities, errors = [] }
             , Cmd.none
             , AppUpdate.none
             )
@@ -136,11 +131,7 @@ update msg model =
             )
 
         LoadSchema (Ok schema) ->
-            ( { model
-                | schema = schema
-                , editingName = Nothing
-                , errors = []
-              }
+            ( { model | schema = schema, editing = False, errors = [] }
             , Cmd.none
             , AppUpdate.none
             )
@@ -151,30 +142,27 @@ update msg model =
             , AppUpdate.none
             )
 
-        EditSchemaName ->
-            ( { model | editingName = Just model.schema.name }
+        EditSchema ->
+            ( { model | editing = True }
             , Dom.focus "edit-schema-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
         InputSchemaName name ->
-            ( { model | editingName = Just name }
+            ( { model | schema = Schema.updateName name model.schema }
             , Cmd.none
             , AppUpdate.none
             )
 
-        CancelEditSchemaName ->
-            ( { model | editingName = Nothing }
-            , Cmd.none
+        CancelEditSchema ->
+            ( model
+            , RS.one model.schema.id |> Http.send LoadSchema
             , AppUpdate.none
             )
 
         SaveSchemaName ->
             ( model
-            , model.editingName
-                |> saveSchemaName model.schema
-                |> RS.update
-                |> Http.send LoadSchema
+            , RS.update model.schema |> Http.send LoadSchema
             , AppUpdate.none
             )
 
@@ -228,7 +216,8 @@ update msg model =
 
         EditEntityName id ->
             ( { model
-                | editingEntity = getEditingEntity id model.entities
+                | editingEntity =
+                    model.entities |> List.filter (.id >> (==) id) >> List.head
               }
             , Dom.focus "edit-entity-name" |> Task.attempt FocusResult
             , AppUpdate.none
@@ -237,7 +226,7 @@ update msg model =
         InputEditingEntityName name ->
             ( { model
                 | editingEntity =
-                    Maybe.map (updateEntityName name) model.editingEntity
+                    Maybe.map (Entity.updateName name) model.editingEntity
               }
             , Cmd.none
             , AppUpdate.none
@@ -259,7 +248,7 @@ update msg model =
 
         UpdateEntity (Ok entity) ->
             ( { model
-                | entities = List.map (replaceEntity entity) model.entities
+                | entities = List.map (Entity.replaceIfMatch entity) model.entities
                 , editingEntity = Nothing
                 , errors = []
               }
@@ -300,44 +289,6 @@ update msg model =
 
 
 
--- SCHEMA NAME UPDATE
-
-
-saveSchemaName : Schema -> Maybe String -> Schema
-saveSchemaName schema editingName =
-    editingName
-        |> Maybe.map (updateSchemaName schema)
-        |> Maybe.withDefault schema
-
-
-updateSchemaName : Schema -> String -> Schema
-updateSchemaName schema name =
-    { schema | name = name }
-
-
-
--- ENTITIES UPDATE
-
-
-getEditingEntity : Int -> List Entity -> Maybe Entity
-getEditingEntity id =
-    List.filter (.id >> (==) id) >> List.head
-
-
-updateEntityName : String -> Entity -> Entity
-updateEntityName name entity =
-    { entity | name = name }
-
-
-replaceEntity : Entity -> Entity -> Entity
-replaceEntity newEntity entity =
-    if entity.id == newEntity.id then
-        newEntity
-    else
-        entity
-
-
-
 -- SUBSCRIPTIONS
 
 
@@ -354,8 +305,8 @@ view : Model -> Html Msg
 view model =
     main_ []
         [ breadCrumbs model.schema
-        , title model.editingName model.schema.name
-        , content model
+        , schemaView model.editing model.schema
+        , entitiesView model
         ]
 
 
@@ -366,35 +317,26 @@ breadCrumbs schema =
 
 
 
--- NAME VIEW
+-- SCHEMA VIEW
 
 
-title : Maybe String -> String -> Html Msg
-title editingName name =
-    section [] (nameChildren editingName name)
+schemaView : Bool -> Schema -> Html Msg
+schemaView editing { name } =
+    section [] (nameChildren editing name)
 
 
-nameChildren : Maybe String -> String -> List (Html Msg)
-nameChildren maybeEditingName name =
-    maybeEditingName
-        |> Maybe.map editingNameChildren
-        |> Maybe.withDefault (normalNameChildren name)
-
-
-editingNameChildren : String -> List (Html Msg)
-editingNameChildren name =
-    [ editSchemaNameInput name
-    , cancelEditSchemaNameButton
-    , saveSchemaNameButton
-    ]
-
-
-normalNameChildren : String -> List (Html Msg)
-normalNameChildren name =
-    [ schemaName name
-    , editSchemaNameButton
-    , deleteSchemaButton
-    ]
+nameChildren : Bool -> String -> List (Html Msg)
+nameChildren editing name =
+    if editing then
+        [ editSchemaNameInput name
+        , saveSchemaButton
+        , cancelEditSchemaButton
+        ]
+    else
+        [ schemaName name
+        , editSchemaButton
+        , deleteSchemaButton
+        ]
 
 
 schemaName : String -> Html Msg
@@ -402,9 +344,19 @@ schemaName name =
     h2 [] [ text name ]
 
 
-editSchemaNameButton : Html Msg
-editSchemaNameButton =
-    button [ onClick EditSchemaName ] [ text "Edit Name" ]
+saveSchemaButton : Html Msg
+saveSchemaButton =
+    button [ onClick SaveSchemaName ] [ text "Save" ]
+
+
+cancelEditSchemaButton : Html Msg
+cancelEditSchemaButton =
+    button [ onClick CancelEditSchema ] [ text "Cancel" ]
+
+
+editSchemaButton : Html Msg
+editSchemaButton =
+    button [ onClick EditSchema ] [ text "Edit Name" ]
 
 
 deleteSchemaButton : Html Msg
@@ -430,33 +382,23 @@ onSchemaNameKeyDown key =
             Just SaveSchemaName
 
         Escape ->
-            Just CancelEditSchemaName
+            Just CancelEditSchema
 
         _ ->
             Nothing
-
-
-cancelEditSchemaNameButton : Html Msg
-cancelEditSchemaNameButton =
-    button [ onClick CancelEditSchemaName ] [ text "Cancel" ]
-
-
-saveSchemaNameButton : Html Msg
-saveSchemaNameButton =
-    button [ onClick SaveSchemaName ] [ text "Save" ]
-
-
-content : Model -> Html Msg
-content model =
-    section [] (contentChildren model)
 
 
 
 -- ENTITIES VIEW
 
 
-contentChildren : Model -> List (Html Msg)
-contentChildren { editingEntity, entities, newEntity, errors } =
+entitiesView : Model -> Html Msg
+entitiesView model =
+    section [] (entitiesChildren model)
+
+
+entitiesChildren : Model -> List (Html Msg)
+entitiesChildren { editingEntity, entities, newEntity, errors } =
     CE.prependIfErrors
         errors
         [ entitiesTitle
