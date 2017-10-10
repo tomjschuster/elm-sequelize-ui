@@ -21,7 +21,7 @@ import Html
         , text
         , ul
         )
-import Html.Attributes exposing (href, id, value)
+import Html.Attributes exposing (disabled, href, id, value)
 import Html.Events as Events exposing (onClick, onInput)
 import Http
 import Request.Schema as RS

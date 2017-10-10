@@ -30,7 +30,7 @@ import Html
         , text
         , ul
         )
-import Html.Attributes exposing (id, value)
+import Html.Attributes exposing (disabled, id, value)
 import Html.Events exposing (onClick, onInput)
 import Http
 import Request.Entity as RE
@@ -144,7 +144,10 @@ update msg model =
             )
 
         EditSchema ->
-            ( { model | editingSchema = Just model.schema }
+            ( { model
+                | editingEntity = Nothing
+                , editingSchema = Just model.schema
+              }
             , Dom.focus "edit-schema-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
@@ -222,7 +225,8 @@ update msg model =
 
         EditEntityName id ->
             ( { model
-                | editingEntity =
+                | editingSchema = Nothing
+                , editingEntity =
                     model.entities |> List.filter (.id >> (==) id) >> List.head
               }
             , Dom.focus "edit-entity-name" |> Task.attempt FocusResult
@@ -312,7 +316,7 @@ view : Model -> Html Msg
 view model =
     main_ []
         [ breadCrumbs model.schema
-        , schemaView model.editingSchema model.schema
+        , schemaView model
         , entitiesView model
         ]
 
@@ -327,8 +331,8 @@ breadCrumbs schema =
 -- SCHEMA VIEW
 
 
-schemaView : Maybe Schema -> Schema -> Html Msg
-schemaView editingSchema schema =
+schemaView : Model -> Html Msg
+schemaView { editingSchema, schema, editingEntity } =
     section [] (schemaChildren editingSchema schema)
 
 
@@ -446,7 +450,10 @@ createEntityView name =
             , onEnter CreateEntity
             ]
             []
-        , button [ onClick CreateEntity ] [ text "Create Model" ]
+        , button
+            [ onClick CreateEntity
+            ]
+            [ text "Create Model" ]
         ]
 
 

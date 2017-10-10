@@ -38,6 +38,8 @@ import Utils.Handlers
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
+import Views.DataType.Display as DTDisplay
+import Views.DataType.Select as DTSelect
 
 
 -- MODEL
@@ -83,8 +85,6 @@ type Msg
     | SaveField
     | Destroy
     | RemoveField (Result Http.Error ())
-      -- DataType
-    | UpdateDataType DataType
 
 
 update : Msg -> Model -> ( Model, Cmd Msg, AppUpdate )
@@ -203,13 +203,6 @@ update msg model =
             , AppUpdate.none
             )
 
-        -- DATA TYPE
-        UpdateDataType dataType ->
-            ( { model | field = Field.updateDataType dataType model.field }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
 
 updateFieldName : Field -> String -> Field
 updateFieldName field name =
@@ -290,8 +283,8 @@ fieldChildren editingField field =
 
 
 readFieldChildren : Field -> List (Html Msg)
-readFieldChildren { name } =
-    [ nameTitle name ]
+readFieldChildren { name, dataType, dataTypeModifier } =
+    [ nameTitle name, DTDisplay.view dataType dataTypeModifier ]
 
 
 nameTitle : String -> Html Msg
@@ -299,13 +292,20 @@ nameTitle name =
     h2 [] [ text name ]
 
 
+dtSelectConfig : DTSelect.Config Msg
+dtSelectConfig =
+    { handleDataTypeChange = SelectDataType
+    , handleModifierChange = UpdateModifier
+    }
+
+
 
 -- UPDATE FIELD
 
 
 editingFieldChildren : Field -> List (Html Msg)
-editingFieldChildren { name } =
-    [ fieldNameInput name ]
+editingFieldChildren { name, dataType, dataTypeModifier } =
+    [ fieldNameInput name, DTSelect.view dtSelectConfig dataType dataTypeModifier ]
 
 
 fieldNameInput : String -> Html Msg

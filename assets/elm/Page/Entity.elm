@@ -36,6 +36,7 @@ import Utils.Handlers exposing (customOnKeyDown, onChangeInt, onEnter)
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
+import Views.DataType.Display as DTDisplay
 import Views.DataType.Select as DTSelect
 
 
@@ -559,7 +560,7 @@ fieldItemChildren editingField schemaId field =
 normalFieldItemChildren : Int -> Field -> List (Html Msg)
 normalFieldItemChildren schemaId field =
     [ fieldLink schemaId field
-    , dataType field.dataType field.dataTypeModifier
+    , DTDisplay.view field.dataType field.dataTypeModifier
     , editFieldButton field.id
     , deleteFieldButton field.id
     ]
@@ -568,21 +569,6 @@ normalFieldItemChildren schemaId field =
 fieldLink : Int -> Field -> Html Msg
 fieldLink schemaId { entityId, id, name } =
     Router.link Goto (Router.Field schemaId entityId id) [] [ text name ]
-
-
-dataType : DataType -> DataType.Modifier -> Html msg
-dataType dataType modifier =
-    span []
-        [ text
-            (" ("
-                ++ DataType.toStringValue dataType
-                ++ (DataType.modifierToString modifier
-                        |> Maybe.map ((++) " ")
-                        |> Maybe.withDefault ""
-                   )
-                ++ ")"
-            )
-        ]
 
 
 editFieldButton : Int -> Html Msg

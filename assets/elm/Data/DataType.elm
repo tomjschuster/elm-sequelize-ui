@@ -20,6 +20,7 @@ module Data.DataType
         )
 
 import Json.Decode as JD exposing (Decoder)
+import Json.Decode.Pipeline as JDP
 import Json.Encode as JE exposing (Value)
 
 
@@ -404,7 +405,11 @@ sizeDecoder =
 
 precisionDecoder : Decoder Modifier
 precisionDecoder =
-    JD.field "precision" (JD.map2 Precision (JD.maybe JD.int) (JD.maybe JD.int))
+    JD.field "precision"
+        (JDP.decode Precision
+            |> JDP.required "precision" (JD.maybe JD.int)
+            |> JDP.required "decimals" (JD.maybe JD.int)
+        )
 
 
 withTimezoneDecoder : Decoder Modifier
@@ -428,18 +433,32 @@ encodeModifier : Modifier -> List ( String, Value )
 encodeModifier modifier =
     case modifier of
         NoModifier ->
-            []
+            [ ( "size", JE.null )
+            , ( "precision", JE.null )
+            , ( "decimals", JE.null )
+            , ( "with_timezone", JE.null )
+            ]
 
         Size size ->
-            [ ( "size", encodeNullableInt size ) ]
+            [ ( "size", encodeNullableInt size )
+            , ( "precision", JE.null )
+            , ( "decimals", JE.null )
+            , ( "with_timezone", JE.null )
+            ]
 
         Precision precision decimals ->
-            [ ( "precision", encodeNullableInt precision )
+            [ ( "size", JE.null )
+            , ( "precision", encodeNullableInt precision )
             , ( "decimals", encodeNullableInt decimals )
+            , ( "with_timezone", JE.null )
             ]
 
         WithTimezone withTimezone ->
-            [ ( "with_timezone", JE.bool withTimezone ) ]
+            [ ( "size", JE.null )
+            , ( "precision", JE.null )
+            , ( "decimals", JE.null )
+            , ( "with_timezone", JE.bool withTimezone )
+            ]
 
 
 encodeNullableInt : Maybe Int -> Value
