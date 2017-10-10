@@ -165,13 +165,20 @@ update msg model =
             )
 
         EditEntity ->
-            ( { model | editingEntity = Just model.entity, editingField = Nothing, errors = [] }
+            ( { model
+                | editingEntity = Just model.entity
+                , editingField = Nothing
+                , errors = []
+              }
             , Dom.focus "edit-entity-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
         InputEntityName name ->
-            ( { model | editingEntity = Maybe.map (Entity.updateName name) model.editingEntity }
+            ( { model
+                | editingEntity =
+                    Maybe.map (Entity.updateName name) model.editingEntity
+              }
             , Cmd.none
             , AppUpdate.none
             )
@@ -217,14 +224,18 @@ update msg model =
             )
 
         SelectNewFieldDataType dataType ->
-            ( { model | newField = Field.updateDataType dataType model.newField }
+            ( { model
+                | newField =
+                    Field.updateDataType dataType model.newField
+              }
             , Cmd.none
             , AppUpdate.none
             )
 
         UpdateNewFieldModifier modifier ->
             ( { model
-                | newField = Field.updateDataTypeModifier modifier model.newField
+                | newField =
+                    Field.updateDataTypeModifier modifier model.newField
               }
             , Cmd.none
             , AppUpdate.none
@@ -287,7 +298,9 @@ update msg model =
         UpdateEditingFieldModifier modifier ->
             ( { model
                 | editingField =
-                    Maybe.map (Field.updateDataTypeModifier modifier) model.editingField
+                    Maybe.map
+                        (Field.updateDataTypeModifier modifier)
+                        model.editingField
               }
             , Cmd.none
             , AppUpdate.none
@@ -595,9 +608,9 @@ getEditingFieldItemChildren field editingField =
 
 
 editingFieldItemChildren : Field -> List (Html Msg)
-editingFieldItemChildren field =
-    [ editFieldNameInput field.name
-    , DTSelect.view editFieldSelectDataTypeConfig field.dataType field.dataTypeModifier
+editingFieldItemChildren { name, dataType, dataTypeModifier } =
+    [ editFieldNameInput name
+    , DTSelect.view fieldSelectDataTypeConfig dataType dataTypeModifier
     , cancelEditFieldButton
     , saveEditFieldButton
     ]
@@ -627,8 +640,8 @@ onFieldNameKeyDown key =
             Nothing
 
 
-editFieldSelectDataTypeConfig : DTSelect.Config Msg
-editFieldSelectDataTypeConfig =
+fieldSelectDataTypeConfig : DTSelect.Config Msg
+fieldSelectDataTypeConfig =
     { handleDataTypeChange = SelectEditingFieldDataType
     , handleModifierChange = UpdateEditingFieldModifier
     }

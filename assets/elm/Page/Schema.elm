@@ -150,7 +150,10 @@ update msg model =
             )
 
         InputSchemaName name ->
-            ( { model | editingSchema = Maybe.map (Schema.updateName name) model.editingSchema }
+            ( { model
+                | editingSchema =
+                    Maybe.map (Schema.updateName name) model.editingSchema
+              }
             , Cmd.none
             , AppUpdate.none
             )
@@ -251,7 +254,8 @@ update msg model =
 
         UpdateEntity (Ok entity) ->
             ( { model
-                | entities = List.map (Entity.replaceIfMatch entity) model.entities
+                | entities =
+                    List.map (Entity.replaceIfMatch entity) model.entities
                 , editingEntity = Nothing
                 , errors = []
               }

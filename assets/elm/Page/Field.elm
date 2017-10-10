@@ -143,7 +143,10 @@ update msg model =
             )
 
         InputFieldName name ->
-            ( { model | editingField = Maybe.map (Field.updateName name) model.editingField }
+            ( { model
+                | editingField =
+                    Maybe.map (Field.updateName name) model.editingField
+              }
             , Cmd.none
             , AppUpdate.none
             )
@@ -155,13 +158,21 @@ update msg model =
             )
 
         SelectDataType dataType ->
-            ( { model | editingField = Maybe.map (Field.updateDataType dataType) model.editingField }
+            ( { model
+                | editingField =
+                    Maybe.map (Field.updateDataType dataType) model.editingField
+              }
             , Cmd.none
             , AppUpdate.none
             )
 
         UpdateModifier modifier ->
-            ( { model | editingField = Maybe.map (Field.updateDataTypeModifier modifier) model.editingField }
+            ( { model
+                | editingField =
+                    Maybe.map
+                        (Field.updateDataTypeModifier modifier)
+                        model.editingField
+              }
             , Cmd.none
             , AppUpdate.none
             )

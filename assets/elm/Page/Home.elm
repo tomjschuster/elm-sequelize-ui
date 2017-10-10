@@ -211,7 +211,10 @@ update msg model =
 
         RemoveSchema (Ok ()) ->
             ( { model
-                | schemas = List.filter (.id >> Just >> (/=) model.toDeleteId) model.schemas
+                | schemas =
+                    List.filter
+                        (.id >> Just >> (/=) model.toDeleteId)
+                        model.schemas
                 , toDeleteId = Nothing
                 , errors = []
               }
