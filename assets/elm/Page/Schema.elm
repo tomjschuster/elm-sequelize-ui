@@ -49,6 +49,7 @@ import Views.ChangesetError as CE
 type alias Model =
     { schema : Schema
     , entities : List Entity
+    , editingSchema : Maybe Schema
     , editing : Bool
     , newEntity : Entity
     , editingEntity : Maybe Entity
@@ -59,7 +60,7 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model Schema.empty [] False Entity.empty Nothing Nothing []
+    Model Schema.empty [] Nothing False Entity.empty Nothing Nothing []
 
 
 init : Int -> ( Model, Cmd Msg )
@@ -83,7 +84,7 @@ type Msg
     | EditSchema
     | InputSchemaName String
     | CancelEditSchema
-    | SaveSchemaName
+    | SaveSchema
     | Destroy
     | RemoveSchema (Result Http.Error ())
       -- ENTITIES
@@ -131,7 +132,7 @@ update msg model =
             )
 
         LoadSchema (Ok schema) ->
-            ( { model | schema = schema, editing = False, errors = [] }
+            ( { model | schema = schema, editingSchema = Nothing, errors = [] }
             , Cmd.none
             , AppUpdate.none
             )
@@ -143,26 +144,28 @@ update msg model =
             )
 
         EditSchema ->
-            ( { model | editing = True }
+            ( { model | editingSchema = Just model.schema }
             , Dom.focus "edit-schema-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
         InputSchemaName name ->
-            ( { model | schema = Schema.updateName name model.schema }
+            ( { model | editingSchema = Maybe.map (Schema.updateName name) model.editingSchema }
             , Cmd.none
             , AppUpdate.none
             )
 
         CancelEditSchema ->
-            ( model
-            , RS.one model.schema.id |> Http.send LoadSchema
+            ( { model | editingSchema = Nothing }
+            , Cmd.none
             , AppUpdate.none
             )
 
-        SaveSchemaName ->
+        SaveSchema ->
             ( model
-            , RS.update model.schema |> Http.send LoadSchema
+            , model.editingSchema
+                |> Maybe.map (RS.update >> Http.send LoadSchema)
+                |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
 
@@ -305,7 +308,7 @@ view : Model -> Html Msg
 view model =
     main_ []
         [ breadCrumbs model.schema
-        , schemaView model.editing model.schema
+        , schemaView model.editingSchema model.schema
         , entitiesView model
         ]
 
@@ -320,23 +323,28 @@ breadCrumbs schema =
 -- SCHEMA VIEW
 
 
-schemaView : Bool -> Schema -> Html Msg
-schemaView editing { name } =
-    section [] (nameChildren editing name)
+schemaView : Maybe Schema -> Schema -> Html Msg
+schemaView editingSchema schema =
+    section [] (schemaChildren editingSchema schema)
 
 
-nameChildren : Bool -> String -> List (Html Msg)
-nameChildren editing name =
-    if editing then
-        [ editSchemaNameInput name
-        , saveSchemaButton
-        , cancelEditSchemaButton
-        ]
-    else
-        [ schemaName name
-        , editSchemaButton
-        , deleteSchemaButton
-        ]
+schemaChildren : Maybe Schema -> Schema -> List (Html Msg)
+schemaChildren editingSchema schema =
+    editingSchema
+        |> Maybe.map editingSchemaChildren
+        |> Maybe.withDefault (readSchemaChildren schema)
+
+
+
+-- READ SCHEMA
+
+
+readSchemaChildren : Schema -> List (Html Msg)
+readSchemaChildren { name } =
+    [ schemaName name
+    , editSchemaButton
+    , deleteSchemaButton
+    ]
 
 
 schemaName : String -> Html Msg
@@ -346,7 +354,7 @@ schemaName name =
 
 saveSchemaButton : Html Msg
 saveSchemaButton =
-    button [ onClick SaveSchemaName ] [ text "Save" ]
+    button [ onClick SaveSchema ] [ text "Save" ]
 
 
 cancelEditSchemaButton : Html Msg
@@ -364,6 +372,18 @@ deleteSchemaButton =
     button [ onClick Destroy ] [ text "Delete Schema" ]
 
 
+
+-- EDIT SCHEMA
+
+
+editingSchemaChildren : Schema -> List (Html Msg)
+editingSchemaChildren { name } =
+    [ editSchemaNameInput name
+    , saveSchemaButton
+    , cancelEditSchemaButton
+    ]
+
+
 editSchemaNameInput : String -> Html Msg
 editSchemaNameInput name =
     input
@@ -379,7 +399,7 @@ onSchemaNameKeyDown : Key -> Maybe Msg
 onSchemaNameKeyDown key =
     case key of
         Enter ->
-            Just SaveSchemaName
+            Just SaveSchema
 
         Escape ->
             Just CancelEditSchema

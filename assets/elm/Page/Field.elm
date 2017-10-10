@@ -47,15 +47,14 @@ type alias Model =
     { schema : Schema
     , entity : Entity
     , field : Field
-    , editing : Bool
-    , editingName : Maybe String
+    , editingField : Maybe Field
     , errors : List ChangesetError
     }
 
 
 initialModel : Model
 initialModel =
-    Model Schema.empty Entity.empty Field.empty False Nothing []
+    Model Schema.empty Entity.empty Field.empty Nothing []
 
 
 init : Int -> Int -> Int -> ( Model, Cmd Msg )
@@ -124,7 +123,7 @@ update msg model =
         LoadField (Ok field) ->
             ( { model
                 | field = field
-                , editing = False
+                , editingField = Nothing
                 , errors = []
               }
             , Cmd.none
@@ -138,38 +137,40 @@ update msg model =
             )
 
         EditField ->
-            ( { model | editing = True }
+            ( { model | editingField = Just model.field }
             , Dom.focus "edit-field-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
         InputFieldName name ->
-            ( { model | field = updateFieldName model.field name }
+            ( { model | editingField = Maybe.map (Field.updateName name) model.editingField }
             , Cmd.none
             , AppUpdate.none
             )
 
         CancelEditField ->
-            ( model
-            , RF.one model.field.id |> Http.send LoadField
+            ( { model | editingField = Nothing }
+            , Cmd.none
             , AppUpdate.none
             )
 
         SelectDataType dataType ->
-            ( { model | field = Field.updateDataType dataType model.field }
+            ( { model | editingField = Maybe.map (Field.updateDataType dataType) model.editingField }
             , Cmd.none
             , AppUpdate.none
             )
 
         UpdateModifier modifier ->
-            ( { model | field = Field.updateDataTypeModifier modifier model.field }
+            ( { model | editingField = Maybe.map (Field.updateDataTypeModifier modifier) model.editingField }
             , Cmd.none
             , AppUpdate.none
             )
 
         SaveField ->
             ( model
-            , RF.update model.field |> Http.send LoadField
+            , model.editingField
+                |> Maybe.map (RF.update >> Http.send LoadField)
+                |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
 
@@ -209,13 +210,13 @@ updateFieldName field name =
 
 
 view : Model -> Html Msg
-view { schema, entity, field, editing, errors } =
+view { schema, entity, field, editingField, errors } =
     main_
         []
         [ breadcrumbs schema entity field
-        , buttons editing
+        , buttons editingField
         , div [] (CE.prependIfErrors errors [])
-        , fieldView editing field.name
+        , fieldView editingField field
         ]
 
 
@@ -229,12 +230,12 @@ breadcrumbs schema entity field =
 -- BUTTONS
 
 
-buttons : Bool -> Html Msg
-buttons editing =
-    if editing then
-        div [] [ saveFieldButton, cancelUpdateField ]
-    else
+buttons : Maybe Field -> Html Msg
+buttons editingField =
+    if editingField == Nothing then
         div [] [ editFieldNameButton, deleteFieldButton ]
+    else
+        div [] [ saveFieldButton, cancelUpdateField ]
 
 
 saveFieldButton : Html Msg
@@ -261,21 +262,25 @@ deleteFieldButton =
 -- FIELD VIEW
 
 
-fieldView : Bool -> String -> Html Msg
-fieldView editing name =
-    section [] (fieldChildren name editing)
+fieldView : Maybe Field -> Field -> Html Msg
+fieldView editingField field =
+    section [] (fieldChildren editingField field)
 
 
-fieldChildren : String -> Bool -> List (Html Msg)
-fieldChildren name editing =
-    if editing then
-        [ fieldNameInput name ]
-    else
-        [ nameTitle name ]
+fieldChildren : Maybe Field -> Field -> List (Html Msg)
+fieldChildren editingField field =
+    editingField
+        |> Maybe.map editingFieldChildren
+        |> Maybe.withDefault (readFieldChildren field)
 
 
 
 -- READ FIELD
+
+
+readFieldChildren : Field -> List (Html Msg)
+readFieldChildren { name } =
+    [ nameTitle name ]
 
 
 nameTitle : String -> Html Msg
@@ -285,6 +290,11 @@ nameTitle name =
 
 
 -- UPDATE FIELD
+
+
+editingFieldChildren : Field -> List (Html Msg)
+editingFieldChildren { name } =
+    [ fieldNameInput name ]
 
 
 fieldNameInput : String -> Html Msg

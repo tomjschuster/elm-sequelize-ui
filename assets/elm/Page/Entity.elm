@@ -46,7 +46,7 @@ type alias Model =
     { schema : Schema
     , entity : Entity
     , fields : List Field
-    , editing : Bool
+    , editingEntity : Maybe Entity
     , newField : Field
     , editingField : Maybe Field
     , toDeleteId : Maybe Int
@@ -56,11 +56,10 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model
-        Schema.empty
+    Model Schema.empty
         Entity.empty
         []
-        False
+        Nothing
         Field.empty
         Nothing
         Nothing
@@ -154,7 +153,7 @@ update msg model =
 
         -- ENTITY
         LoadEntity (Ok entity) ->
-            ( { model | entity = entity, editing = False, errors = [] }
+            ( { model | entity = entity, editingEntity = Nothing, errors = [] }
             , Cmd.none
             , AppUpdate.none
             )
@@ -166,26 +165,28 @@ update msg model =
             )
 
         EditEntity ->
-            ( { model | editing = True, editingField = Nothing, errors = [] }
+            ( { model | editingEntity = Just model.entity, editingField = Nothing, errors = [] }
             , Dom.focus "edit-entity-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
         InputEntityName name ->
-            ( { model | entity = Entity.updateName name model.entity }
+            ( { model | editingEntity = Maybe.map (Entity.updateName name) model.editingEntity }
             , Cmd.none
             , AppUpdate.none
             )
 
         CancelEditEntity ->
-            ( model
-            , RE.one model.entity.id |> Http.send LoadEntity
+            ( { model | editingEntity = Nothing }
+            , Cmd.none
             , AppUpdate.none
             )
 
         SaveEntityName ->
             ( model
-            , RE.update model.entity |> Http.send LoadEntity
+            , model.editingEntity
+                |> Maybe.map (RE.update >> Http.send LoadEntity)
+                |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
 
@@ -254,7 +255,7 @@ update msg model =
         -- EDIT FIELD
         EditField id ->
             ( { model
-                | editing = False
+                | editingEntity = Nothing
                 , editingField =
                     model.fields
                         |> List.filter (.id >> (==) id)
@@ -358,7 +359,7 @@ view : Model -> Html Msg
 view model =
     main_ []
         [ breadCrumbs model.schema model.entity
-        , entityView model.editing model.entity
+        , entityView model.editingEntity model.entity
         , fieldsView model
         ]
 
@@ -372,27 +373,28 @@ breadCrumbs schema entity =
 -- ENTITY VIEW
 
 
-entityView : Bool -> Entity -> Html Msg
-entityView editing entity =
-    section [] (entityChildren editing entity)
+entityView : Maybe Entity -> Entity -> Html Msg
+entityView editingEntity entity =
+    section [] (entityChildren editingEntity entity)
 
 
-entityChildren : Bool -> Entity -> List (Html Msg)
-entityChildren editing { name } =
-    if editing then
-        [ editEntityNameInput name
-        , cancelEditEntityButton
-        , saveEditEntityButton
-        ]
-    else
-        [ entityName name
-        , editEntityNameButton
-        , deleteEntityButton
-        ]
+entityChildren : Maybe Entity -> Entity -> List (Html Msg)
+entityChildren editingEntity entity =
+    editingEntity
+        |> Maybe.map editingEntityChildren
+        |> Maybe.withDefault (readEntityChildren entity)
 
 
 
 -- READ ENTITY
+
+
+readEntityChildren : Entity -> List (Html Msg)
+readEntityChildren { name } =
+    [ entityName name
+    , editEntityNameButton
+    , deleteEntityButton
+    ]
 
 
 entityName : String -> Html Msg
@@ -412,6 +414,14 @@ deleteEntityButton =
 
 
 -- UPDATE ENTITY
+
+
+editingEntityChildren : Entity -> List (Html Msg)
+editingEntityChildren { name } =
+    [ editEntityNameInput name
+    , cancelEditEntityButton
+    , saveEditEntityButton
+    ]
 
 
 editEntityNameInput : String -> Html Msg
