@@ -38,7 +38,7 @@ import Views.ChangesetError as CE
 
 type alias Model =
     { schemas : List Schema
-    , schemaNameInput : String
+    , newSchema : Schema
     , editingSchema : Maybe Schema
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
@@ -47,12 +47,12 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model [] "" Nothing Nothing []
+    Model [] Schema.empty Nothing Nothing []
 
 
-init : Cmd Msg
+init : ( Model, Cmd Msg )
 init =
-    Http.send LoadSchemas RS.all
+    ( initialModel, Http.send LoadSchemas RS.all )
 
 
 
@@ -111,20 +111,20 @@ update msg model =
 
         -- CREATE SCHEMA
         InputSchemaName name ->
-            ( { model | schemaNameInput = name }
+            ( { model | newSchema = Schema.updateName name model.newSchema }
             , Cmd.none
             , AppUpdate.none
             )
 
         CreateSchema ->
             ( { model | editingSchema = Nothing }
-            , RS.create model.schemaNameInput |> Http.send LoadNewSchema
+            , RS.create model.newSchema |> Http.send LoadNewSchema
             , AppUpdate.none
             )
 
         LoadNewSchema (Ok schema) ->
             ( { model
-                | schemaNameInput = ""
+                | newSchema = Schema.empty
                 , schemas = model.schemas ++ [ schema ]
                 , errors = []
               }
@@ -283,7 +283,7 @@ contentChildren model =
 
 normalContentChildren : Model -> List (Html Msg)
 normalContentChildren model =
-    [ createSchemaInput model.schemaNameInput
+    [ createSchemaInput model.newSchema.name
     , createSchemaButton
     , schemaList model.schemas model.editingSchema
     ]

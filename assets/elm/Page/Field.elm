@@ -58,10 +58,11 @@ initialModel =
     Model Schema.empty Entity.empty Field.empty False Nothing []
 
 
-init : Int -> Int -> Int -> Cmd Msg
+init : Int -> Int -> Int -> ( Model, Cmd Msg )
 init schemaId entityId id =
-    (RF.oneWithAll id |> Http.toTask)
-        |> Task.attempt LoadFieldWithAll
+    ( initialModel
+    , (RF.oneWithAll id |> Http.toTask) |> Task.attempt LoadFieldWithAll
+    )
 
 
 

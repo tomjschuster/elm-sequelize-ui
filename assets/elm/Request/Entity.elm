@@ -46,10 +46,10 @@ entityUrl =
 -- CREATE
 
 
-create : String -> Int -> Request Entity
-create name schemaId =
+create : Entity -> Request Entity
+create entity =
     Http.post entitiesUrl
-        (Entity.encodeNewEntity name schemaId |> Http.jsonBody)
+        (Entity.encodeNew entity |> Http.jsonBody)
         (dataDecoder Entity.decoder)
 
 

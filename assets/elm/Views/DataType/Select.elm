@@ -7,10 +7,8 @@ import Utils.Handlers exposing (onChangeBool, onChangeInt, onIntInput)
 
 
 type alias Config msg =
-    { handleChange : Maybe Int -> msg
-    , handleSizeInput : Maybe Int -> msg
-    , handlePrecisionInput : Maybe Int -> Maybe Int -> msg
-    , handleTimezoneCheck : Bool -> msg
+    { handleDataTypeChange : DataType -> msg
+    , handleModifierChange : DataType.Modifier -> msg
     }
 
 
@@ -29,7 +27,7 @@ children config dataType modifier =
 dataTypeSelect : Config msg -> DataType -> Html msg
 dataTypeSelect config dataType =
     select
-        [ onChangeInt config.handleChange ]
+        [ onChangeInt (Maybe.andThen DataType.fromId >> Maybe.withDefault DataType.none >> config.handleDataTypeChange) ]
         (option [] [ text "Data Type" ] :: List.map (selectOption config dataType) DataType.all)
 
 
@@ -49,37 +47,37 @@ modifierView config modifier =
             Nothing
 
         DataType.Size size ->
-            Just (sizeInput config.handleSizeInput size)
+            Just (sizeInput config.handleModifierChange size)
 
         DataType.Precision precision decimals ->
-            Just (precisionInput config.handlePrecisionInput precision decimals)
+            Just (precisionInput config.handleModifierChange precision decimals)
 
         DataType.WithTimezone withTimezone ->
-            Just (timezoneCheckbox config.handleTimezoneCheck withTimezone)
+            Just (timezoneCheckbox config.handleModifierChange withTimezone)
 
 
-sizeInput : (Maybe Int -> msg) -> Maybe Int -> Html msg
-sizeInput handleSizeInput size =
+sizeInput : (DataType.Modifier -> msg) -> Maybe Int -> Html msg
+sizeInput handleModifierChange size =
     div []
         [ label []
             [ text "Size" ]
         , input
             [ type_ "number"
             , value (maybeIntToString size)
-            , onIntInput handleSizeInput
+            , onIntInput (DataType.Size >> handleModifierChange)
             ]
             []
         ]
 
 
-precisionInput : (Maybe Int -> Maybe Int -> msg) -> Maybe Int -> Maybe Int -> Html msg
-precisionInput handlePrecisionInput precision decimals =
+precisionInput : (DataType.Modifier -> msg) -> Maybe Int -> Maybe Int -> Html msg
+precisionInput handleModifierChange precision decimals =
     div []
         [ div []
             [ label [] [ text "Precision" ]
             , input
                 [ type_ "number"
-                , onIntInput (flip handlePrecisionInput decimals)
+                , onIntInput (flip DataType.Precision decimals >> handleModifierChange)
                 , value (maybeIntToString precision)
                 ]
                 []
@@ -88,7 +86,7 @@ precisionInput handlePrecisionInput precision decimals =
             [ label [] [ text "Decimals" ]
             , input
                 [ type_ "number"
-                , onIntInput (handlePrecisionInput precision)
+                , onIntInput (DataType.Precision precision >> handleModifierChange)
                 , value (maybeIntToString decimals)
                 ]
                 []
@@ -96,14 +94,14 @@ precisionInput handlePrecisionInput precision decimals =
         ]
 
 
-timezoneCheckbox : (Bool -> msg) -> Bool -> Html msg
-timezoneCheckbox handleTimezoneCheck isChecked =
+timezoneCheckbox : (DataType.Modifier -> msg) -> Bool -> Html msg
+timezoneCheckbox handleModifierChange isChecked =
     label []
         [ text "With Timezone"
         , input
             [ type_ "checkbox"
             , checked isChecked
-            , onChangeBool handleTimezoneCheck
+            , onChangeBool (DataType.WithTimezone >> handleModifierChange)
             ]
             []
         ]

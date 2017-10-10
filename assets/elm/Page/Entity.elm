@@ -47,9 +47,7 @@ type alias Model =
     , entity : Entity
     , fields : List Field
     , editingName : Maybe String
-    , newFieldInput : String
-    , newFieldDataType : DataType
-    , newFieldModifier : DataType.Modifier
+    , newField : Field
     , editingField : Maybe Field
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
@@ -63,9 +61,7 @@ initialModel =
         Entity.empty
         []
         Nothing
-        ""
-        DataType.none
-        DataType.NoModifier
+        Field.empty
         Nothing
         Nothing
         []
@@ -77,11 +73,11 @@ type alias InitialData =
     }
 
 
-init : Int -> Int -> Cmd Msg
-init schemaId id =
-    RE.oneWithAll id
-        |> Http.toTask
-        |> Task.attempt LoadEntityWithAll
+init : Int -> Int -> ( Model, Cmd Msg )
+init schemaId entityId =
+    ( { initialModel | newField = Field.init entityId }
+    , RE.oneWithAll entityId |> Http.toTask |> Task.attempt LoadEntityWithAll
+    )
 
 
 
@@ -102,22 +98,21 @@ type Msg
     | Destroy
     | RemoveEntity (Result Http.Error ())
       -- FIELDS
+      -- CREATE FIELD
     | InputNewFieldName String
-    | SelectNewFieldDataType (Maybe Int)
-    | UpdateNewFieldSize (Maybe Int)
-    | UpdateNewFieldPrecision (Maybe Int) (Maybe Int)
-    | UpdateNewFieldWithTimezone Bool
+    | SelectNewFieldDataType DataType
+    | UpdateNewFieldModifier DataType.Modifier
     | CreateField
     | LoadNewField (Result Http.Error Field)
+      -- UPDATE FIELD
     | EditField Int
     | InputEditingFieldName String
-    | SelectEditingFieldDataType (Maybe Int)
-    | UpdateEditingFieldSize (Maybe Int)
-    | UpdateEditingFieldPrecision (Maybe Int) (Maybe Int)
-    | UpdateEditingFieldWithTimezone Bool
+    | SelectEditingFieldDataType DataType
+    | UpdateEditingFieldModifier DataType.Modifier
     | CancelEditField
-    | SaveFieldName
+    | SaveEditingField
     | UpdateField (Result Http.Error Field)
+      -- DELETE FIELD
     | DestroyField Int
     | RemoveField (Result Http.Error ())
 
@@ -200,7 +195,7 @@ update msg model =
             ( model
             , model.editingName
                 |> Maybe.map
-                    (updateEntityName model.entity
+                    (flip Entity.updateName model.entity
                         >> RE.update
                         >> Http.send LoadEntity
                     )
@@ -227,49 +222,22 @@ update msg model =
             )
 
         -- FIELDS
+        -- NEW FIELD
         InputNewFieldName name ->
-            ( { model | newFieldInput = name }
+            ( { model | newField = Field.updateName name model.newField }
             , Cmd.none
             , AppUpdate.none
             )
 
-        SelectNewFieldDataType maybeId ->
-            let
-                dataType =
-                    maybeId
-                        |> Maybe.andThen DataType.fromId
-                        |> Maybe.withDefault DataType.none
-            in
-            ( { model
-                | newFieldDataType = dataType
-                , newFieldModifier = DataType.toInitialModifier dataType
-              }
+        SelectNewFieldDataType dataType ->
+            ( { model | newField = Field.updateDataType dataType model.newField }
             , Cmd.none
             , AppUpdate.none
             )
 
-        UpdateNewFieldSize size ->
+        UpdateNewFieldModifier modifier ->
             ( { model
-                | newFieldModifier =
-                    DataType.updateSize size model.newFieldModifier
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        UpdateNewFieldPrecision precision decimals ->
-            ( { model
-                | newFieldModifier =
-                    DataType.updatePrecision precision decimals model.newFieldModifier
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        UpdateNewFieldWithTimezone withTimezone ->
-            ( { model
-                | newFieldModifier =
-                    DataType.updateWithTimezone withTimezone model.newFieldModifier
+                | newField = Field.updateDataTypeModifier modifier model.newField
               }
             , Cmd.none
             , AppUpdate.none
@@ -277,21 +245,14 @@ update msg model =
 
         CreateField ->
             ( model
-            , RF.create
-                model.entity.id
-                model.newFieldInput
-                model.newFieldDataType
-                model.newFieldModifier
-                |> Http.send LoadNewField
+            , RF.create model.newField |> Http.send LoadNewField
             , AppUpdate.none
             )
 
         LoadNewField (Ok field) ->
             ( { model
                 | fields = model.fields ++ [ field ]
-                , newFieldInput = ""
-                , newFieldDataType = DataType.none
-                , newFieldModifier = DataType.noModifier
+                , newField = Field.init model.entity.id
                 , errors = []
               }
             , Dom.focus "create-field" |> Task.attempt FocusResult
@@ -304,6 +265,7 @@ update msg model =
             , AppUpdate.none
             )
 
+        -- EDIT FIELD
         EditField id ->
             ( { model
                 | editingName = Nothing
@@ -320,72 +282,22 @@ update msg model =
         InputEditingFieldName name ->
             ( { model
                 | editingField =
-                    Maybe.map (updateFieldName name) model.editingField
+                    Maybe.map (Field.updateName name) model.editingField
               }
             , Cmd.none
             , AppUpdate.none
             )
 
-        SelectEditingFieldDataType maybeId ->
-            let
-                dataType =
-                    maybeId
-                        |> Maybe.andThen DataType.fromId
-                        |> Maybe.withDefault DataType.none
-            in
+        SelectEditingFieldDataType dataType ->
             ( { model
                 | editingField =
-                    Maybe.map
-                        (Field.updateDataType dataType
-                            >> Field.updateDataTypeModifier
-                                (DataType.toInitialModifier dataType)
-                        )
-                        model.editingField
+                    Maybe.map (Field.updateDataType dataType) model.editingField
               }
             , Cmd.none
             , AppUpdate.none
             )
 
-        UpdateEditingFieldSize size ->
-            let
-                modifier =
-                    Maybe.map
-                        (.dataTypeModifier >> DataType.updateSize size)
-                        model.editingField
-                        |> Maybe.withDefault DataType.noModifier
-            in
-            ( { model
-                | editingField =
-                    Maybe.map (Field.updateDataTypeModifier modifier) model.editingField
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        UpdateEditingFieldPrecision precision decimal ->
-            let
-                modifier =
-                    Maybe.map
-                        (.dataTypeModifier >> DataType.updatePrecision precision decimal)
-                        model.editingField
-                        |> Maybe.withDefault DataType.noModifier
-            in
-            ( { model
-                | editingField =
-                    Maybe.map (Field.updateDataTypeModifier modifier) model.editingField
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        UpdateEditingFieldWithTimezone withTimezone ->
-            let
-                modifier =
-                    Maybe.map
-                        (.dataTypeModifier >> DataType.updateWithTimezone withTimezone)
-                        model.editingField
-                        |> Maybe.withDefault DataType.noModifier
-            in
+        UpdateEditingFieldModifier modifier ->
             ( { model
                 | editingField =
                     Maybe.map (Field.updateDataTypeModifier modifier) model.editingField
@@ -400,7 +312,7 @@ update msg model =
             , AppUpdate.none
             )
 
-        SaveFieldName ->
+        SaveEditingField ->
             ( model
             , model.editingField
                 |> Maybe.map (RF.update >> Http.send UpdateField)
@@ -410,7 +322,7 @@ update msg model =
 
         UpdateField (Ok field) ->
             ( { model
-                | fields = List.map (replaceField field) model.fields
+                | fields = List.map (Field.replaceIfMatch field) model.fields
                 , editingField = Nothing
                 , errors = []
               }
@@ -435,7 +347,7 @@ update msg model =
                 | errors = []
                 , fields =
                     model.toDeleteId
-                        |> Maybe.map (removeField model.fields)
+                        |> Maybe.map (Field.removeFromList model.fields)
                         |> Maybe.withDefault model.fields
               }
             , Cmd.none
@@ -450,29 +362,6 @@ update msg model =
             , Cmd.none
             , AppUpdate.none
             )
-
-
-updateEntityName : Entity -> String -> Entity
-updateEntityName entity name =
-    { entity | name = name }
-
-
-updateFieldName : String -> Field -> Field
-updateFieldName name field =
-    { field | name = name }
-
-
-replaceField : Field -> Field -> Field
-replaceField newField field =
-    if field.id == newField.id then
-        newField
-    else
-        field
-
-
-removeField : List Field -> Int -> List Field
-removeField fields id =
-    List.filter (.id >> (/=) id) fields
 
 
 
@@ -587,7 +476,7 @@ contentChildren : Model -> List (Html Msg)
 contentChildren model =
     CE.prependIfErrors model.errors
         [ fieldsTitle
-        , createField model.newFieldInput model.newFieldDataType model.newFieldModifier
+        , createField model.newField
         , fieldList model.editingField model.schema.id model.fields
         ]
 
@@ -597,22 +486,24 @@ fieldsTitle =
     h3 [] [ text "Fields" ]
 
 
-createField : String -> DataType -> DataType.Modifier -> Html Msg
-createField name dataType modifier =
+
+-- CREATE FIELD
+
+
+createField : Field -> Html Msg
+createField { name, dataType, dataTypeModifier } =
     div
         []
         [ createFieldInput name
-        , DTSelect.view selectDataTypeConfig dataType modifier
+        , DTSelect.view selectDataTypeConfig dataType dataTypeModifier
         , createFieldButton
         ]
 
 
 selectDataTypeConfig : DTSelect.Config Msg
 selectDataTypeConfig =
-    { handleChange = SelectNewFieldDataType
-    , handleSizeInput = UpdateNewFieldSize
-    , handlePrecisionInput = UpdateNewFieldPrecision
-    , handleTimezoneCheck = UpdateNewFieldWithTimezone
+    { handleDataTypeChange = SelectNewFieldDataType
+    , handleModifierChange = UpdateNewFieldModifier
     }
 
 
@@ -632,9 +523,17 @@ createFieldButton =
     button [ onClick CreateField ] [ text "Create" ]
 
 
+
+-- FIELD LIST
+
+
 fieldList : Maybe Field -> Int -> List Field -> Html Msg
 fieldList editingField schemaId fields =
     ul [] (List.map (fieldItem editingField schemaId) fields)
+
+
+
+-- READ FIELDS
 
 
 fieldItem : Maybe Field -> Int -> Field -> Html Msg
@@ -658,23 +557,6 @@ normalFieldItemChildren schemaId field =
     ]
 
 
-getEditingFieldItemChildren : Field -> Field -> List (Html Msg)
-getEditingFieldItemChildren field editingField =
-    if field.id == editingField.id then
-        editingFieldItemChildren editingField
-    else
-        [ text field.name ]
-
-
-editingFieldItemChildren : Field -> List (Html Msg)
-editingFieldItemChildren field =
-    [ editFieldNameInput field.name
-    , DTSelect.view editFieldSelectDataTypeConfig field.dataType field.dataTypeModifier
-    , cancelEditFieldButton
-    , saveEditFieldButton
-    ]
-
-
 fieldLink : Int -> Field -> Html Msg
 fieldLink schemaId { entityId, id, name } =
     Router.link Goto (Router.Field schemaId entityId id) [] [ text name ]
@@ -695,6 +577,27 @@ dataType dataType modifier =
         ]
 
 
+
+-- UPDATE FIELDS
+
+
+getEditingFieldItemChildren : Field -> Field -> List (Html Msg)
+getEditingFieldItemChildren field editingField =
+    if field.id == editingField.id then
+        editingFieldItemChildren editingField
+    else
+        [ text field.name ]
+
+
+editingFieldItemChildren : Field -> List (Html Msg)
+editingFieldItemChildren field =
+    [ editFieldNameInput field.name
+    , DTSelect.view editFieldSelectDataTypeConfig field.dataType field.dataTypeModifier
+    , cancelEditFieldButton
+    , saveEditFieldButton
+    ]
+
+
 editFieldButton : Int -> Html Msg
 editFieldButton id =
     button [ onClick (EditField id) ] [ text "Edit" ]
@@ -711,26 +614,24 @@ editFieldNameInput name =
         []
 
 
-editFieldSelectDataTypeConfig : DTSelect.Config Msg
-editFieldSelectDataTypeConfig =
-    { handleChange = SelectEditingFieldDataType
-    , handleSizeInput = UpdateEditingFieldSize
-    , handlePrecisionInput = UpdateEditingFieldPrecision
-    , handleTimezoneCheck = UpdateEditingFieldWithTimezone
-    }
-
-
 onFieldNameKeyDown : Key -> Maybe Msg
 onFieldNameKeyDown key =
     case key of
         Enter ->
-            Just SaveFieldName
+            Just SaveEditingField
 
         Escape ->
             Just CancelEditField
 
         _ ->
             Nothing
+
+
+editFieldSelectDataTypeConfig : DTSelect.Config Msg
+editFieldSelectDataTypeConfig =
+    { handleDataTypeChange = SelectEditingFieldDataType
+    , handleModifierChange = UpdateEditingFieldModifier
+    }
 
 
 cancelEditFieldButton : Html Msg
@@ -740,7 +641,7 @@ cancelEditFieldButton =
 
 saveEditFieldButton : Html Msg
 saveEditFieldButton =
-    button [ onClick SaveFieldName ] [ text "Save" ]
+    button [ onClick SaveEditingField ] [ text "Save" ]
 
 
 deleteFieldButton : Int -> Html Msg

@@ -4,9 +4,18 @@ module Data.Field
         , decoder
         , empty
         , encode
+        , encodeNew
         , encodeNewField
+        , init
+        , removeFromList
+        , replaceIfMatch
         , updateDataType
+        , updateDataTypeById
         , updateDataTypeModifier
+        , updateName
+        , updatePrecision
+        , updateSize
+        , updateWithTimezone
         )
 
 import Data.DataType as DataType exposing (DataType)
@@ -46,6 +55,20 @@ empty =
     }
 
 
+init : Int -> Field
+init entityId =
+    { empty | entityId = entityId }
+
+
+
+-- UPDATE
+
+
+updateName : String -> Field -> Field
+updateName name field =
+    { field | name = name }
+
+
 updateDataType : DataType -> Field -> Field
 updateDataType dataType field =
     { field | dataType = dataType }
@@ -54,6 +77,60 @@ updateDataType dataType field =
 updateDataTypeModifier : DataType.Modifier -> Field -> Field
 updateDataTypeModifier dataTypeModifier field =
     { field | dataTypeModifier = dataTypeModifier }
+
+
+updateDataTypeById : Maybe Int -> Field -> Field
+updateDataTypeById maybeId field =
+    let
+        dataType =
+            maybeId
+                |> Maybe.andThen DataType.fromId
+                |> Maybe.withDefault DataType.none
+    in
+    field
+        |> updateDataType dataType
+        |> updateDataTypeModifier (DataType.toInitialModifier dataType)
+
+
+updateSize : Maybe Int -> Field -> Field
+updateSize size field =
+    { field
+        | dataTypeModifier =
+            DataType.updateSize size field.dataTypeModifier
+    }
+
+
+updatePrecision : Maybe Int -> Maybe Int -> Field -> Field
+updatePrecision precision decimals field =
+    { field
+        | dataTypeModifier =
+            DataType.updatePrecision precision decimals field.dataTypeModifier
+    }
+
+
+updateWithTimezone : Bool -> Field -> Field
+updateWithTimezone withTimezone field =
+    { field
+        | dataTypeModifier =
+            DataType.updateWithTimezone withTimezone field.dataTypeModifier
+    }
+
+
+replaceIfMatch : Field -> Field -> Field
+replaceIfMatch newField field =
+    if field.id == newField.id then
+        newField
+    else
+        field
+
+
+removeFromList : List Field -> Int -> List Field
+removeFromList fields id =
+    List.filter (.id >> (/=) id) fields
+
+
+
+-- DECODE/ENCODE
 
 
 decoder : Decoder Field
@@ -73,6 +150,21 @@ encode { id, entityId, name, dataType, dataTypeModifier } =
           , JE.object
                 ([ ( "id", JE.int id )
                  , ( "entity_id", JE.int entityId )
+                 , ( "name", JE.string name )
+                 , ( "data_type_id", DataType.encode dataType )
+                 ]
+                    ++ DataType.encodeModifier dataTypeModifier
+                )
+          )
+        ]
+
+
+encodeNew : Field -> Value
+encodeNew { entityId, name, dataType, dataTypeModifier } =
+    JE.object
+        [ ( "field"
+          , JE.object
+                ([ ( "entity_id", JE.int entityId )
                  , ( "name", JE.string name )
                  , ( "data_type_id", DataType.encode dataType )
                  ]

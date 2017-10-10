@@ -12,7 +12,7 @@ module Page.Schema
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Combined exposing (SchemaWithEntities)
-import Data.Entity exposing (Entity)
+import Data.Entity as Entity exposing (Entity)
 import Data.Schema as Schema exposing (Schema)
 import Dom
 import Html
@@ -50,7 +50,7 @@ type alias Model =
     { schema : Schema
     , entities : List Entity
     , editingName : Maybe String
-    , newEntityInput : String
+    , newEntity : Entity
     , editingEntity : Maybe Entity
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
@@ -59,12 +59,14 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model Schema.empty [] Nothing "" Nothing Nothing []
+    Model Schema.empty [] Nothing Entity.empty Nothing Nothing []
 
 
-init : Int -> Cmd Msg
-init id =
-    RS.oneWithEntities id |> Http.send LoadSchemaWithEntities
+init : Int -> ( Model, Cmd Msg )
+init schemaId =
+    ( { initialModel | newEntity = Entity.init schemaId }
+    , RS.oneWithEntities schemaId |> Http.send LoadSchemaWithEntities
+    )
 
 
 
@@ -195,15 +197,15 @@ update msg model =
             )
 
         -- ENTITIES
-        InputNewEntityName newEntityInput ->
-            ( { model | newEntityInput = newEntityInput }
+        InputNewEntityName name ->
+            ( { model | newEntity = Entity.updateName name model.newEntity }
             , Cmd.none
             , AppUpdate.none
             )
 
         CreateEntity ->
             ( model
-            , RE.create model.newEntityInput model.schema.id
+            , RE.create model.newEntity
                 |> Http.send LoadEntity
             , AppUpdate.none
             )
@@ -211,7 +213,7 @@ update msg model =
         LoadEntity (Ok entity) ->
             ( { model
                 | entities = model.entities ++ [ entity ]
-                , newEntityInput = ""
+                , newEntity = Entity.init model.schema.id
                 , errors = []
               }
             , Dom.focus "create-entity" |> Task.attempt FocusResult
@@ -454,11 +456,11 @@ content model =
 
 
 contentChildren : Model -> List (Html Msg)
-contentChildren { editingEntity, entities, newEntityInput, errors } =
+contentChildren { editingEntity, entities, newEntity, errors } =
     CE.prependIfErrors
         errors
         [ entitiesTitle
-        , createEntityView newEntityInput
+        , createEntityView newEntity.name
         , entitiesListView editingEntity entities
         ]
 
@@ -469,11 +471,11 @@ entitiesTitle =
 
 
 createEntityView : String -> Html Msg
-createEntityView newEntityInput =
+createEntityView name =
     div []
         [ input
             [ id "create-entity"
-            , value newEntityInput
+            , value name
             , onInput InputNewEntityName
             , onEnter CreateEntity
             ]

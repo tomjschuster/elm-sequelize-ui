@@ -4,7 +4,8 @@ module Data.Schema
         , decoder
         , empty
         , encode
-        , encodeNewSchema
+        , encodeNew
+        , updateName
         )
 
 import Json.Decode exposing (Decoder, Value, int, list, string)
@@ -16,6 +17,11 @@ type alias Schema =
     { id : Int
     , name : String
     }
+
+
+updateName : String -> Schema -> Schema
+updateName name schema =
+    { schema | name = name }
 
 
 empty : Schema
@@ -42,7 +48,12 @@ encode schema =
         ]
 
 
-encodeNewSchema : String -> JE.Value
-encodeNewSchema name =
+encodeNew : Schema -> JE.Value
+encodeNew schema =
     JE.object
-        [ ( "schema", JE.object [ ( "name", JE.string name ) ] ) ]
+        [ ( "schema"
+          , JE.object
+                [ ( "name", JE.string schema.name )
+                ]
+          )
+        ]

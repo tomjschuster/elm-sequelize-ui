@@ -7,6 +7,9 @@ module Data.DataType
         , encode
         , encodeModifier
         , fromId
+        , initPrecision
+        , initSize
+        , initWithTimezone
         , modifierDecoder
         , modifierToString
         , noModifier
@@ -326,36 +329,6 @@ noModifier =
     NoModifier
 
 
-updateSize : Maybe Int -> Modifier -> Modifier
-updateSize size modifier =
-    case modifier of
-        Size _ ->
-            Size size
-
-        _ ->
-            modifier
-
-
-updatePrecision : Maybe Int -> Maybe Int -> Modifier -> Modifier
-updatePrecision precision decimals modifier =
-    case modifier of
-        Precision _ _ ->
-            Precision precision decimals
-
-        _ ->
-            modifier
-
-
-updateWithTimezone : Bool -> Modifier -> Modifier
-updateWithTimezone withTimezone modifier =
-    case modifier of
-        WithTimezone _ ->
-            WithTimezone withTimezone
-
-        _ ->
-            modifier
-
-
 modifierToString : Modifier -> Maybe String
 modifierToString modifier =
     case modifier of
@@ -376,6 +349,63 @@ modifierToString modifier =
                 Just "with time zone"
             else
                 Just "without time zone"
+
+
+
+-- SIZE
+
+
+updateSize : Maybe Int -> Modifier -> Modifier
+updateSize size modifier =
+    case modifier of
+        Size _ ->
+            Size size
+
+        _ ->
+            modifier
+
+
+initSize : Maybe Int -> Modifier
+initSize =
+    Size
+
+
+
+-- PRECISION
+
+
+updatePrecision : Maybe Int -> Maybe Int -> Modifier -> Modifier
+updatePrecision precision decimals modifier =
+    case modifier of
+        Precision _ _ ->
+            Precision precision decimals
+
+        _ ->
+            modifier
+
+
+initPrecision : Maybe Int -> Maybe Int -> Modifier
+initPrecision =
+    Precision
+
+
+
+-- TIMEZONE
+
+
+updateWithTimezone : Bool -> Modifier -> Modifier
+updateWithTimezone withTimezone modifier =
+    case modifier of
+        WithTimezone _ ->
+            WithTimezone withTimezone
+
+        _ ->
+            modifier
+
+
+initWithTimezone : Bool -> Modifier
+initWithTimezone =
+    WithTimezone
 
 
 

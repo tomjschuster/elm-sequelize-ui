@@ -1,4 +1,13 @@
-module Data.Entity exposing (Entity, decoder, empty, encode, encodeNewEntity)
+module Data.Entity
+    exposing
+        ( Entity
+        , decoder
+        , empty
+        , encode
+        , encodeNew
+        , init
+        , updateName
+        )
 
 import Json.Decode as JD exposing (Decoder, int, string)
 import Json.Decode.Pipeline exposing (decode, optional, required)
@@ -18,6 +27,16 @@ empty =
     , name = ""
     , schemaId = 0
     }
+
+
+init : Int -> Entity
+init schemaId =
+    { empty | schemaId = schemaId }
+
+
+updateName : String -> Entity -> Entity
+updateName name entity =
+    { entity | name = name }
 
 
 decoder : Decoder Entity
@@ -40,8 +59,8 @@ encode entity =
         ]
 
 
-encodeNewEntity : String -> Int -> Value
-encodeNewEntity name schemaId =
+encodeNew : Entity -> Value
+encodeNew { name, schemaId } =
     JE.object
         [ ( "entity"
           , JE.object

@@ -96,53 +96,32 @@ update msg model =
             ( model, Router.goto route )
 
 
-handleAppUpdate : AppUpdate -> Model -> Cmd Msg -> ( Model, Cmd Msg )
-handleAppUpdate appUpdate model cmd =
-    case appUpdate of
-        AppUpdate.DisplayError error ->
-            ( { model | error = Just error }, cmd )
-
-        AppUpdate.HideError ->
-            ( { model | error = Nothing }, cmd )
-
-        AppUpdate.None ->
-            ( model, cmd )
-
-
-
---DisplayError error ->
---    ( { model | error = Just error }, Cmd.none )
---HideError ->
---    ( { model | error = Nothing }, Cmd.none )
-
-
 setRoute : Route -> ( Page, Cmd PageMsg )
 setRoute route =
     case route of
         Router.Home ->
-            ( Home Home.initialModel
-            , Home.init |> Cmd.map HomeMsg
-            )
+            Home.init |> mapPageInit Home HomeMsg
 
-        Router.Schema id ->
-            ( Schema Schema.initialModel
-            , Schema.init id |> Cmd.map SchemaMsg
-            )
+        Router.Schema schemaId ->
+            Schema.init schemaId |> mapPageInit Schema SchemaMsg
 
-        Router.Entity schemaId id ->
-            ( Entity Entity.initialModel
-            , Entity.init schemaId id |> Cmd.map EntityMsg
-            )
+        Router.Entity schemaId entityId ->
+            Entity.init schemaId entityId |> mapPageInit Entity EntityMsg
 
-        Router.Field schemaId entityId id ->
-            ( Field Field.initialModel
-            , Field.init schemaId entityId id |> Cmd.map FieldMsg
-            )
+        Router.Field schemaId entityId fieldId ->
+            Field.init schemaId entityId fieldId |> mapPageInit Field FieldMsg
 
         Router.NotFound ->
-            ( Home Home.initialModel
-            , Home.init |> Cmd.map HomeMsg
-            )
+            Home.init |> mapPageInit Home HomeMsg
+
+
+mapPageInit :
+    (model -> Page)
+    -> (msg -> PageMsg)
+    -> ( model, Cmd msg )
+    -> ( Page, Cmd PageMsg )
+mapPageInit toPage toMsg ( model, cmd ) =
+    ( toPage model, Cmd.map toMsg cmd )
 
 
 updatePage : PageMsg -> Page -> ( Page, Cmd PageMsg, AppUpdate )
@@ -162,6 +141,19 @@ updatePage msg page =
 
         ( _, _ ) ->
             ( page, Cmd.none, AppUpdate.none )
+
+
+handleAppUpdate : AppUpdate -> Model -> Cmd Msg -> ( Model, Cmd Msg )
+handleAppUpdate appUpdate model cmd =
+    case appUpdate of
+        AppUpdate.DisplayError error ->
+            ( { model | error = Just error }, cmd )
+
+        AppUpdate.HideError ->
+            ( { model | error = Nothing }, cmd )
+
+        AppUpdate.None ->
+            ( model, cmd )
 
 
 updatePageHelper :

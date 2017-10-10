@@ -49,11 +49,11 @@ one id =
     Http.get (schemaUrl id) Schema.decoder
 
 
-create : String -> Http.Request Schema
-create name =
+create : Schema -> Http.Request Schema
+create schema =
     Http.post
         schemasUrl
-        (Schema.encodeNewSchema name |> Http.jsonBody)
+        (Schema.encodeNew schema |> Http.jsonBody)
         (dataDecoder Schema.decoder)
 
 
