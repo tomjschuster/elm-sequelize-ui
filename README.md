@@ -1,3 +1,11 @@
+
+# Elm Sequelize UI
+
+## In Progress
+
+* Constraints
+* Field Order
+
 # TODO
 * Constraints
 * Template builder (SQL, Sequelize, Ecto)
