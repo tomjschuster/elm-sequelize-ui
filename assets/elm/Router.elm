@@ -19,7 +19,7 @@ import Utils.Handlers exposing (onPreventDefaultClick)
 type Route
     = Home
     | Schema Int
-    | Entity Int Int
+    | Table Int Int
     | Field Int Int Int
     | NotFound
 
@@ -49,28 +49,28 @@ getConfig route =
             , parent = Just Home
             }
 
-        Entity schemaId id ->
-            { route = Entity id schemaId
-            , title = "Model"
+        Table schemaId id ->
+            { route = Table id schemaId
+            , title = "Table"
             , url =
                 "/schemas/"
                     ++ toString schemaId
-                    ++ "/models/"
+                    ++ "/tables/"
                     ++ toString id
             , parent = Just (Schema schemaId)
             }
 
-        Field schemaId entityId id ->
-            { route = Field schemaId entityId id
+        Field schemaId tableId id ->
+            { route = Field schemaId tableId id
             , title = "Field"
             , url =
                 "/schemas/"
                     ++ toString schemaId
-                    ++ "/models/"
-                    ++ toString entityId
+                    ++ "/tables/"
+                    ++ toString tableId
                     ++ "/fields/"
                     ++ toString id
-            , parent = Just (Entity schemaId entityId)
+            , parent = Just (Table schemaId tableId)
             }
 
         NotFound ->
@@ -97,8 +97,8 @@ routeParser =
         [ Url.map Home top
         , Url.map Home (s "schemas")
         , Url.map Schema (s "schemas" </> int)
-        , Url.map Entity (s "schemas" </> int </> s "models" </> int)
-        , Url.map Field (s "schemas" </> int </> s "models" </> int </> s "fields" </> int)
+        , Url.map Table (s "schemas" </> int </> s "tables" </> int)
+        , Url.map Field (s "schemas" </> int </> s "tables" </> int </> s "fields" </> int)
         ]
 
 

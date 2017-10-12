@@ -3,7 +3,7 @@ module Data.Constraint exposing (Constraint)
 
 type alias Constraint =
     { tipe : ConstraintType
-    , entityId : Int
+    , tableId : Int
     , name : String
     }
 

@@ -1,8 +1,8 @@
-module Views.Breadcrumbs exposing (entity, field, home, schema, view)
+module Views.Breadcrumbs exposing (field, home, schema, table, view)
 
-import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
 import Data.Schema as Schema exposing (Schema)
+import Data.Table as Table exposing (Table)
 import Html exposing (Html, p, text)
 import Router exposing (Route)
 
@@ -39,11 +39,11 @@ schema { id, name } =
     ( Router.Schema id, name )
 
 
-entity : Entity -> ( Route, String )
-entity { id, name, schemaId } =
-    ( Router.Entity schemaId id, name )
+table : Table -> ( Route, String )
+table { id, name, schemaId } =
+    ( Router.Table schemaId id, name )
 
 
 field : Int -> Field -> ( Route, String )
-field schemaId { id, name, entityId } =
-    ( Router.Field schemaId entityId id, name )
+field schemaId { id, name, tableId } =
+    ( Router.Field schemaId tableId id, name )

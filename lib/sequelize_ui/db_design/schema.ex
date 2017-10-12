@@ -1,13 +1,13 @@
 defmodule SequelizeUi.DbDesign.Schema do
   use Ecto.Schema
   import Ecto.Changeset
-  alias SequelizeUi.DbDesign.{Schema, Entity}
+  alias SequelizeUi.DbDesign.{Schema, Table}
 
 
   schema "schema" do
     field :name, :string
 
-    has_many :entities, Entity
+    has_many :tables, Table
 
     timestamps()
   end

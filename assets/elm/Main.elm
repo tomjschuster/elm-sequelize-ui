@@ -3,10 +3,10 @@ module Main exposing (..)
 import AppUpdate exposing (AppUpdate)
 import Html exposing (Html, div, footer, h1, header, text)
 import Navigation exposing (Location)
-import Page.Entity as Entity
 import Page.Field as Field
 import Page.Home as Home
 import Page.Schema as Schema
+import Page.Table as Table
 import Router exposing (Route)
 
 
@@ -34,7 +34,7 @@ type alias Model =
 type Page
     = Home Home.Model
     | Schema Schema.Model
-    | Entity Entity.Model
+    | Table Table.Model
     | Field Field.Model
 
 
@@ -63,7 +63,7 @@ type Msg
 type PageMsg
     = HomeMsg Home.Msg
     | SchemaMsg Schema.Msg
-    | EntityMsg Entity.Msg
+    | TableMsg Table.Msg
     | FieldMsg Field.Msg
 
 
@@ -105,11 +105,11 @@ setRoute route =
         Router.Schema schemaId ->
             Schema.init schemaId |> mapPageInit Schema SchemaMsg
 
-        Router.Entity schemaId entityId ->
-            Entity.init schemaId entityId |> mapPageInit Entity EntityMsg
+        Router.Table schemaId tableId ->
+            Table.init schemaId tableId |> mapPageInit Table TableMsg
 
-        Router.Field schemaId entityId fieldId ->
-            Field.init schemaId entityId fieldId |> mapPageInit Field FieldMsg
+        Router.Field schemaId tableId fieldId ->
+            Field.init schemaId tableId fieldId |> mapPageInit Field FieldMsg
 
         Router.NotFound ->
             Home.init |> mapPageInit Home HomeMsg
@@ -133,8 +133,8 @@ updatePage msg page =
         ( SchemaMsg subMsg, Schema subModel ) ->
             updatePageHelper Schema SchemaMsg Schema.update subMsg subModel
 
-        ( EntityMsg subMsg, Entity subModel ) ->
-            updatePageHelper Entity EntityMsg Entity.update subMsg subModel
+        ( TableMsg subMsg, Table subModel ) ->
+            updatePageHelper Table TableMsg Table.update subMsg subModel
 
         ( FieldMsg subMsg, Field subModel ) ->
             updatePageHelper Field FieldMsg Field.update subMsg subModel
@@ -214,8 +214,8 @@ pageView model =
         Schema subModel ->
             Schema.view subModel |> Html.map SchemaMsg
 
-        Entity subModel ->
-            Entity.view subModel |> Html.map EntityMsg
+        Table subModel ->
+            Table.view subModel |> Html.map TableMsg
 
         Field subModel ->
             Field.view subModel |> Html.map FieldMsg

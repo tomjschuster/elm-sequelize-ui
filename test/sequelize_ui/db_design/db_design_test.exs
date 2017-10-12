@@ -64,62 +64,62 @@ defmodule SequelizeUi.DbDesignTest do
   end
 
   describe "entities" do
-    alias SequelizeUi.DbDesign.Entity
+    alias SequelizeUi.DbDesign.Table
 
     @valid_attrs %{name: "some name"}
     @update_attrs %{name: "some updated name"}
     @invalid_attrs %{name: nil}
 
-    def entity_fixture(attrs \\ %{}) do
-      {:ok, entity} =
+    def table_fixture(attrs \\ %{}) do
+      {:ok, table} =
         attrs
         |> Enum.into(@valid_attrs)
-        |> DbDesign.create_entity()
+        |> DbDesign.create_table()
 
-      entity
+      table
     end
 
     test "list_entities/0 returns all entities" do
-      entity = entity_fixture()
-      assert DbDesign.list_entities() == [entity]
+      table = table_fixture()
+      assert DbDesign.list_entities() == [table]
     end
 
-    test "get_entity!/1 returns the entity with given id" do
-      entity = entity_fixture()
-      assert DbDesign.get_entity!(entity.id) == entity
+    test "get_table!/1 returns the table with given id" do
+      table = table_fixture()
+      assert DbDesign.get_table!(table.id) == table
     end
 
-    test "create_entity/1 with valid data creates a entity" do
-      assert {:ok, %Entity{} = entity} = DbDesign.create_entity(@valid_attrs)
-      assert entity.name == "some name"
+    test "create_table/1 with valid data creates a table" do
+      assert {:ok, %Table{} = table} = DbDesign.create_table(@valid_attrs)
+      assert table.name == "some name"
     end
 
-    test "create_entity/1 with invalid data returns error changeset" do
-      assert {:error, %Ecto.Changeset{}} = DbDesign.create_entity(@invalid_attrs)
+    test "create_table/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = DbDesign.create_table(@invalid_attrs)
     end
 
-    test "update_entity/2 with valid data updates the entity" do
-      entity = entity_fixture()
-      assert {:ok, entity} = DbDesign.update_entity(entity, @update_attrs)
-      assert %Entity{} = entity
-      assert entity.name == "some updated name"
+    test "update_table/2 with valid data updates the table" do
+      table = table_fixture()
+      assert {:ok, table} = DbDesign.update_table(table, @update_attrs)
+      assert %Table{} = table
+      assert table.name == "some updated name"
     end
 
-    test "update_entity/2 with invalid data returns error changeset" do
-      entity = entity_fixture()
-      assert {:error, %Ecto.Changeset{}} = DbDesign.update_entity(entity, @invalid_attrs)
-      assert entity == DbDesign.get_entity!(entity.id)
+    test "update_table/2 with invalid data returns error changeset" do
+      table = table_fixture()
+      assert {:error, %Ecto.Changeset{}} = DbDesign.update_table(table, @invalid_attrs)
+      assert table == DbDesign.get_table!(table.id)
     end
 
-    test "delete_entity/1 deletes the entity" do
-      entity = entity_fixture()
-      assert {:ok, %Entity{}} = DbDesign.delete_entity(entity)
-      assert_raise Ecto.NoResultsError, fn -> DbDesign.get_entity!(entity.id) end
+    test "delete_table/1 deletes the table" do
+      table = table_fixture()
+      assert {:ok, %Table{}} = DbDesign.delete_table(table)
+      assert_raise Ecto.NoResultsError, fn -> DbDesign.get_table!(table.id) end
     end
 
-    test "change_entity/1 returns a entity changeset" do
-      entity = entity_fixture()
-      assert %Ecto.Changeset{} = DbDesign.change_entity(entity)
+    test "change_table/1 returns a table changeset" do
+      table = table_fixture()
+      assert %Ecto.Changeset{} = DbDesign.change_table(table)
     end
   end
 

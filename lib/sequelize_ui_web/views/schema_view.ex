@@ -1,6 +1,6 @@
 defmodule SequelizeUiWeb.SchemaView do
   use SequelizeUiWeb, :view
-  alias SequelizeUiWeb.{SchemaView, EntityView}
+  alias SequelizeUiWeb.{SchemaView, TableView}
 
   def render("index.json", %{schemas: schemas}) do
     %{data: render_many(schemas, SchemaView, "schema.json")}
@@ -10,9 +10,9 @@ defmodule SequelizeUiWeb.SchemaView do
     %{data: render_one(schema, SchemaView, "schema.json")}
   end
 
-  def render("show-with-entities.json", %{schema: schema}) do
+  def render("show-with-tables.json", %{schema: schema}) do
     %{data: %{schema: render_one(schema, SchemaView, "schema.json"),
-              entities: render_many(schema.entities, EntityView, "entity.json")}}
+              tables: render_many(schema.tables, TableView, "table.json")}}
   end
 
   def render("schema.json", %{schema: schema}) do

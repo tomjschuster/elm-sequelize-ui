@@ -1,10 +1,10 @@
-defmodule SequelizeUi.DbDesign.Entity do
+defmodule SequelizeUi.DbDesign.Table do
   use Ecto.Schema
   import Ecto.Changeset
-  alias SequelizeUi.DbDesign.{Entity, Schema, Field, Constraint}
+  alias SequelizeUi.DbDesign.{Table, Schema, Field, Constraint}
 
 
-  schema "entity" do
+  schema "sql_table" do
     field :name, :string
     field :schema_id, :integer
 
@@ -16,11 +16,11 @@ defmodule SequelizeUi.DbDesign.Entity do
   end
 
   @doc false
-  def changeset(%Entity{} = entity, attrs) do
-    entity
+  def changeset(%Table{} = table, attrs) do
+    table
     |> cast(attrs, [:name, :schema_id])
     |> validate_required([:name, :schema_id])
     |> assoc_constraint(:schema)
-    |> unique_constraint(:name, name: :entity_schema_id_name_index)
+    |> unique_constraint(:name, name: :table_schema_id_name_index)
   end
 end

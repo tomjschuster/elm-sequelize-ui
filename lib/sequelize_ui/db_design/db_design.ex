@@ -38,23 +38,23 @@ defmodule SequelizeUi.DbDesign do
   def get_schema!(id), do: Repo.get!(Schema, id)
 
   @doc """
-  Gets a single Schema with its entities.
+  Gets a single Schema with its tables.
 
   Raises `Ecto.NoResultsError` if the Schema does not exist.
 
   ## Examples
 
-      iex> get_schema_with_entities!!(123)
-      %Schema{entities: [%Entity{} | _rest]}
+      iex> get_schema_with_tables!!(123)
+      %Schema{tables: [%Table{} | _rest]}
 
-      iex> get_schema_with_entities!(456)
+      iex> get_schema_with_tables!(456)
       ** (Ecto.NoResultsError)
   """
-  def get_schema_with_entities!(id) do
+  def get_schema_with_tables!(id) do
     Repo.one! from s in Schema,
-      left_join: e in assoc(s, :entities),
+      left_join: e in assoc(s, :tables),
       where: s.id == ^id,
-      preload: [entities: e]
+      preload: [tables: e]
   end
 
   @doc """
@@ -122,92 +122,92 @@ defmodule SequelizeUi.DbDesign do
     Schema.changeset(schema, %{})
   end
 
-  alias SequelizeUi.DbDesign.Entity
+  alias SequelizeUi.DbDesign.Table
 
   @doc """
-  Returns the list of entities.
+  Returns the list of tables.
 
   ## Examples
 
-      iex> list_entities()
-      [%Entity{}, ...]
+      iex> list_tables()
+      [%Table{}, ...]
 
   """
-  def list_entities do
-    Repo.all(Entity)
+  def list_tables do
+    Repo.all(Table)
   end
 
   @doc """
-  Gets a single entity.
+  Gets a single table.
 
-  Raises `Ecto.NoResultsError` if the Entity does not exist.
+  Raises `Ecto.NoResultsError` if the Table does not exist.
 
   ## Examples
 
-      iex> get_entity!(123)
-      %Entity{}
+      iex> get_table!(123)
+      %Table{}
 
-      iex> get_entity!(456)
+      iex> get_table!(456)
       ** (Ecto.NoResultsError)
 
   """
-  def get_entity!(id), do: Repo.get!(Entity, id)
+  def get_table!(id), do: Repo.get!(Table, id)
 
   @doc """
-  Gets a single entity with its parent schema.
+  Gets a single table with its parent schema.
 
-  Raises `Ecto.NoResultsError` if the Entity or Schema does not exist.
+  Raises `Ecto.NoResultsError` if the Table or Schema does not exist.
 
   ## Examples
 
-      iex> get_entity_with_schema!(123)
-      %Entity{schema: %Schema{}}
+      iex> get_table_with_schema!(123)
+      %Table{schema: %Schema{}}
 
-      iex> get_entity_with_schema!(456)
+      iex> get_table_with_schema!(456)
       ** (Ecto.NoResultsError)
   """
-  def get_entity_with_schema!(id) do
-    Repo.one! from e in Entity,
+  def get_table_with_schema!(id) do
+    Repo.one! from e in Table,
       join: s in assoc(e, :schema),
       where: e.id == ^id,
       preload: [schema: s]
   end
 
   @doc """
-  Gets a single entity with its fields.
+  Gets a single table with its fields.
 
-  Raises `Ecto.NoResultsError` if the Entity does not exist.
+  Raises `Ecto.NoResultsError` if the Table does not exist.
 
   ## Examples
 
-      iex> get_entity_with_fields!(123)
-      %Entity{fields: [%Field{} | _rest]}
+      iex> get_table_with_fields!(123)
+      %Table{fields: [%Field{} | _rest]}
 
-      iex> get_entity_with_fields!(456)
+      iex> get_table_with_fields!(456)
       ** (Ecto.NoResultsError)
   """
-  def get_entity_with_fields!(id) do
-    Repo.one! from e in Entity,
+  def get_table_with_fields!(id) do
+    Repo.one! from e in Table,
       left_join: f in assoc(e, :fields),
       where: e.id == ^id,
       preload: [fields: f]
   end
 
   @doc """
-  Gets a single entity with its schema and fields.
+  Gets a single table with its schema and fields.
 
-  Raises `Ecto.NoResultsError` if the Entity or Schema does not exist.
+  Raises `Ecto.NoResultsError` if the Table or Schema does not exist.
 
   ## Examples
 
-      iex> get_entity_with_all!(123)
-      %Entity{schema: %Schema{}, fields: [%Field{} | _rest]}
+      iex> get_table_with_all!(123)
+      %Table{schema: %Schema{}, fields: [%Field{} | _rest]}
 
-      iex> get_entity_with_all!(456)
+      iex> get_table_with_all!(456)
       ** (Ecto.NoResultsError)
   """
-  def get_entity_with_all!(id) do
-    Repo.one! from e in Entity,
+  def get_table_with_all!(id) do
+    Repo.one! from e in Table,
       join: s in assoc(e, :schema),
       left_join: f in assoc(e, :fields),
       where: e.id == ^id,
@@ -215,68 +215,68 @@ defmodule SequelizeUi.DbDesign do
   end
 
   @doc """
-  Creates a entity.
+  Creates a table.
 
   ## Examples
 
-      iex> create_entity(%{field: value})
-      {:ok, %Entity{}}
+      iex> create_table(%{field: value})
+      {:ok, %Table{}}
 
-      iex> create_entity(%{field: bad_value})
+      iex> create_table(%{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_entity(attrs \\ %{}) do
-    %Entity{}
-    |> Entity.changeset(attrs)
+  def create_table(attrs \\ %{}) do
+    %Table{}
+    |> Table.changeset(attrs)
     |> Repo.insert()
   end
 
   @doc """
-  Updates a entity.
+  Updates a table.
 
   ## Examples
 
-      iex> update_entity(entity, %{field: new_value})
-      {:ok, %Entity{}}
+      iex> update_table(table, %{field: new_value})
+      {:ok, %Table{}}
 
-      iex> update_entity(entity, %{field: bad_value})
+      iex> update_table(table, %{field: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_entity(%Entity{} = entity, attrs) do
-    entity
-    |> Entity.changeset(attrs)
+  def update_table(%Table{} = table, attrs) do
+    table
+    |> Table.changeset(attrs)
     |> Repo.update()
   end
 
   @doc """
-  Deletes a Entity.
+  Deletes a Table.
 
   ## Examples
 
-      iex> delete_entity(entity)
-      {:ok, %Entity{}}
+      iex> delete_table(table)
+      {:ok, %Table{}}
 
-      iex> delete_entity(entity)
+      iex> delete_table(table)
       {:error, %Ecto.Changeset{}}
 
   """
-  def delete_entity(%Entity{} = entity) do
-    Repo.delete(entity)
+  def delete_table(%Table{} = table) do
+    Repo.delete(table)
   end
 
   @doc """
-  Returns an `%Ecto.Changeset{}` for tracking entity changes.
+  Returns an `%Ecto.Changeset{}` for tracking table changes.
 
   ## Examples
 
-      iex> change_entity(entity)
-      %Ecto.Changeset{source: %Entity{}}
+      iex> change_table(table)
+      %Ecto.Changeset{source: %Table{}}
 
   """
-  def change_entity(%Entity{} = entity) do
-    Entity.changeset(entity, %{})
+  def change_table(%Table{} = table) do
+    Table.changeset(table, %{})
   end
 
   alias SequelizeUi.DbDesign.Field
@@ -311,35 +311,35 @@ defmodule SequelizeUi.DbDesign do
   def get_field!(id), do: Repo.get!(Field, id)
 
   @doc """
-  Gets a single field with entity parent.
+  Gets a single field with table parent.
 
   Raises `Ecto.NoResultsError` if the Field does not exist.
 
   ## Examples
 
-      iex> get_field_with_entity!(123)
-      %Field{entity: %Entity{}}
+      iex> get_field_with_table!(123)
+      %Field{table: %Table{}}
 
-      iex> get_field_with_entity!(456)
+      iex> get_field_with_table!(456)
       ** (Ecto.NoResultsError)
 
   """
-  def get_field_with_entity!(id) do
+  def get_field_with_table!(id) do
     Repo.one from f in Field,
-      join: e in assoc(f, :entity),
+      join: e in assoc(f, :table),
       where: f.id == ^id,
-      preload: [entity: e]
+      preload: [table: e]
   end
 
   @doc """
-  Gets a single field with entity parent and schema grandparent.
+  Gets a single field with table parent and schema grandparent.
 
   Raises `Ecto.NoResultsError` if the Field does not exist.
 
   ## Examples
 
       iex> get_field_with_all!(123)
-      %Field{entity: %Entity{}}
+      %Field{table: %Table{}}
 
       iex> get_field_with_all!(456)
       ** (Ecto.NoResultsError)
@@ -347,10 +347,10 @@ defmodule SequelizeUi.DbDesign do
   """
   def get_field_with_all!(id) do
     Repo.one from f in Field,
-      join: e in assoc(f, :entity),
+      join: e in assoc(f, :table),
       join: s in assoc(e, :schema),
       where: f.id == ^id,
-      preload: [entity: {e, schema: s}]
+      preload: [table: {e, schema: s}]
   end
 
   @doc """

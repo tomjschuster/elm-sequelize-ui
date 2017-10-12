@@ -1,89 +1,89 @@
 module Data.Combined
     exposing
-        ( EntityWithAll
-        , EntityWithFields
-        , EntityWithSchema
-        , FieldWithAll
-        , FieldWithEntity
-        , SchemaWithEntities
-        , entityWithAllDecoder
-        , entityWithFieldsDecoder
-        , entityWithSchemaDecoder
+        ( FieldWithAll
+        , FieldWithTable
+        , SchemaWithTables
+        , TableWithAll
+        , TableWithFields
+        , TableWithSchema
         , fieldWithAllDecoder
-        , fieldWithEntityDecoder
-        , schemaWithEntitiesDecoder
+        , fieldWithTableDecoder
+        , schemaWithTablesDecoder
+        , tableWithAllDecoder
+        , tableWithFieldsDecoder
+        , tableWithSchemaDecoder
         )
 
-import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
 import Data.Schema as Schema exposing (Schema)
+import Data.Table as Table exposing (Table)
 import Json.Decode as JD exposing (Decoder)
 import Json.Decode.Pipeline exposing (decode, required)
 
 
-type alias SchemaWithEntities =
-    { schema : Schema, entities : List Entity }
+type alias SchemaWithTables =
+    { schema : Schema, tables : List Table }
 
 
-schemaWithEntitiesDecoder : Decoder SchemaWithEntities
-schemaWithEntitiesDecoder =
-    decode SchemaWithEntities
+schemaWithTablesDecoder : Decoder SchemaWithTables
+schemaWithTablesDecoder =
+    decode SchemaWithTables
         |> required "schema" Schema.decoder
-        |> required "entities" (JD.list Entity.decoder)
+        |> required "tables" (JD.list Table.decoder)
 
 
-type alias EntityWithSchema =
-    { entity : Entity, schema : Schema }
+type alias TableWithSchema =
+    { table : Table, schema : Schema }
 
 
-entityWithSchemaDecoder : Decoder EntityWithSchema
-entityWithSchemaDecoder =
-    decode EntityWithSchema
-        |> required "entity" Entity.decoder
+tableWithSchemaDecoder : Decoder TableWithSchema
+tableWithSchemaDecoder =
+    decode TableWithSchema
+        |> required "table" Table.decoder
         |> required "schema" Schema.decoder
 
 
-type alias EntityWithFields =
-    { entity : Entity, fields : List Field }
+type alias TableWithFields =
+    { table : Table, fields : List Field }
 
 
-entityWithFieldsDecoder : Decoder EntityWithFields
-entityWithFieldsDecoder =
-    decode EntityWithFields
-        |> required "entity" Entity.decoder
+tableWithFieldsDecoder : Decoder TableWithFields
+tableWithFieldsDecoder =
+    decode TableWithFields
+        |> required "table" Table.decoder
         |> required "fields" (JD.list Field.decoder)
 
 
-type alias EntityWithAll =
-    { entity : Entity, schema : Schema, fields : List Field }
+type alias TableWithAll =
+    { table : Table, schema : Schema, fields : List Field }
 
 
-entityWithAllDecoder : Decoder EntityWithAll
-entityWithAllDecoder =
-    decode EntityWithAll
-        |> required "entity" Entity.decoder
+tableWithAllDecoder : Decoder TableWithAll
+tableWithAllDecoder =
+    decode TableWithAll
+        |> required "table" Table.decoder
         |> required "schema" Schema.decoder
         |> required "fields" (JD.list Field.decoder)
 
 
-type alias FieldWithEntity =
-    { field : Field, entity : Entity }
+type alias FieldWithTable =
+    { field : Field, table : Table }
 
 
-fieldWithEntityDecoder : Decoder FieldWithEntity
-fieldWithEntityDecoder =
-    decode FieldWithEntity
+fieldWithTableDecoder : Decoder FieldWithTable
+fieldWithTableDecoder =
+    decode FieldWithTable
         |> required "field" Field.decoder
-        |> required "entity" Entity.decoder
+        |> required "table" Table.decoder
 
 
 type alias FieldWithAll =
-    { field : Field, entity : Entity, schema : Schema }
+    { field : Field, table : Table, schema : Schema }
 
 
 fieldWithAllDecoder : Decoder FieldWithAll
 fieldWithAllDecoder =
     decode FieldWithAll
         |> required "field" Field.decoder
-        |> required "entity" Entity.decoder
+        |> required "table" Table.decoder
         |> required "schema" Schema.decoder

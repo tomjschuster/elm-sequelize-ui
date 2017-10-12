@@ -4,7 +4,7 @@ module Utils.Http
         , dataDecoder
         , delete
         , errorBody
-        , isUnprocessableEntity
+        , isUnprocessableTable
         , put
         )
 
@@ -51,7 +51,7 @@ type HttpError
     | MethodNotAllowed
     | NotAcceptable
     | ImATeapot
-    | UnprocessableEntity
+    | UnprocessableTable
 
 
 httpErrorToStatusCode : HttpError -> Int
@@ -78,7 +78,7 @@ httpErrorToStatusCode error =
         ImATeapot ->
             418
 
-        UnprocessableEntity ->
+        UnprocessableTable ->
             422
 
 
@@ -95,9 +95,9 @@ isError errorType httpError =
             False
 
 
-isUnprocessableEntity : Http.Error -> Bool
-isUnprocessableEntity =
-    isError UnprocessableEntity
+isUnprocessableTable : Http.Error -> Bool
+isUnprocessableTable =
+    isError UnprocessableTable
 
 
 errorBody : Http.Error -> Maybe String

@@ -1,6 +1,6 @@
 defmodule SequelizeUiWeb.FieldView do
   use SequelizeUiWeb, :view
-  alias SequelizeUiWeb.{FieldView, EntityView, SchemaView}
+  alias SequelizeUiWeb.{FieldView, TableView, SchemaView}
 
   def render("index.json", %{fields: fields}) do
     %{data: render_many(fields, FieldView, "field.json")}
@@ -10,15 +10,15 @@ defmodule SequelizeUiWeb.FieldView do
     %{data: render_one(field, FieldView, "field.json")}
   end
 
-  def render("show-with-entity.json", %{field: field}) do
+  def render("show-with-table.json", %{field: field}) do
     %{data: %{field: render_one(field, FieldView, "field.json"),
-              entity: render_one(field.entity, EntityView, "entity.json")}}
+              table: render_one(field.table, TableView, "table.json")}}
   end
 
   def render("show-with-all.json", %{field: field}) do
     %{data: %{field: render_one(field, FieldView, "field.json"),
-              entity: render_one(field.entity, EntityView, "entity.json"),
-              schema: render_one(field.entity.schema, SchemaView, "schema.json")}}
+              table: render_one(field.table, TableView, "table.json"),
+              schema: render_one(field.table.schema, SchemaView, "schema.json")}}
   end
 
   def render("field.json", %{field: field}) do
@@ -35,7 +35,7 @@ defmodule SequelizeUiWeb.FieldView do
       end
     %{id: field.id,
       name: field.name,
-      entityId: field.entity_id,
+      tableId: field.table_id,
       dataTypeId: field.data_type_id,
       modifier: modifier}
   end

@@ -1,6 +1,6 @@
-module Data.Entity
+module Data.Table
     exposing
-        ( Entity
+        ( Table
         , decoder
         , empty
         , encode
@@ -15,14 +15,14 @@ import Json.Decode.Pipeline exposing (decode, optional, required)
 import Json.Encode as JE exposing (Value)
 
 
-type alias Entity =
+type alias Table =
     { id : Int
     , name : String
     , schemaId : Int
     }
 
 
-empty : Entity
+empty : Table
 empty =
     { id = 0
     , name = ""
@@ -30,7 +30,7 @@ empty =
     }
 
 
-init : Int -> Entity
+init : Int -> Table
 init schemaId =
     { empty | schemaId = schemaId }
 
@@ -39,47 +39,47 @@ init schemaId =
 -- UPDATE
 
 
-updateName : String -> Entity -> Entity
-updateName name entity =
-    { entity | name = name }
+updateName : String -> Table -> Table
+updateName name table =
+    { table | name = name }
 
 
-replaceIfMatch : Entity -> Entity -> Entity
-replaceIfMatch newEntity entity =
-    if entity.id == newEntity.id then
-        newEntity
+replaceIfMatch : Table -> Table -> Table
+replaceIfMatch newTable table =
+    if table.id == newTable.id then
+        newTable
     else
-        entity
+        table
 
 
 
 -- DECODE/ENCODE
 
 
-decoder : Decoder Entity
+decoder : Decoder Table
 decoder =
-    decode Entity
+    decode Table
         |> required "id" int
         |> required "name" string
         |> required "schemaId" int
 
 
-encode : Entity -> Value
-encode entity =
+encode : Table -> Value
+encode table =
     JE.object
-        [ ( "entity"
+        [ ( "table"
           , JE.object
-                [ ( "name", JE.string entity.name )
-                , ( "schema_id", JE.int entity.schemaId )
+                [ ( "name", JE.string table.name )
+                , ( "schema_id", JE.int table.schemaId )
                 ]
           )
         ]
 
 
-encodeNew : Entity -> Value
+encodeNew : Table -> Value
 encodeNew { name, schemaId } =
     JE.object
-        [ ( "entity"
+        [ ( "table"
           , JE.object
                 [ ( "name", JE.string name )
                 , ( "schema_id", JE.int schemaId )

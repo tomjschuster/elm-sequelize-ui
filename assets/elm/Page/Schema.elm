@@ -11,9 +11,9 @@ module Page.Schema
 
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
-import Data.Combined exposing (SchemaWithEntities)
-import Data.Entity as Entity exposing (Entity)
+import Data.Combined exposing (SchemaWithTables)
 import Data.Schema as Schema exposing (Schema)
+import Data.Table as Table exposing (Table)
 import Dom
 import Html
     exposing
@@ -33,8 +33,8 @@ import Html
 import Html.Attributes exposing (disabled, id, value)
 import Html.Events exposing (onClick, onInput)
 import Http
-import Request.Entity as RE
 import Request.Schema as RS
+import Request.Table as RE
 import Router exposing (Route)
 import Task
 import Utils.Handlers exposing (customOnKeyDown, onEnter)
@@ -48,11 +48,11 @@ import Views.ChangesetError as CE
 
 type alias Model =
     { schema : Schema
-    , entities : List Entity
+    , tables : List Table
     , editingSchema : Maybe Schema
     , editing : Bool
-    , newEntity : Entity
-    , editingEntity : Maybe Entity
+    , newTable : Table
+    , editingTable : Maybe Table
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
     }
@@ -60,13 +60,13 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model Schema.empty [] Nothing False Entity.empty Nothing Nothing []
+    Model Schema.empty [] Nothing False Table.empty Nothing Nothing []
 
 
 init : Int -> ( Model, Cmd Msg )
 init schemaId =
-    ( { initialModel | newEntity = Entity.init schemaId }
-    , RS.oneWithEntities schemaId |> Http.send LoadSchemaWithEntities
+    ( { initialModel | newTable = Table.init schemaId }
+    , RS.oneWithTables schemaId |> Http.send LoadSchemaWithTables
     )
 
 
@@ -79,7 +79,7 @@ type Msg
     | FocusResult (Result Dom.Error ())
     | Goto Route
       -- SCHEMA
-    | LoadSchemaWithEntities (Result Http.Error SchemaWithEntities)
+    | LoadSchemaWithTables (Result Http.Error SchemaWithTables)
     | LoadSchema (Result Http.Error Schema)
     | EditSchema
     | InputSchemaName String
@@ -88,16 +88,16 @@ type Msg
     | Destroy
     | RemoveSchema (Result Http.Error ())
       -- ENTITIES
-    | InputNewEntityName String
-    | CreateEntity
-    | LoadEntity (Result Http.Error Entity)
-    | EditEntityName Int
-    | InputEditingEntityName String
-    | CancelEditEntityName
-    | SaveEntityName
-    | UpdateEntity (Result Http.Error Entity)
-    | DestroyEntity Int
-    | RemoveEntity (Result Http.Error ())
+    | InputNewTableName String
+    | CreateTable
+    | LoadTable (Result Http.Error Table)
+    | EditTableName Int
+    | InputEditingTableName String
+    | CancelEditTableName
+    | SaveTableName
+    | UpdateTable (Result Http.Error Table)
+    | DestroyTable Int
+    | RemoveTable (Result Http.Error ())
 
 
 update : Msg -> Model -> ( Model, Cmd Msg, AppUpdate )
@@ -119,13 +119,13 @@ update msg model =
             )
 
         -- SCHEMA
-        LoadSchemaWithEntities (Ok { schema, entities }) ->
-            ( { model | schema = schema, entities = entities, errors = [] }
+        LoadSchemaWithTables (Ok { schema, tables }) ->
+            ( { model | schema = schema, tables = tables, errors = [] }
             , Cmd.none
             , AppUpdate.none
             )
 
-        LoadSchemaWithEntities (Err error) ->
+        LoadSchemaWithTables (Err error) ->
             ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
@@ -145,7 +145,7 @@ update msg model =
 
         EditSchema ->
             ( { model
-                | editingEntity = Nothing
+                | editingTable = Nothing
                 , editingSchema = Just model.schema
               }
             , Dom.focus "edit-schema-name" |> Task.attempt FocusResult
@@ -194,105 +194,105 @@ update msg model =
             )
 
         -- ENTITIES
-        InputNewEntityName name ->
-            ( { model | newEntity = Entity.updateName name model.newEntity }
+        InputNewTableName name ->
+            ( { model | newTable = Table.updateName name model.newTable }
             , Cmd.none
             , AppUpdate.none
             )
 
-        CreateEntity ->
+        CreateTable ->
             ( model
-            , RE.create model.newEntity
-                |> Http.send LoadEntity
+            , RE.create model.newTable
+                |> Http.send LoadTable
             , AppUpdate.none
             )
 
-        LoadEntity (Ok entity) ->
+        LoadTable (Ok table) ->
             ( { model
-                | entities = model.entities ++ [ entity ]
-                , newEntity = Entity.init model.schema.id
+                | tables = model.tables ++ [ table ]
+                , newTable = Table.init model.schema.id
                 , errors = []
               }
-            , Dom.focus "create-entity" |> Task.attempt FocusResult
+            , Dom.focus "create-table" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
-        LoadEntity (Err error) ->
+        LoadTable (Err error) ->
             ( { model | errors = ChangesetError.parseHttpError error }
-            , Dom.focus "create-entity" |> Task.attempt FocusResult
+            , Dom.focus "create-table" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
-        EditEntityName id ->
+        EditTableName id ->
             ( { model
                 | editingSchema = Nothing
-                , editingEntity =
-                    model.entities |> List.filter (.id >> (==) id) >> List.head
+                , editingTable =
+                    model.tables |> List.filter (.id >> (==) id) >> List.head
               }
-            , Dom.focus "edit-entity-name" |> Task.attempt FocusResult
+            , Dom.focus "edit-table-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
-        InputEditingEntityName name ->
+        InputEditingTableName name ->
             ( { model
-                | editingEntity =
-                    Maybe.map (Entity.updateName name) model.editingEntity
+                | editingTable =
+                    Maybe.map (Table.updateName name) model.editingTable
               }
             , Cmd.none
             , AppUpdate.none
             )
 
-        CancelEditEntityName ->
-            ( { model | editingEntity = Nothing }
+        CancelEditTableName ->
+            ( { model | editingTable = Nothing }
             , Cmd.none
             , AppUpdate.none
             )
 
-        SaveEntityName ->
+        SaveTableName ->
             ( model
-            , model.editingEntity
-                |> Maybe.map (RE.update >> Http.send UpdateEntity)
+            , model.editingTable
+                |> Maybe.map (RE.update >> Http.send UpdateTable)
                 |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
 
-        UpdateEntity (Ok entity) ->
+        UpdateTable (Ok table) ->
             ( { model
-                | entities =
-                    List.map (Entity.replaceIfMatch entity) model.entities
-                , editingEntity = Nothing
+                | tables =
+                    List.map (Table.replaceIfMatch table) model.tables
+                , editingTable = Nothing
                 , errors = []
               }
             , Cmd.none
             , AppUpdate.none
             )
 
-        UpdateEntity (Err error) ->
+        UpdateTable (Err error) ->
             ( { model | errors = ChangesetError.parseHttpError error }
-            , Dom.focus "edit-entity-name" |> Task.attempt FocusResult
+            , Dom.focus "edit-table-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
-        DestroyEntity id ->
+        DestroyTable id ->
             ( { model | toDeleteId = Just id }
             , RE.destroy id
-                |> Http.send RemoveEntity
+                |> Http.send RemoveTable
             , AppUpdate.none
             )
 
-        RemoveEntity (Ok ()) ->
+        RemoveTable (Ok ()) ->
             ( { model
-                | entities =
+                | tables =
                     List.filter
                         (.id >> Just >> (/=) model.toDeleteId)
-                        model.entities
+                        model.tables
                 , errors = []
               }
             , Cmd.none
             , AppUpdate.none
             )
 
-        RemoveEntity (Err error) ->
+        RemoveTable (Err error) ->
             ( { model | errors = ChangesetError.parseHttpError error }
             , Cmd.none
             , AppUpdate.none
@@ -317,7 +317,7 @@ view model =
     main_ []
         [ breadCrumbs model.schema
         , schemaView model
-        , entitiesView model
+        , tablesView model
         ]
 
 
@@ -332,7 +332,7 @@ breadCrumbs schema =
 
 
 schemaView : Model -> Html Msg
-schemaView { editingSchema, schema, editingEntity } =
+schemaView { editingSchema, schema, editingTable } =
     section [] (schemaChildren editingSchema schema)
 
 
@@ -420,127 +420,127 @@ onSchemaNameKeyDown key =
 -- ENTITIES VIEW
 
 
-entitiesView : Model -> Html Msg
-entitiesView model =
-    section [] (entitiesChildren model)
+tablesView : Model -> Html Msg
+tablesView model =
+    section [] (tablesChildren model)
 
 
-entitiesChildren : Model -> List (Html Msg)
-entitiesChildren { editingEntity, entities, newEntity, errors } =
+tablesChildren : Model -> List (Html Msg)
+tablesChildren { editingTable, tables, newTable, errors } =
     CE.prependIfErrors
         errors
-        [ entitiesTitle
-        , createEntityView newEntity.name
-        , entitiesListView editingEntity entities
+        [ tablesTitle
+        , createTableView newTable.name
+        , tablesListView editingTable tables
         ]
 
 
-entitiesTitle : Html msg
-entitiesTitle =
-    h3 [] [ text "Models" ]
+tablesTitle : Html msg
+tablesTitle =
+    h3 [] [ text "Tables" ]
 
 
-createEntityView : String -> Html Msg
-createEntityView name =
+createTableView : String -> Html Msg
+createTableView name =
     div []
         [ input
-            [ id "create-entity"
+            [ id "create-table"
             , value name
-            , onInput InputNewEntityName
-            , onEnter CreateEntity
+            , onInput InputNewTableName
+            , onEnter CreateTable
             ]
             []
         , button
-            [ onClick CreateEntity
+            [ onClick CreateTable
             ]
-            [ text "Create Model" ]
+            [ text "Create Table" ]
         ]
 
 
-entitiesListView : Maybe Entity -> List Entity -> Html Msg
-entitiesListView editingEntity entities =
-    ul [] (List.map (entityView editingEntity) entities)
+tablesListView : Maybe Table -> List Table -> Html Msg
+tablesListView editingTable tables =
+    ul [] (List.map (tableView editingTable) tables)
 
 
-entityView : Maybe Entity -> Entity -> Html Msg
-entityView editingEntity entity =
-    li [] (entityChildrenView entity editingEntity)
+tableView : Maybe Table -> Table -> Html Msg
+tableView editingTable table =
+    li [] (tableChildrenView table editingTable)
 
 
-entityChildrenView : Entity -> Maybe Entity -> List (Html Msg)
-entityChildrenView entity =
-    Maybe.map (getEditingEntityChildren entity)
-        >> Maybe.withDefault (normalEntityChildren entity)
+tableChildrenView : Table -> Maybe Table -> List (Html Msg)
+tableChildrenView table =
+    Maybe.map (getEditingTableChildren table)
+        >> Maybe.withDefault (normalTableChildren table)
 
 
-getEditingEntityChildren : Entity -> Entity -> List (Html Msg)
-getEditingEntityChildren entity editingEntity =
-    if editingEntity.id == entity.id then
-        editingEntityChildren editingEntity
+getEditingTableChildren : Table -> Table -> List (Html Msg)
+getEditingTableChildren table editingTable =
+    if editingTable.id == table.id then
+        editingTableChildren editingTable
     else
-        [ text entity.name ]
+        [ text table.name ]
 
 
-normalEntityChildren : Entity -> List (Html Msg)
-normalEntityChildren entity =
-    [ entityLink entity
-    , editEntityNameButton entity.id
-    , deleteEntityButton entity.id
+normalTableChildren : Table -> List (Html Msg)
+normalTableChildren table =
+    [ tableLink table
+    , editTableNameButton table.id
+    , deleteTableButton table.id
     ]
 
 
-editingEntityChildren : Entity -> List (Html Msg)
-editingEntityChildren { name } =
-    [ editEntityNameInput name
-    , cancelEditEntityNameButton
-    , saveEntityNameButton
+editingTableChildren : Table -> List (Html Msg)
+editingTableChildren { name } =
+    [ editTableNameInput name
+    , cancelEditTableNameButton
+    , saveTableNameButton
     ]
 
 
-entityLink : Entity -> Html Msg
-entityLink { id, name, schemaId } =
-    Router.link Goto (Router.Entity schemaId id) [] [ text name ]
+tableLink : Table -> Html Msg
+tableLink { id, name, schemaId } =
+    Router.link Goto (Router.Table schemaId id) [] [ text name ]
 
 
-editEntityNameButton : Int -> Html Msg
-editEntityNameButton id =
-    button [ onClick (EditEntityName id) ] [ text "Edit Name" ]
+editTableNameButton : Int -> Html Msg
+editTableNameButton id =
+    button [ onClick (EditTableName id) ] [ text "Edit Name" ]
 
 
-deleteEntityButton : Int -> Html Msg
-deleteEntityButton id =
-    button [ onClick (DestroyEntity id) ] [ text "Delete" ]
+deleteTableButton : Int -> Html Msg
+deleteTableButton id =
+    button [ onClick (DestroyTable id) ] [ text "Delete" ]
 
 
-editEntityNameInput : String -> Html Msg
-editEntityNameInput name =
+editTableNameInput : String -> Html Msg
+editTableNameInput name =
     input
-        [ id "edit-entity-name"
+        [ id "edit-table-name"
         , value name
-        , onInput InputEditingEntityName
-        , customOnKeyDown onEntityNameKeyDown
+        , onInput InputEditingTableName
+        , customOnKeyDown onTableNameKeyDown
         ]
         []
 
 
-onEntityNameKeyDown : Key -> Maybe Msg
-onEntityNameKeyDown key =
+onTableNameKeyDown : Key -> Maybe Msg
+onTableNameKeyDown key =
     case key of
         Enter ->
-            Just SaveEntityName
+            Just SaveTableName
 
         Escape ->
-            Just CancelEditEntityName
+            Just CancelEditTableName
 
         _ ->
             Nothing
 
 
-cancelEditEntityNameButton : Html Msg
-cancelEditEntityNameButton =
-    button [ onClick CancelEditEntityName ] [ text "Cancel" ]
+cancelEditTableNameButton : Html Msg
+cancelEditTableNameButton =
+    button [ onClick CancelEditTableName ] [ text "Cancel" ]
 
 
-saveEntityNameButton : Html Msg
-saveEntityNameButton =
-    button [ onClick SaveEntityName ] [ text "Save" ]
+saveTableNameButton : Html Msg
+saveTableNameButton =
+    button [ onClick SaveTableName ] [ text "Save" ]

@@ -1,33 +1,33 @@
 module Data.EditingModel
     exposing
         ( EditingModel
-        , editEntity
         , editField
         , editSchema
-        , extractEntity
+        , editTable
         , extractField
         , extractSchema
-        , isEntity
+        , extractTable
         , isField
         , isSchema
-        , mapEntity
+        , isTable
         , mapField
         , mapSchema
+        , mapTable
         , none
-        , updateEntity
         , updateField
         , updateSchema
+        , updateTable
         )
 
-import Data.Entity exposing (Entity)
 import Data.Field exposing (Field)
 import Data.Schema exposing (Schema)
+import Data.Table exposing (Table)
 
 
 type EditingModel
     = NoModel
     | EditingSchema Schema
-    | EditingEntity Entity
+    | EditingTable Table
     | EditingField Field
 
 
@@ -41,9 +41,9 @@ editSchema =
     EditingSchema
 
 
-editEntity : Entity -> EditingModel
-editEntity =
-    EditingEntity
+editTable : Table -> EditingModel
+editTable =
+    EditingTable
 
 
 editField : Field -> EditingModel
@@ -61,11 +61,11 @@ isSchema id editingModel =
             False
 
 
-isEntity : Int -> EditingModel -> Bool
-isEntity id editingModel =
+isTable : Int -> EditingModel -> Bool
+isTable id editingModel =
     case editingModel of
-        EditingEntity entity ->
-            id == entity.id
+        EditingTable table ->
+            id == table.id
 
         _ ->
             False
@@ -89,10 +89,10 @@ updateSchema schema editingModel =
         editingModel
 
 
-updateEntity : Entity -> EditingModel -> EditingModel
-updateEntity entity editingModel =
-    if isEntity entity.id editingModel then
-        EditingEntity entity
+updateTable : Table -> EditingModel -> EditingModel
+updateTable table editingModel =
+    if isTable table.id editingModel then
+        EditingTable table
     else
         editingModel
 
@@ -115,11 +115,11 @@ extractSchema editingModel =
             Nothing
 
 
-extractEntity : EditingModel -> Maybe Entity
-extractEntity editingModel =
+extractTable : EditingModel -> Maybe Table
+extractTable editingModel =
     case editingModel of
-        EditingEntity entity ->
-            Just entity
+        EditingTable table ->
+            Just table
 
         _ ->
             Nothing
@@ -143,11 +143,11 @@ mapSchema toSchema input editingModel =
         |> Maybe.withDefault editingModel
 
 
-mapEntity : (a -> Entity -> Entity) -> a -> EditingModel -> EditingModel
-mapEntity toEntity input editingModel =
+mapTable : (a -> Table -> Table) -> a -> EditingModel -> EditingModel
+mapTable toTable input editingModel =
     editingModel
-        |> extractEntity
-        |> Maybe.map (toEntity input >> EditingEntity)
+        |> extractTable
+        |> Maybe.map (toTable input >> EditingTable)
         |> Maybe.withDefault editingModel
 
 

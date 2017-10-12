@@ -37,7 +37,7 @@ import Json.Encode as JE exposing (Value)
 
 type alias Field =
     { id : Int
-    , entityId : Int
+    , tableId : Int
     , name : String
     , dataType : DataType
     , dataTypeModifier : DataType.Modifier
@@ -47,7 +47,7 @@ type alias Field =
 empty : Field
 empty =
     { id = 0
-    , entityId = 0
+    , tableId = 0
     , name = ""
     , dataType = DataType.none
     , dataTypeModifier = DataType.NoModifier
@@ -55,8 +55,8 @@ empty =
 
 
 init : Int -> Field
-init entityId =
-    { empty | entityId = entityId }
+init tableId =
+    { empty | tableId = tableId }
 
 
 
@@ -126,19 +126,19 @@ decoder : Decoder Field
 decoder =
     decode Field
         |> required "id" int
-        |> required "entityId" int
+        |> required "tableId" int
         |> required "name" string
         |> optional "dataTypeId" DataType.decoder DataType.none
         |> optional "modifier" DataType.modifierDecoder DataType.noModifier
 
 
 encode : Field -> Value
-encode { id, entityId, name, dataType, dataTypeModifier } =
+encode { id, tableId, name, dataType, dataTypeModifier } =
     JE.object
         [ ( "field"
           , JE.object
                 ([ ( "id", JE.int id )
-                 , ( "entity_id", JE.int entityId )
+                 , ( "table_id", JE.int tableId )
                  , ( "name", JE.string name )
                  , ( "data_type_id", DataType.encode dataType )
                  ]
@@ -149,11 +149,11 @@ encode { id, entityId, name, dataType, dataTypeModifier } =
 
 
 encodeNew : Field -> Value
-encodeNew { entityId, name, dataType, dataTypeModifier } =
+encodeNew { tableId, name, dataType, dataTypeModifier } =
     JE.object
         [ ( "field"
           , JE.object
-                ([ ( "entity_id", JE.int entityId )
+                ([ ( "table_id", JE.int tableId )
                  , ( "name", JE.string name )
                  , ( "data_type_id", DataType.encode dataType )
                  ]
@@ -164,11 +164,11 @@ encodeNew { entityId, name, dataType, dataTypeModifier } =
 
 
 encodeNewField : Int -> String -> DataType -> DataType.Modifier -> Value
-encodeNewField entityId name dataType modifier =
+encodeNewField tableId name dataType modifier =
     JE.object
         [ ( "field"
           , JE.object
-                ([ ( "entity_id", JE.int entityId )
+                ([ ( "table_id", JE.int tableId )
                  , ( "name", JE.string name )
                  , ( "data_type_id", DataType.encode dataType )
                  ]

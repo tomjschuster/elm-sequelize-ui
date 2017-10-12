@@ -1,6 +1,6 @@
-module Request.Field exposing (create, destroy, one, oneWithAll, oneWithEntity, update)
+module Request.Field exposing (create, destroy, one, oneWithAll, oneWithTable, update)
 
-import Data.Combined as Combined exposing (FieldWithAll, FieldWithEntity)
+import Data.Combined as Combined exposing (FieldWithAll, FieldWithTable)
 import Data.DataType as DataType exposing (DataType)
 import Data.Field as Field exposing (Field)
 import Http exposing (Request)
@@ -12,9 +12,9 @@ fieldsUrl =
     baseUrl ++ "fields/"
 
 
-withEntity : String -> String
-withEntity =
-    flip (++) "?" >> flip (++) "&entity=show"
+withTable : String -> String
+withTable =
+    flip (++) "?" >> flip (++) "&table=show"
 
 
 withSchema : String -> String
@@ -24,7 +24,7 @@ withSchema =
 
 withAll : String -> String
 withAll =
-    flip (++) "?" >> flip (++) "&schema=show" >> flip (++) "&entity=show"
+    flip (++) "?" >> flip (++) "&schema=show" >> flip (++) "&table=show"
 
 
 fieldUrl : Int -> String
@@ -45,9 +45,9 @@ one id =
     Http.get (fieldUrl id) (dataDecoder Field.decoder)
 
 
-oneWithEntity : Int -> Request FieldWithEntity
-oneWithEntity id =
-    Http.get (fieldUrl id |> withEntity) (dataDecoder Combined.fieldWithEntityDecoder)
+oneWithTable : Int -> Request FieldWithTable
+oneWithTable id =
+    Http.get (fieldUrl id |> withTable) (dataDecoder Combined.fieldWithTableDecoder)
 
 
 oneWithAll : Int -> Request FieldWithAll

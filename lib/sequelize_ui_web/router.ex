@@ -17,7 +17,7 @@ defmodule SequelizeUiWeb.Router do
     pipe_through :api
 
     resources "/schemas", SchemaController
-    resources "/entities", EntityController
+    resources "/tables", TableController
     resources "/fields", FieldController
     resources "/constraints", ConstraintController
   end

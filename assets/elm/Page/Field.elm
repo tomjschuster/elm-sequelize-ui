@@ -4,9 +4,9 @@ import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Combined as Combined exposing (FieldWithAll)
 import Data.DataType as DataType exposing (DataType)
-import Data.Entity as Entity exposing (Entity)
 import Data.Field as Field exposing (Field)
 import Data.Schema as Schema exposing (Schema)
+import Data.Table as Table exposing (Table)
 import Dom
 import Html
     exposing
@@ -47,7 +47,7 @@ import Views.DataType.Select as DTSelect
 
 type alias Model =
     { schema : Schema
-    , entity : Entity
+    , table : Table
     , field : Field
     , editingField : Maybe Field
     , errors : List ChangesetError
@@ -56,11 +56,11 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model Schema.empty Entity.empty Field.empty Nothing []
+    Model Schema.empty Table.empty Field.empty Nothing []
 
 
 init : Int -> Int -> Int -> ( Model, Cmd Msg )
-init schemaId entityId id =
+init schemaId tableId id =
     ( initialModel
     , (RF.oneWithAll id |> Http.toTask) |> Task.attempt LoadFieldWithAll
     )
@@ -102,10 +102,10 @@ update msg model =
         Goto route ->
             ( model, Router.goto route, AppUpdate.none )
 
-        LoadFieldWithAll (Ok { schema, entity, field }) ->
+        LoadFieldWithAll (Ok { schema, table, field }) ->
             ( { model
                 | schema = schema
-                , entity = entity
+                , table = table
                 , field = field
                 , errors = []
               }
@@ -193,7 +193,7 @@ update msg model =
 
         RemoveField (Ok ()) ->
             ( model
-            , Router.goto (Router.Entity model.schema.id model.entity.id)
+            , Router.goto (Router.Table model.schema.id model.table.id)
             , AppUpdate.none
             )
 
@@ -214,20 +214,20 @@ updateFieldName field name =
 
 
 view : Model -> Html Msg
-view { schema, entity, field, editingField, errors } =
+view { schema, table, field, editingField, errors } =
     main_
         []
-        [ breadcrumbs schema entity field
+        [ breadcrumbs schema table field
         , buttons editingField
         , div [] (CE.prependIfErrors errors [])
         , fieldView editingField field
         ]
 
 
-breadcrumbs : Schema -> Entity -> Field -> Html Msg
-breadcrumbs schema entity field =
+breadcrumbs : Schema -> Table -> Field -> Html Msg
+breadcrumbs schema table field =
     BC.view Goto
-        [ BC.home, BC.schema schema, BC.entity entity, BC.field schema.id field ]
+        [ BC.home, BC.schema schema, BC.table table, BC.field schema.id field ]
 
 
 
