@@ -8,13 +8,5 @@ defmodule SequelizeUi.Repo.Migrations.DataType do
     end
 
     create unique_index(:data_type, :string_value)
-
-    alter table(:field) do
-      add :data_type_id, references(:data_type)
-      add :size, :integer
-      add :precision, :integer
-      add :decimals, :integer
-      add :with_timezone, :boolean
-    end
   end
 end
