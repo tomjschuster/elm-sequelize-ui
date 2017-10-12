@@ -1,7 +1,7 @@
 defmodule SequelizeUi.DbDesign.Entity do
   use Ecto.Schema
   import Ecto.Changeset
-  alias SequelizeUi.DbDesign.{Entity, Schema, Field}
+  alias SequelizeUi.DbDesign.{Entity, Schema, Field, Constraint}
 
 
   schema "entity" do
@@ -10,6 +10,7 @@ defmodule SequelizeUi.DbDesign.Entity do
 
     belongs_to :schema, Schema, define_field: false
     has_many :fields, Field
+    has_many :constraints, Constraint
 
     timestamps()
   end

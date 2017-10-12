@@ -1,7 +1,7 @@
 defmodule SequelizeUi.DbDesign.Field do
   use Ecto.Schema
   import Ecto.Changeset
-  alias SequelizeUi.DbDesign.{Field, Entity, DataType}
+  alias SequelizeUi.DbDesign.{Field, Entity, DataType, Constraint, FieldConstraint}
 
 
   schema "field" do
@@ -15,6 +15,7 @@ defmodule SequelizeUi.DbDesign.Field do
 
     belongs_to :entity, Entity, define_field: false
     belongs_to :data_type, DataType, define_field: false
+    many_to_many :constraints, Constraint, join_through: FieldConstraint
 
     timestamps()
   end

@@ -182,4 +182,64 @@ defmodule SequelizeUi.DbDesignTest do
       assert %Ecto.Changeset{} = DbDesign.change_field(field)
     end
   end
+
+  describe "constraints" do
+    alias SequelizeUi.DbDesign.Constraint
+
+    @valid_attrs %{name: "some name"}
+    @update_attrs %{name: "some updated name"}
+    @invalid_attrs %{name: nil}
+
+    def constraint_fixture(attrs \\ %{}) do
+      {:ok, constraint} =
+        attrs
+        |> Enum.into(@valid_attrs)
+        |> DbDesign.create_constraint()
+
+      constraint
+    end
+
+    test "list_constraints/0 returns all constraints" do
+      constraint = constraint_fixture()
+      assert DbDesign.list_constraints() == [constraint]
+    end
+
+    test "get_constraint!/1 returns the constraint with given id" do
+      constraint = constraint_fixture()
+      assert DbDesign.get_constraint!(constraint.id) == constraint
+    end
+
+    test "create_constraint/1 with valid data creates a constraint" do
+      assert {:ok, %Constraint{} = constraint} = DbDesign.create_constraint(@valid_attrs)
+      assert constraint.name == "some name"
+    end
+
+    test "create_constraint/1 with invalid data returns error changeset" do
+      assert {:error, %Ecto.Changeset{}} = DbDesign.create_constraint(@invalid_attrs)
+    end
+
+    test "update_constraint/2 with valid data updates the constraint" do
+      constraint = constraint_fixture()
+      assert {:ok, constraint} = DbDesign.update_constraint(constraint, @update_attrs)
+      assert %Constraint{} = constraint
+      assert constraint.name == "some updated name"
+    end
+
+    test "update_constraint/2 with invalid data returns error changeset" do
+      constraint = constraint_fixture()
+      assert {:error, %Ecto.Changeset{}} = DbDesign.update_constraint(constraint, @invalid_attrs)
+      assert constraint == DbDesign.get_constraint!(constraint.id)
+    end
+
+    test "delete_constraint/1 deletes the constraint" do
+      constraint = constraint_fixture()
+      assert {:ok, %Constraint{}} = DbDesign.delete_constraint(constraint)
+      assert_raise Ecto.NoResultsError, fn -> DbDesign.get_constraint!(constraint.id) end
+    end
+
+    test "change_constraint/1 returns a constraint changeset" do
+      constraint = constraint_fixture()
+      assert %Ecto.Changeset{} = DbDesign.change_constraint(constraint)
+    end
+  end
 end

@@ -19,6 +19,7 @@ defmodule SequelizeUiWeb.Router do
     resources "/schemas", SchemaController
     resources "/entities", EntityController
     resources "/fields", FieldController
+    resources "/constraints", ConstraintController
   end
 
   scope "/", SequelizeUiWeb do
