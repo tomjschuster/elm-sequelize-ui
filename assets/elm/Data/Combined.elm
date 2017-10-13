@@ -1,28 +1,28 @@
 module Data.Combined
     exposing
-        ( FieldWithAll
-        , FieldWithTable
+        ( ColumnWithAll
+        , ColumnWithTable
         , SchemaWithTables
         , TableWithAll
-        , TableWithFields
+        , TableWithColumns
         , TableWithSchema
-        , andWithFields
+        , andWithColumns
         , andWithSchema
         , andWithTable
         , andWithTables
-        , fieldWithAllDecoder
-        , fieldWithTableDecoder
+        , columnWithAllDecoder
+        , columnWithTableDecoder
         , schemaWithTablesDecoder
         , tableWithAllDecoder
-        , tableWithFieldsDecoder
+        , tableWithColumnsDecoder
         , tableWithSchemaDecoder
-        , withFields
+        , withColumns
         , withSchema
         , withTable
         , withTables
         )
 
-import Data.Field as Field exposing (Field)
+import Data.Column as Column exposing (Column)
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
 import Json.Decode as JD exposing (Decoder)
@@ -52,9 +52,9 @@ withTables =
     with "tables"
 
 
-withFields : String -> String
-withFields =
-    with "fields"
+withColumns : String -> String
+withColumns =
+    with "columns"
 
 
 andWith : String -> String -> String
@@ -77,9 +77,9 @@ andWithTables =
     andWith "tables"
 
 
-andWithFields : String -> String
-andWithFields =
-    andWith "fields"
+andWithColumns : String -> String
+andWithColumns =
+    andWith "columns"
 
 
 
@@ -108,19 +108,19 @@ tableWithSchemaDecoder =
         |> required "schema" Schema.decoder
 
 
-type alias TableWithFields =
-    { table : Table, fields : List Field }
+type alias TableWithColumns =
+    { table : Table, columns : List Column }
 
 
-tableWithFieldsDecoder : Decoder TableWithFields
-tableWithFieldsDecoder =
-    decode TableWithFields
+tableWithColumnsDecoder : Decoder TableWithColumns
+tableWithColumnsDecoder =
+    decode TableWithColumns
         |> required "table" Table.decoder
-        |> required "fields" (JD.list Field.decoder)
+        |> required "columns" (JD.list Column.decoder)
 
 
 type alias TableWithAll =
-    { table : Table, schema : Schema, fields : List Field }
+    { table : Table, schema : Schema, columns : List Column }
 
 
 tableWithAllDecoder : Decoder TableWithAll
@@ -128,27 +128,27 @@ tableWithAllDecoder =
     decode TableWithAll
         |> required "table" Table.decoder
         |> required "schema" Schema.decoder
-        |> required "fields" (JD.list Field.decoder)
+        |> required "columns" (JD.list Column.decoder)
 
 
-type alias FieldWithTable =
-    { field : Field, table : Table }
+type alias ColumnWithTable =
+    { column : Column, table : Table }
 
 
-fieldWithTableDecoder : Decoder FieldWithTable
-fieldWithTableDecoder =
-    decode FieldWithTable
-        |> required "field" Field.decoder
+columnWithTableDecoder : Decoder ColumnWithTable
+columnWithTableDecoder =
+    decode ColumnWithTable
+        |> required "column" Column.decoder
         |> required "table" Table.decoder
 
 
-type alias FieldWithAll =
-    { field : Field, table : Table, schema : Schema }
+type alias ColumnWithAll =
+    { column : Column, table : Table, schema : Schema }
 
 
-fieldWithAllDecoder : Decoder FieldWithAll
-fieldWithAllDecoder =
-    decode FieldWithAll
-        |> required "field" Field.decoder
+columnWithAllDecoder : Decoder ColumnWithAll
+columnWithAllDecoder =
+    decode ColumnWithAll
+        |> required "column" Column.decoder
         |> required "table" Table.decoder
         |> required "schema" Schema.decoder

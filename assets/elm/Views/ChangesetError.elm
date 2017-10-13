@@ -28,10 +28,10 @@ heading =
 
 
 errorList : ChangesetError -> List (Html msg)
-errorList { field, messages } =
-    List.map (messageView field) messages
+errorList { column, messages } =
+    List.map (messageView column) messages
 
 
 messageView : String -> String -> Html msg
-messageView field message =
-    li [] [ text (ChangesetError.fieldToText field ++ " " ++ message) ]
+messageView column message =
+    li [] [ text (ChangesetError.columnToText column ++ " " ++ message) ]

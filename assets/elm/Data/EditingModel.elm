@@ -1,25 +1,25 @@
 module Data.EditingModel
     exposing
         ( EditingModel
-        , editField
+        , editColumn
         , editSchema
         , editTable
-        , extractField
+        , extractColumn
         , extractSchema
         , extractTable
-        , isField
+        , isColumn
         , isSchema
         , isTable
-        , mapField
+        , mapColumn
         , mapSchema
         , mapTable
         , none
-        , updateField
+        , updateColumn
         , updateSchema
         , updateTable
         )
 
-import Data.Field exposing (Field)
+import Data.Column exposing (Column)
 import Data.Schema exposing (Schema)
 import Data.Table exposing (Table)
 
@@ -28,7 +28,7 @@ type EditingModel
     = NoModel
     | EditingSchema Schema
     | EditingTable Table
-    | EditingField Field
+    | EditingColumn Column
 
 
 none : EditingModel
@@ -46,9 +46,9 @@ editTable =
     EditingTable
 
 
-editField : Field -> EditingModel
-editField =
-    EditingField
+editColumn : Column -> EditingModel
+editColumn =
+    EditingColumn
 
 
 isSchema : Int -> EditingModel -> Bool
@@ -71,11 +71,11 @@ isTable id editingModel =
             False
 
 
-isField : Int -> EditingModel -> Bool
-isField id editingModel =
+isColumn : Int -> EditingModel -> Bool
+isColumn id editingModel =
     case editingModel of
-        EditingField field ->
-            id == field.id
+        EditingColumn column ->
+            id == column.id
 
         _ ->
             False
@@ -97,10 +97,10 @@ updateTable table editingModel =
         editingModel
 
 
-updateField : Field -> EditingModel -> EditingModel
-updateField field editingModel =
-    if isField field.id editingModel then
-        EditingField field
+updateColumn : Column -> EditingModel -> EditingModel
+updateColumn column editingModel =
+    if isColumn column.id editingModel then
+        EditingColumn column
     else
         editingModel
 
@@ -125,11 +125,11 @@ extractTable editingModel =
             Nothing
 
 
-extractField : EditingModel -> Maybe Field
-extractField editingModel =
+extractColumn : EditingModel -> Maybe Column
+extractColumn editingModel =
     case editingModel of
-        EditingField field ->
-            Just field
+        EditingColumn column ->
+            Just column
 
         _ ->
             Nothing
@@ -151,9 +151,9 @@ mapTable toTable input editingModel =
         |> Maybe.withDefault editingModel
 
 
-mapField : (a -> Field -> Field) -> a -> EditingModel -> EditingModel
-mapField toField input editingModel =
+mapColumn : (a -> Column -> Column) -> a -> EditingModel -> EditingModel
+mapColumn toColumn input editingModel =
     editingModel
-        |> extractField
-        |> Maybe.map (toField input >> EditingField)
+        |> extractColumn
+        |> Maybe.map (toColumn input >> EditingColumn)
         |> Maybe.withDefault editingModel

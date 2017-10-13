@@ -25,7 +25,7 @@ defmodule SequelizeUiWeb.Router do
     pipe_through :combine_entities
     resources "/schemas", SchemaController
     resources "/tables", TableController
-    resources "/fields", FieldController
+    resources "/columns", ColumnController
   end
 
   scope "/", SequelizeUiWeb do

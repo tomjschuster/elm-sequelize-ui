@@ -3,7 +3,7 @@ module Main exposing (..)
 import AppUpdate exposing (AppUpdate)
 import Html exposing (Html, div, footer, h1, header, text)
 import Navigation exposing (Location)
-import Page.Field as Field
+import Page.Column as Column
 import Page.Home as Home
 import Page.Schema as Schema
 import Page.Table as Table
@@ -35,7 +35,7 @@ type Page
     = Home Home.Model
     | Schema Schema.Model
     | Table Table.Model
-    | Field Field.Model
+    | Column Column.Model
 
 
 init : Location -> ( Model, Cmd Msg )
@@ -64,7 +64,7 @@ type PageMsg
     = HomeMsg Home.Msg
     | SchemaMsg Schema.Msg
     | TableMsg Table.Msg
-    | FieldMsg Field.Msg
+    | ColumnMsg Column.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -108,8 +108,8 @@ setRoute route =
         Router.Table schemaId tableId ->
             Table.init schemaId tableId |> mapPageInit Table TableMsg
 
-        Router.Field schemaId tableId fieldId ->
-            Field.init schemaId tableId fieldId |> mapPageInit Field FieldMsg
+        Router.Column schemaId tableId columnId ->
+            Column.init schemaId tableId columnId |> mapPageInit Column ColumnMsg
 
         Router.NotFound ->
             Home.init |> mapPageInit Home HomeMsg
@@ -136,8 +136,8 @@ updatePage msg page =
         ( TableMsg subMsg, Table subModel ) ->
             updatePageHelper Table TableMsg Table.update subMsg subModel
 
-        ( FieldMsg subMsg, Field subModel ) ->
-            updatePageHelper Field FieldMsg Field.update subMsg subModel
+        ( ColumnMsg subMsg, Column subModel ) ->
+            updatePageHelper Column ColumnMsg Column.update subMsg subModel
 
         ( _, _ ) ->
             ( page, Cmd.none, AppUpdate.none )
@@ -217,5 +217,5 @@ pageView model =
         Table subModel ->
             Table.view subModel |> Html.map TableMsg
 
-        Field subModel ->
-            Field.view subModel |> Html.map FieldMsg
+        Column subModel ->
+            Column.view subModel |> Html.map ColumnMsg

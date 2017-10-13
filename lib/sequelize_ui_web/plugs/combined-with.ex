@@ -1,7 +1,7 @@
 defmodule SequelizeUiWeb.CombinedWith do
   import Plug.Conn
 
-  @entity_map %{schema: false, table: false, tables: false, fields: false}
+  @entity_map %{schema: false, table: false, tables: false, columns: false}
 
   def combined_with(conn, _) do
     combined_with = split_combined_with(conn.params["with"])

@@ -1,11 +1,11 @@
-module Data.Field
+module Data.Column
     exposing
-        ( Field
+        ( Column
         , decoder
         , empty
         , encode
         , encodeNew
-        , encodeNewField
+        , encodeNewColumn
         , init
         , removeFromList
         , replaceIfMatch
@@ -35,7 +35,7 @@ import Json.Encode as JE exposing (Value)
 -}
 
 
-type alias Field =
+type alias Column =
     { id : Int
     , tableId : Int
     , name : String
@@ -44,7 +44,7 @@ type alias Field =
     }
 
 
-empty : Field
+empty : Column
 empty =
     { id = 0
     , tableId = 0
@@ -54,7 +54,7 @@ empty =
     }
 
 
-init : Int -> Field
+init : Int -> Column
 init tableId =
     { empty | tableId = tableId }
 
@@ -63,68 +63,68 @@ init tableId =
 -- UPDATE
 
 
-updateName : String -> Field -> Field
-updateName name field =
-    { field | name = name }
+updateName : String -> Column -> Column
+updateName name column =
+    { column | name = name }
 
 
-updateDataType : DataType -> Field -> Field
-updateDataType dataType field =
-    { field
+updateDataType : DataType -> Column -> Column
+updateDataType dataType column =
+    { column
         | dataType = dataType
         , dataTypeModifier = DataType.toInitialModifier dataType
     }
 
 
-updateDataTypeModifier : DataType.Modifier -> Field -> Field
-updateDataTypeModifier dataTypeModifier field =
-    { field | dataTypeModifier = dataTypeModifier }
+updateDataTypeModifier : DataType.Modifier -> Column -> Column
+updateDataTypeModifier dataTypeModifier column =
+    { column | dataTypeModifier = dataTypeModifier }
 
 
-updateSize : Maybe Int -> Field -> Field
-updateSize size field =
-    { field
+updateSize : Maybe Int -> Column -> Column
+updateSize size column =
+    { column
         | dataTypeModifier =
-            DataType.updateSize size field.dataTypeModifier
+            DataType.updateSize size column.dataTypeModifier
     }
 
 
-updatePrecision : Maybe Int -> Maybe Int -> Field -> Field
-updatePrecision precision decimals field =
-    { field
+updatePrecision : Maybe Int -> Maybe Int -> Column -> Column
+updatePrecision precision decimals column =
+    { column
         | dataTypeModifier =
-            DataType.updatePrecision precision decimals field.dataTypeModifier
+            DataType.updatePrecision precision decimals column.dataTypeModifier
     }
 
 
-updateWithTimezone : Bool -> Field -> Field
-updateWithTimezone withTimezone field =
-    { field
+updateWithTimezone : Bool -> Column -> Column
+updateWithTimezone withTimezone column =
+    { column
         | dataTypeModifier =
-            DataType.updateWithTimezone withTimezone field.dataTypeModifier
+            DataType.updateWithTimezone withTimezone column.dataTypeModifier
     }
 
 
-replaceIfMatch : Field -> Field -> Field
-replaceIfMatch newField field =
-    if field.id == newField.id then
-        newField
+replaceIfMatch : Column -> Column -> Column
+replaceIfMatch newColumn column =
+    if column.id == newColumn.id then
+        newColumn
     else
-        field
+        column
 
 
-removeFromList : List Field -> Int -> List Field
-removeFromList fields id =
-    List.filter (.id >> (/=) id) fields
+removeFromList : List Column -> Int -> List Column
+removeFromList columns id =
+    List.filter (.id >> (/=) id) columns
 
 
 
 -- DECODE/ENCODE
 
 
-decoder : Decoder Field
+decoder : Decoder Column
 decoder =
-    decode Field
+    decode Column
         |> required "id" int
         |> required "tableId" int
         |> required "name" string
@@ -132,10 +132,10 @@ decoder =
         |> optional "modifier" DataType.modifierDecoder DataType.noModifier
 
 
-encode : Field -> Value
+encode : Column -> Value
 encode { id, tableId, name, dataType, dataTypeModifier } =
     JE.object
-        [ ( "field"
+        [ ( "column"
           , JE.object
                 ([ ( "id", JE.int id )
                  , ( "table_id", JE.int tableId )
@@ -148,10 +148,10 @@ encode { id, tableId, name, dataType, dataTypeModifier } =
         ]
 
 
-encodeNew : Field -> Value
+encodeNew : Column -> Value
 encodeNew { tableId, name, dataType, dataTypeModifier } =
     JE.object
-        [ ( "field"
+        [ ( "column"
           , JE.object
                 ([ ( "table_id", JE.int tableId )
                  , ( "name", JE.string name )
@@ -163,10 +163,10 @@ encodeNew { tableId, name, dataType, dataTypeModifier } =
         ]
 
 
-encodeNewField : Int -> String -> DataType -> DataType.Modifier -> Value
-encodeNewField tableId name dataType modifier =
+encodeNewColumn : Int -> String -> DataType -> DataType.Modifier -> Value
+encodeNewColumn tableId name dataType modifier =
     JE.object
-        [ ( "field"
+        [ ( "column"
           , JE.object
                 ([ ( "table_id", JE.int tableId )
                  , ( "name", JE.string name )

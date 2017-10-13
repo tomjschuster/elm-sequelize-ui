@@ -2,9 +2,9 @@ module Page.Table exposing (Model, Msg, init, initialModel, update, view)
 
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
+import Data.Column as Column exposing (Column)
 import Data.Combined as Combined exposing (TableWithAll)
 import Data.DataType as DataType exposing (DataType)
-import Data.Field as Field exposing (Field)
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
 import Dom
@@ -28,7 +28,7 @@ import Html
 import Html.Attributes exposing (id, selected, value)
 import Html.Events exposing (onClick, onInput)
 import Http
-import Request.Field as RF
+import Request.Column as RF
 import Request.Table as RE
 import Router exposing (Route)
 import Task
@@ -46,10 +46,10 @@ import Views.DataType.Select as DTSelect
 type alias Model =
     { schema : Schema
     , table : Table
-    , fields : List Field
+    , columns : List Column
     , editingTable : Maybe Table
-    , newField : Field
-    , editingField : Maybe Field
+    , newColumn : Column
+    , editingColumn : Maybe Column
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
     }
@@ -61,7 +61,7 @@ initialModel =
         Table.empty
         []
         Nothing
-        Field.empty
+        Column.empty
         Nothing
         Nothing
         []
@@ -75,7 +75,7 @@ type alias InitialData =
 
 init : Int -> Int -> ( Model, Cmd Msg )
 init schemaId tableId =
-    ( { initialModel | newField = Field.init tableId }
+    ( { initialModel | newColumn = Column.init tableId }
     , RE.oneWithAll tableId |> Http.toTask |> Task.attempt LoadTableWithAll
     )
 
@@ -97,24 +97,24 @@ type Msg
     | SaveTableName
     | Destroy
     | RemoveTable (Result Http.Error ())
-      -- FIELDS
-      -- CREATE FIELD
-    | InputNewFieldName String
-    | SelectNewFieldDataType DataType
-    | UpdateNewFieldModifier DataType.Modifier
-    | CreateField
-    | LoadNewField (Result Http.Error Field)
-      -- UPDATE FIELD
-    | EditField Int
-    | InputEditingFieldName String
-    | SelectEditingFieldDataType DataType
-    | UpdateEditingFieldModifier DataType.Modifier
-    | CancelEditField
-    | SaveEditingField
-    | UpdateField (Result Http.Error Field)
-      -- DELETE FIELD
-    | DestroyField Int
-    | RemoveField (Result Http.Error ())
+      -- COLUMNS
+      -- CREATE COLUMN
+    | InputNewColumnName String
+    | SelectNewColumnDataType DataType
+    | UpdateNewColumnModifier DataType.Modifier
+    | CreateColumn
+    | LoadNewColumn (Result Http.Error Column)
+      -- UPDATE COLUMN
+    | EditColumn Int
+    | InputEditingColumnName String
+    | SelectEditingColumnDataType DataType
+    | UpdateEditingColumnModifier DataType.Modifier
+    | CancelEditColumn
+    | SaveEditingColumn
+    | UpdateColumn (Result Http.Error Column)
+      -- DELETE COLUMN
+    | DestroyColumn Int
+    | RemoveColumn (Result Http.Error ())
 
 
 update : Msg -> Model -> ( Model, Cmd Msg, AppUpdate )
@@ -135,11 +135,11 @@ update msg model =
             , AppUpdate.none
             )
 
-        LoadTableWithAll (Ok { schema, table, fields }) ->
+        LoadTableWithAll (Ok { schema, table, columns }) ->
             ( { model
                 | table = table
                 , schema = schema
-                , fields = fields
+                , columns = columns
                 , errors = []
               }
             , Cmd.none
@@ -168,7 +168,7 @@ update msg model =
         EditTable ->
             ( { model
                 | editingTable = Just model.table
-                , editingField = Nothing
+                , editingColumn = Nothing
                 , errors = []
               }
             , Dom.focus "edit-table-name" |> Task.attempt FocusResult
@@ -216,146 +216,146 @@ update msg model =
             , AppUpdate.none
             )
 
-        -- FIELDS
-        -- NEW FIELD
-        InputNewFieldName name ->
-            ( { model | newField = Field.updateName name model.newField }
+        -- COLUMNS
+        -- NEW COLUMN
+        InputNewColumnName name ->
+            ( { model | newColumn = Column.updateName name model.newColumn }
             , Cmd.none
             , AppUpdate.none
             )
 
-        SelectNewFieldDataType dataType ->
+        SelectNewColumnDataType dataType ->
             ( { model
-                | newField =
-                    Field.updateDataType dataType model.newField
+                | newColumn =
+                    Column.updateDataType dataType model.newColumn
               }
             , Cmd.none
             , AppUpdate.none
             )
 
-        UpdateNewFieldModifier modifier ->
+        UpdateNewColumnModifier modifier ->
             ( { model
-                | newField =
-                    Field.updateDataTypeModifier modifier model.newField
+                | newColumn =
+                    Column.updateDataTypeModifier modifier model.newColumn
               }
             , Cmd.none
             , AppUpdate.none
             )
 
-        CreateField ->
+        CreateColumn ->
             ( model
-            , RF.create model.newField |> Http.send LoadNewField
+            , RF.create model.newColumn |> Http.send LoadNewColumn
             , AppUpdate.none
             )
 
-        LoadNewField (Ok field) ->
+        LoadNewColumn (Ok column) ->
             ( { model
-                | fields = model.fields ++ [ field ]
-                , newField = Field.init model.table.id
+                | columns = model.columns ++ [ column ]
+                , newColumn = Column.init model.table.id
                 , errors = []
               }
-            , Dom.focus "create-field" |> Task.attempt FocusResult
+            , Dom.focus "create-column" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
-        LoadNewField (Err error) ->
+        LoadNewColumn (Err error) ->
             ( { model | errors = ChangesetError.parseHttpError error }
-            , Dom.focus "create-field" |> Task.attempt FocusResult
+            , Dom.focus "create-column" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
-        -- EDIT FIELD
-        EditField id ->
+        -- EDIT COLUMN
+        EditColumn id ->
             ( { model
                 | editingTable = Nothing
-                , editingField =
-                    model.fields
+                , editingColumn =
+                    model.columns
                         |> List.filter (.id >> (==) id)
                         |> List.head
                 , errors = []
               }
-            , Dom.focus "edit-field-name" |> Task.attempt FocusResult
+            , Dom.focus "edit-column-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
-        InputEditingFieldName name ->
+        InputEditingColumnName name ->
             ( { model
-                | editingField =
-                    Maybe.map (Field.updateName name) model.editingField
+                | editingColumn =
+                    Maybe.map (Column.updateName name) model.editingColumn
               }
             , Cmd.none
             , AppUpdate.none
             )
 
-        SelectEditingFieldDataType dataType ->
+        SelectEditingColumnDataType dataType ->
             ( { model
-                | editingField =
-                    Maybe.map (Field.updateDataType dataType) model.editingField
+                | editingColumn =
+                    Maybe.map (Column.updateDataType dataType) model.editingColumn
               }
             , Cmd.none
             , AppUpdate.none
             )
 
-        UpdateEditingFieldModifier modifier ->
+        UpdateEditingColumnModifier modifier ->
             ( { model
-                | editingField =
+                | editingColumn =
                     Maybe.map
-                        (Field.updateDataTypeModifier modifier)
-                        model.editingField
+                        (Column.updateDataTypeModifier modifier)
+                        model.editingColumn
               }
             , Cmd.none
             , AppUpdate.none
             )
 
-        CancelEditField ->
-            ( { model | editingField = Nothing, errors = [] }
+        CancelEditColumn ->
+            ( { model | editingColumn = Nothing, errors = [] }
             , Cmd.none
             , AppUpdate.none
             )
 
-        SaveEditingField ->
+        SaveEditingColumn ->
             ( model
-            , model.editingField
-                |> Maybe.map (RF.update >> Http.send UpdateField)
+            , model.editingColumn
+                |> Maybe.map (RF.update >> Http.send UpdateColumn)
                 |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
 
-        UpdateField (Ok field) ->
+        UpdateColumn (Ok column) ->
             ( { model
-                | fields = List.map (Field.replaceIfMatch field) model.fields
-                , editingField = Nothing
+                | columns = List.map (Column.replaceIfMatch column) model.columns
+                , editingColumn = Nothing
                 , errors = []
               }
             , Cmd.none
             , AppUpdate.none
             )
 
-        UpdateField (Err error) ->
+        UpdateColumn (Err error) ->
             ( { model | errors = ChangesetError.parseHttpError error }
-            , Dom.focus "edit-field-name" |> Task.attempt FocusResult
+            , Dom.focus "edit-column-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
-        DestroyField id ->
+        DestroyColumn id ->
             ( { model | toDeleteId = Just id }
-            , RF.destroy id |> Http.send RemoveField
+            , RF.destroy id |> Http.send RemoveColumn
             , AppUpdate.none
             )
 
-        RemoveField (Ok ()) ->
+        RemoveColumn (Ok ()) ->
             ( { model
                 | errors = []
-                , fields =
+                , columns =
                     model.toDeleteId
-                        |> Maybe.map (Field.removeFromList model.fields)
-                        |> Maybe.withDefault model.fields
+                        |> Maybe.map (Column.removeFromList model.columns)
+                        |> Maybe.withDefault model.columns
               }
             , Cmd.none
             , AppUpdate.none
             )
 
-        RemoveField (Err error) ->
+        RemoveColumn (Err error) ->
             ( { model
                 | errors = ChangesetError.parseHttpError error
                 , toDeleteId = Nothing
@@ -374,7 +374,7 @@ view model =
     main_ []
         [ breadCrumbs model.schema model.table
         , tableView model.editingTable model.table
-        , fieldsView model
+        , columnsView model
         ]
 
 
@@ -473,171 +473,171 @@ saveEditTableButton =
 
 
 
--- FIELDS VIEW
+-- COLUMNS VIEW
 
 
-fieldsView : Model -> Html Msg
-fieldsView model =
-    section [] (fieldsChildren model)
+columnsView : Model -> Html Msg
+columnsView model =
+    section [] (columnsChildren model)
 
 
-fieldsChildren : Model -> List (Html Msg)
-fieldsChildren model =
+columnsChildren : Model -> List (Html Msg)
+columnsChildren model =
     CE.prependIfErrors model.errors
-        [ fieldsTitle
-        , createField model.newField
-        , fieldList model.editingField model.schema.id model.fields
+        [ columnsTitle
+        , createColumn model.newColumn
+        , columnList model.editingColumn model.schema.id model.columns
         ]
 
 
-fieldsTitle : Html msg
-fieldsTitle =
-    h3 [] [ text "Fields" ]
+columnsTitle : Html msg
+columnsTitle =
+    h3 [] [ text "Columns" ]
 
 
 
--- CREATE FIELD
+-- CREATE COLUMN
 
 
-createField : Field -> Html Msg
-createField { name, dataType, dataTypeModifier } =
+createColumn : Column -> Html Msg
+createColumn { name, dataType, dataTypeModifier } =
     div
         []
-        [ createFieldInput name
+        [ createColumnInput name
         , DTSelect.view selectDataTypeConfig dataType dataTypeModifier
-        , createFieldButton
+        , createColumnButton
         ]
 
 
 selectDataTypeConfig : DTSelect.Config Msg
 selectDataTypeConfig =
-    { handleDataTypeChange = SelectNewFieldDataType
-    , handleModifierChange = UpdateNewFieldModifier
+    { handleDataTypeChange = SelectNewColumnDataType
+    , handleModifierChange = UpdateNewColumnModifier
     }
 
 
-createFieldInput : String -> Html Msg
-createFieldInput name =
+createColumnInput : String -> Html Msg
+createColumnInput name =
     input
-        [ id "create-field"
+        [ id "create-column"
         , value name
-        , onInput InputNewFieldName
-        , onEnter CreateField
+        , onInput InputNewColumnName
+        , onEnter CreateColumn
         ]
         []
 
 
-createFieldButton : Html Msg
-createFieldButton =
-    button [ onClick CreateField ] [ text "Create" ]
+createColumnButton : Html Msg
+createColumnButton =
+    button [ onClick CreateColumn ] [ text "Create" ]
 
 
 
--- FIELD LIST
+-- COLUMN LIST
 
 
-fieldList : Maybe Field -> Int -> List Field -> Html Msg
-fieldList editingField schemaId fields =
-    ul [] (List.map (fieldItem editingField schemaId) fields)
+columnList : Maybe Column -> Int -> List Column -> Html Msg
+columnList editingColumn schemaId columns =
+    ul [] (List.map (columnItem editingColumn schemaId) columns)
 
 
 
--- READ FIELDS
+-- READ COLUMNS
 
 
-fieldItem : Maybe Field -> Int -> Field -> Html Msg
-fieldItem editingField schemaId field =
-    li [] (fieldItemChildren editingField schemaId field)
+columnItem : Maybe Column -> Int -> Column -> Html Msg
+columnItem editingColumn schemaId column =
+    li [] (columnItemChildren editingColumn schemaId column)
 
 
-fieldItemChildren : Maybe Field -> Int -> Field -> List (Html Msg)
-fieldItemChildren editingField schemaId field =
-    editingField
-        |> Maybe.map (getEditingFieldItemChildren field)
-        |> Maybe.withDefault (normalFieldItemChildren schemaId field)
+columnItemChildren : Maybe Column -> Int -> Column -> List (Html Msg)
+columnItemChildren editingColumn schemaId column =
+    editingColumn
+        |> Maybe.map (getEditingColumnItemChildren column)
+        |> Maybe.withDefault (normalColumnItemChildren schemaId column)
 
 
-normalFieldItemChildren : Int -> Field -> List (Html Msg)
-normalFieldItemChildren schemaId field =
-    [ fieldLink schemaId field
-    , DTDisplay.view field.dataType field.dataTypeModifier
-    , editFieldButton field.id
-    , deleteFieldButton field.id
+normalColumnItemChildren : Int -> Column -> List (Html Msg)
+normalColumnItemChildren schemaId column =
+    [ columnLink schemaId column
+    , DTDisplay.view column.dataType column.dataTypeModifier
+    , editColumnButton column.id
+    , deleteColumnButton column.id
     ]
 
 
-fieldLink : Int -> Field -> Html Msg
-fieldLink schemaId { tableId, id, name } =
-    Router.link Goto (Router.Field schemaId tableId id) [] [ text name ]
+columnLink : Int -> Column -> Html Msg
+columnLink schemaId { tableId, id, name } =
+    Router.link Goto (Router.Column schemaId tableId id) [] [ text name ]
 
 
-editFieldButton : Int -> Html Msg
-editFieldButton id =
-    button [ onClick (EditField id) ] [ text "Edit" ]
+editColumnButton : Int -> Html Msg
+editColumnButton id =
+    button [ onClick (EditColumn id) ] [ text "Edit" ]
 
 
-deleteFieldButton : Int -> Html Msg
-deleteFieldButton id =
-    button [ onClick (DestroyField id) ] [ text "Delete" ]
+deleteColumnButton : Int -> Html Msg
+deleteColumnButton id =
+    button [ onClick (DestroyColumn id) ] [ text "Delete" ]
 
 
 
--- UPDATE FIELDS
+-- UPDATE COLUMNS
 
 
-getEditingFieldItemChildren : Field -> Field -> List (Html Msg)
-getEditingFieldItemChildren field editingField =
-    if field.id == editingField.id then
-        editingFieldItemChildren editingField
+getEditingColumnItemChildren : Column -> Column -> List (Html Msg)
+getEditingColumnItemChildren column editingColumn =
+    if column.id == editingColumn.id then
+        editingColumnItemChildren editingColumn
     else
-        [ text field.name ]
+        [ text column.name ]
 
 
-editingFieldItemChildren : Field -> List (Html Msg)
-editingFieldItemChildren { name, dataType, dataTypeModifier } =
-    [ editFieldNameInput name
-    , DTSelect.view fieldSelectDataTypeConfig dataType dataTypeModifier
-    , cancelEditFieldButton
-    , saveEditFieldButton
+editingColumnItemChildren : Column -> List (Html Msg)
+editingColumnItemChildren { name, dataType, dataTypeModifier } =
+    [ editColumnNameInput name
+    , DTSelect.view columnSelectDataTypeConfig dataType dataTypeModifier
+    , cancelEditColumnButton
+    , saveEditColumnButton
     ]
 
 
-editFieldNameInput : String -> Html Msg
-editFieldNameInput name =
+editColumnNameInput : String -> Html Msg
+editColumnNameInput name =
     input
-        [ id "edit-field-name"
+        [ id "edit-column-name"
         , value name
-        , onInput InputEditingFieldName
-        , customOnKeyDown onFieldNameKeyDown
+        , onInput InputEditingColumnName
+        , customOnKeyDown onColumnNameKeyDown
         ]
         []
 
 
-onFieldNameKeyDown : Key -> Maybe Msg
-onFieldNameKeyDown key =
+onColumnNameKeyDown : Key -> Maybe Msg
+onColumnNameKeyDown key =
     case key of
         Enter ->
-            Just SaveEditingField
+            Just SaveEditingColumn
 
         Escape ->
-            Just CancelEditField
+            Just CancelEditColumn
 
         _ ->
             Nothing
 
 
-fieldSelectDataTypeConfig : DTSelect.Config Msg
-fieldSelectDataTypeConfig =
-    { handleDataTypeChange = SelectEditingFieldDataType
-    , handleModifierChange = UpdateEditingFieldModifier
+columnSelectDataTypeConfig : DTSelect.Config Msg
+columnSelectDataTypeConfig =
+    { handleDataTypeChange = SelectEditingColumnDataType
+    , handleModifierChange = UpdateEditingColumnModifier
     }
 
 
-cancelEditFieldButton : Html Msg
-cancelEditFieldButton =
-    button [ onClick CancelEditField ] [ text "Cancel" ]
+cancelEditColumnButton : Html Msg
+cancelEditColumnButton =
+    button [ onClick CancelEditColumn ] [ text "Cancel" ]
 
 
-saveEditFieldButton : Html Msg
-saveEditFieldButton =
-    button [ onClick SaveEditingField ] [ text "Save" ]
+saveEditColumnButton : Html Msg
+saveEditColumnButton =
+    button [ onClick SaveEditingColumn ] [ text "Save" ]

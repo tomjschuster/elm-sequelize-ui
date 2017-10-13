@@ -5,7 +5,7 @@ module Request.Table
         , index
         , one
         , oneWithAll
-        , oneWithFields
+        , oneWithColumns
         , oneWithSchema
         , update
         )
@@ -13,7 +13,7 @@ module Request.Table
 import Data.Combined as Combined
     exposing
         ( TableWithAll
-        , TableWithFields
+        , TableWithColumns
         , TableWithSchema
         )
 import Data.Table as Table exposing (Table)
@@ -64,17 +64,17 @@ oneWithSchema id =
         (dataDecoder Combined.tableWithSchemaDecoder)
 
 
-oneWithFields : Int -> Http.Request TableWithFields
-oneWithFields id =
+oneWithColumns : Int -> Http.Request TableWithColumns
+oneWithColumns id =
     Http.get
-        (tableUrl id |> Combined.withFields)
-        (dataDecoder Combined.tableWithFieldsDecoder)
+        (tableUrl id |> Combined.withColumns)
+        (dataDecoder Combined.tableWithColumnsDecoder)
 
 
 oneWithAll : Int -> Http.Request TableWithAll
 oneWithAll id =
     Http.get
-        (tableUrl id |> Combined.withSchema |> Combined.andWithFields)
+        (tableUrl id |> Combined.withSchema |> Combined.andWithColumns)
         (dataDecoder Combined.tableWithAllDecoder)
 
 

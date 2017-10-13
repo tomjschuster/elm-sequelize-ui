@@ -1,10 +1,10 @@
-defmodule SequelizeUi.DbDesign.Field do
+defmodule SequelizeUi.DbDesign.Column do
   use Ecto.Schema
   import Ecto.Changeset
-  alias SequelizeUi.DbDesign.{Field, Table, DataType, Constraint, FieldConstraint}
+  alias SequelizeUi.DbDesign.{Column, Table, DataType, Constraint, ColumnConstraint}
 
 
-  schema "field" do
+  schema "sql_column" do
     field :table_id, :integer
     field :name, :string
     field :data_type_id, :integer
@@ -15,14 +15,14 @@ defmodule SequelizeUi.DbDesign.Field do
 
     belongs_to :table, Table, define_field: false
     belongs_to :data_type, DataType, define_field: false
-    many_to_many :constraints, Constraint, join_through: FieldConstraint
+    many_to_many :constraints, Constraint, join_through: ColumnConstraint
 
     timestamps()
   end
 
   @doc false
-  def changeset(%Field{} = field, attrs) do
-    field
+  def changeset(%Column{} = column, attrs) do
+    column
     |> cast(attrs, [:table_id, :name, :data_type_id, :size, :precision, :decimals, :with_timezone])
     |> validate_required([:table_id, :name, :data_type_id])
     |> assoc_constraint(:table)

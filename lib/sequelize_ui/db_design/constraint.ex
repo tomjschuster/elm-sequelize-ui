@@ -1,7 +1,7 @@
 defmodule SequelizeUi.DbDesign.Constraint do
   use Ecto.Schema
   import Ecto.Changeset
-  alias SequelizeUi.DbDesign.{Constraint, ConstraintType, Schema, Table}
+  alias SequelizeUi.DbDesign.{Constraint, ConstraintType, Schema, Table, Column, ColumnConstraint}
 
 
   schema "sql_constraint" do
@@ -13,6 +13,8 @@ defmodule SequelizeUi.DbDesign.Constraint do
     belongs_to :constraint_type, ConstraintType, define_field: false
     belongs_to :schema, Schema, define_field: false
     belongs_to :table, Table, define_field: false
+
+    many_to_many :columns, Column, join_through: ColumnConstraint
 
     timestamps()
   end

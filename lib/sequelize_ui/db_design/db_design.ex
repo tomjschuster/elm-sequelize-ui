@@ -62,10 +62,10 @@ defmodule SequelizeUi.DbDesign do
 
   ## Examples
 
-      iex> create_schema(%{field: value})
+      iex> create_schema(%{column: value})
       {:ok, %Schema{}}
 
-      iex> create_schema(%{field: bad_value})
+      iex> create_schema(%{column: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
@@ -80,10 +80,10 @@ defmodule SequelizeUi.DbDesign do
 
   ## Examples
 
-      iex> update_schema(schema, %{field: new_value})
+      iex> update_schema(schema, %{column: new_value})
       {:ok, %Schema{}}
 
-      iex> update_schema(schema, %{field: bad_value})
+      iex> update_schema(schema, %{column: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
@@ -174,34 +174,34 @@ defmodule SequelizeUi.DbDesign do
   end
 
   @doc """
-  Gets a single table with its fields.
+  Gets a single table with its columns.
 
   Raises `Ecto.NoResultsError` if the Table does not exist.
 
   ## Examples
 
-      iex> get_table_with_fields!(123)
-      %Table{fields: [%Field{} | _rest]}
+      iex> get_table_with_columns!(123)
+      %Table{columns: [%Column{} | _rest]}
 
-      iex> get_table_with_fields!(456)
+      iex> get_table_with_columns!(456)
       ** (Ecto.NoResultsError)
   """
-  def get_table_with_fields!(id) do
+  def get_table_with_columns!(id) do
     Repo.one! from e in Table,
-      left_join: f in assoc(e, :fields),
+      left_join: f in assoc(e, :columns),
       where: e.id == ^id,
-      preload: [fields: f]
+      preload: [columns: f]
   end
 
   @doc """
-  Gets a single table with its schema and fields.
+  Gets a single table with its schema and columns.
 
   Raises `Ecto.NoResultsError` if the Table or Schema does not exist.
 
   ## Examples
 
       iex> get_table_with_all!(123)
-      %Table{schema: %Schema{}, fields: [%Field{} | _rest]}
+      %Table{schema: %Schema{}, columns: [%Column{} | _rest]}
 
       iex> get_table_with_all!(456)
       ** (Ecto.NoResultsError)
@@ -209,9 +209,9 @@ defmodule SequelizeUi.DbDesign do
   def get_table_with_all!(id) do
     Repo.one! from e in Table,
       join: s in assoc(e, :schema),
-      left_join: f in assoc(e, :fields),
+      left_join: f in assoc(e, :columns),
       where: e.id == ^id,
-      preload: [schema: s, fields: f]
+      preload: [schema: s, columns: f]
   end
 
   @doc """
@@ -219,10 +219,10 @@ defmodule SequelizeUi.DbDesign do
 
   ## Examples
 
-      iex> create_table(%{field: value})
+      iex> create_table(%{column: value})
       {:ok, %Table{}}
 
-      iex> create_table(%{field: bad_value})
+      iex> create_table(%{column: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
@@ -237,10 +237,10 @@ defmodule SequelizeUi.DbDesign do
 
   ## Examples
 
-      iex> update_table(table, %{field: new_value})
+      iex> update_table(table, %{column: new_value})
       {:ok, %Table{}}
 
-      iex> update_table(table, %{field: bad_value})
+      iex> update_table(table, %{column: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
@@ -279,74 +279,74 @@ defmodule SequelizeUi.DbDesign do
     Table.changeset(table, %{})
   end
 
-  alias SequelizeUi.DbDesign.Field
+  alias SequelizeUi.DbDesign.Column
 
   @doc """
-  Returns the list of fields.
+  Returns the list of columns.
 
   ## Examples
 
-      iex> list_fields()
-      [%Field{}, ...]
+      iex> list_columns()
+      [%Column{}, ...]
 
   """
-  def list_fields do
-    Repo.all(Field)
+  def list_columns do
+    Repo.all(Column)
   end
 
   @doc """
-  Gets a single field.
+  Gets a single column.
 
-  Raises `Ecto.NoResultsError` if the Field does not exist.
+  Raises `Ecto.NoResultsError` if the Column does not exist.
 
   ## Examples
 
-      iex> get_field!(123)
-      %Field{}
+      iex> get_column!(123)
+      %Column{}
 
-      iex> get_field!(456)
+      iex> get_column!(456)
       ** (Ecto.NoResultsError)
 
   """
-  def get_field!(id), do: Repo.get!(Field, id)
+  def get_column!(id), do: Repo.get!(Column, id)
 
   @doc """
-  Gets a single field with table parent.
+  Gets a single column with table parent.
 
-  Raises `Ecto.NoResultsError` if the Field does not exist.
+  Raises `Ecto.NoResultsError` if the Column does not exist.
 
   ## Examples
 
-      iex> get_field_with_table!(123)
-      %Field{table: %Table{}}
+      iex> get_column_with_table!(123)
+      %Column{table: %Table{}}
 
-      iex> get_field_with_table!(456)
+      iex> get_column_with_table!(456)
       ** (Ecto.NoResultsError)
 
   """
-  def get_field_with_table!(id) do
-    Repo.one from f in Field,
+  def get_column_with_table!(id) do
+    Repo.one from f in Column,
       join: e in assoc(f, :table),
       where: f.id == ^id,
       preload: [table: e]
   end
 
   @doc """
-  Gets a single field with table parent and schema grandparent.
+  Gets a single column with table parent and schema grandparent.
 
-  Raises `Ecto.NoResultsError` if the Field does not exist.
+  Raises `Ecto.NoResultsError` if the Column does not exist.
 
   ## Examples
 
-      iex> get_field_with_all!(123)
-      %Field{table: %Table{}}
+      iex> get_column_with_all!(123)
+      %Column{table: %Table{}}
 
-      iex> get_field_with_all!(456)
+      iex> get_column_with_all!(456)
       ** (Ecto.NoResultsError)
 
   """
-  def get_field_with_all!(id) do
-    Repo.one from f in Field,
+  def get_column_with_all!(id) do
+    Repo.one from f in Column,
       join: e in assoc(f, :table),
       join: s in assoc(e, :schema),
       where: f.id == ^id,
@@ -354,68 +354,68 @@ defmodule SequelizeUi.DbDesign do
   end
 
   @doc """
-  Creates a field.
+  Creates a column.
 
   ## Examples
 
-      iex> create_field(%{field: value})
-      {:ok, %Field{}}
+      iex> create_column(%{column: value})
+      {:ok, %Column{}}
 
-      iex> create_field(%{field: bad_value})
+      iex> create_column(%{column: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_field(attrs \\ %{}) do
-    %Field{}
-    |> Field.changeset(attrs)
+  def create_column(attrs \\ %{}) do
+    %Column{}
+    |> Column.changeset(attrs)
     |> Repo.insert()
   end
 
   @doc """
-  Updates a field.
+  Updates a column.
 
   ## Examples
 
-      iex> update_field(field, %{field: new_value})
-      {:ok, %Field{}}
+      iex> update_column(column, %{column: new_value})
+      {:ok, %Column{}}
 
-      iex> update_field(field, %{field: bad_value})
+      iex> update_column(column, %{column: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
-  def update_field(%Field{} = field, attrs) do
-    field
-    |> Field.changeset(attrs)
+  def update_column(%Column{} = column, attrs) do
+    column
+    |> Column.changeset(attrs)
     |> Repo.update()
   end
 
   @doc """
-  Deletes a Field.
+  Deletes a Column.
 
   ## Examples
 
-      iex> delete_field(field)
-      {:ok, %Field{}}
+      iex> delete_column(column)
+      {:ok, %Column{}}
 
-      iex> delete_field(field)
+      iex> delete_column(column)
       {:error, %Ecto.Changeset{}}
 
   """
-  def delete_field(%Field{} = field) do
-    Repo.delete(field)
+  def delete_column(%Column{} = column) do
+    Repo.delete(column)
   end
 
   @doc """
-  Returns an `%Ecto.Changeset{}` for tracking field changes.
+  Returns an `%Ecto.Changeset{}` for tracking column changes.
 
   ## Examples
 
-      iex> change_field(field)
-      %Ecto.Changeset{source: %Field{}}
+      iex> change_column(column)
+      %Ecto.Changeset{source: %Column{}}
 
   """
-  def change_field(%Field{} = field) do
-    Field.changeset(field, %{})
+  def change_column(%Column{} = column) do
+    Column.changeset(column, %{})
   end
 
   alias SequelizeUi.DbDesign.Constraint
@@ -454,10 +454,10 @@ defmodule SequelizeUi.DbDesign do
 
   ## Examples
 
-      iex> create_constraint(%{field: value})
+      iex> create_constraint(%{column: value})
       {:ok, %Constraint{}}
 
-      iex> create_constraint(%{field: bad_value})
+      iex> create_constraint(%{column: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """
@@ -472,10 +472,10 @@ defmodule SequelizeUi.DbDesign do
 
   ## Examples
 
-      iex> update_constraint(constraint, %{field: new_value})
+      iex> update_constraint(constraint, %{column: new_value})
       {:ok, %Constraint{}}
 
-      iex> update_constraint(constraint, %{field: bad_value})
+      iex> update_constraint(constraint, %{column: bad_value})
       {:error, %Ecto.Changeset{}}
 
   """

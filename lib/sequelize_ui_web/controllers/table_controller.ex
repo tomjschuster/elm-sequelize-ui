@@ -21,8 +21,8 @@ defmodule SequelizeUiWeb.TableController do
   end
 
   def show(conn, %{"id" => id} = params) do
-    %{schema: with_schema, fields: with_fields} = conn.assigns.combined_with
-    case {with_schema, with_fields} do
+    %{schema: with_schema, columns: with_columns} = conn.assigns.combined_with
+    case {with_schema, with_columns} do
       {true, true} ->
         table = DbDesign.get_table_with_all!(id)
         render(conn, "show-with-all.json", table: table)
@@ -30,8 +30,8 @@ defmodule SequelizeUiWeb.TableController do
         table = DbDesign.get_table_with_schema!(id)
         render(conn, "show-with-schema.json", table: table)
       {false, true} ->
-        table = DbDesign.get_table_with_fields!(id)
-        render(conn, "show-with-fields.json", table: table)
+        table = DbDesign.get_table_with_columns!(id)
+        render(conn, "show-with-columns.json", table: table)
       {false, false} ->
         table = DbDesign.get_table!(id)
         render(conn, "show.json", table: table)

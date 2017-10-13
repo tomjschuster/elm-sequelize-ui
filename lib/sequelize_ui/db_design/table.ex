@@ -1,7 +1,7 @@
 defmodule SequelizeUi.DbDesign.Table do
   use Ecto.Schema
   import Ecto.Changeset
-  alias SequelizeUi.DbDesign.{Table, Schema, Field, Constraint}
+  alias SequelizeUi.DbDesign.{Table, Schema, Column, Constraint}
 
 
   schema "sql_table" do
@@ -9,7 +9,7 @@ defmodule SequelizeUi.DbDesign.Table do
     field :schema_id, :integer
 
     belongs_to :schema, Schema, define_field: false
-    has_many :fields, Field
+    has_many :columns, Column
     has_many :constraints, Constraint
 
     timestamps()

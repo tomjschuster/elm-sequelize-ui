@@ -26,20 +26,20 @@ toConfig constraint =
             , stringValue = ""
             }
 
-        PrimaryKey fieldId ->
-            { constraint = PrimaryKey fieldId
+        PrimaryKey columnId ->
+            { constraint = PrimaryKey columnId
             , id = 1
             , stringValue = "Primary Key"
             }
 
-        NotNull fieldId ->
-            { constraint = NotNull fieldId
+        NotNull columnId ->
+            { constraint = NotNull columnId
             , id = 2
             , stringValue = "Not Null"
             }
 
-        Unique fieldIds ->
-            { constraint = Unique fieldIds
+        Unique columnIds ->
+            { constraint = Unique columnIds
             , id = 3
             , stringValue = "Unique Key"
             }
@@ -50,8 +50,8 @@ toConfig constraint =
             , stringValue = "Foreign Key"
             }
 
-        Check maybeFieldId query ->
-            { constraint = Check maybeFieldId query
+        Check maybeColumnId query ->
+            { constraint = Check maybeColumnId query
             , id = 5
             , stringValue = "Check"
             }
