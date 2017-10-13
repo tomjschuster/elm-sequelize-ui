@@ -513,4 +513,19 @@ defmodule SequelizeUi.DbDesign do
   def change_constraint(%Constraint{} = constraint) do
     Constraint.changeset(constraint, %{})
   end
+
+  alias SequelizeUi.DbDesign.Constraint
+
+  @doc """
+  Returns the list of constraint types.
+
+  ## Examples
+
+      iex> list_constraint_types()
+      [%ConstraintType{}, ...]
+
+  """
+  def list_constraint_types do
+    Repo.all(ConstraintType)
+  end
 end

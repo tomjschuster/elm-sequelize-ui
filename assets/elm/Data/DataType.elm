@@ -25,7 +25,7 @@ import Json.Encode as JE exposing (Value)
 
 
 type DataType
-    = None
+    = NoConstraint
     | Char
     | VarChar
     | Text
@@ -73,7 +73,7 @@ all =
 
 none : DataType
 none =
-    None
+    NoConstraint
 
 
 
@@ -91,10 +91,10 @@ type alias DataTypeConfig =
 toConfig : DataType -> DataTypeConfig
 toConfig dataType =
     case dataType of
-        None ->
-            { dataType = None
+        NoConstraint ->
+            { dataType = NoConstraint
             , id = 0
-            , stringValue = "None"
+            , stringValue = ""
             , initialModifier = NoModifier
             }
 
@@ -385,7 +385,7 @@ updateWithTimezone withTimezone modifier =
 
 decoder : Decoder DataType
 decoder =
-    JD.map (fromId >> Maybe.withDefault None) JD.int
+    JD.map (fromId >> Maybe.withDefault NoConstraint) JD.int
 
 
 modifierDecoder : Decoder Modifier
@@ -423,7 +423,7 @@ withTimezoneDecoder =
 
 encode : DataType -> Value
 encode dataType =
-    if dataType == None then
+    if dataType == NoConstraint then
         JE.null
     else
         JE.int (toId dataType)
