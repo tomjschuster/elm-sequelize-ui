@@ -52,7 +52,7 @@ initialModel =
 
 init : ( Model, Cmd Msg )
 init =
-    ( initialModel, Http.send LoadSchemas RS.all )
+    ( initialModel, Http.send LoadSchemas RS.index )
 
 
 

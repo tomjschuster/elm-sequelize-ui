@@ -21,7 +21,8 @@ defmodule SequelizeUiWeb.SchemaController do
   end
 
   def show(conn, %{"id" => id} = params) do
-    if params["tables"] == "show" do
+    %{tables: with_tables} = conn.assigns.combined_with
+    if with_tables do
       schema = DbDesign.get_schema_with_tables!(id)
       render(conn, "show-with-tables.json", schema: schema)
     else

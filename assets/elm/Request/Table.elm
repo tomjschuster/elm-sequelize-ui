@@ -1,8 +1,8 @@
 module Request.Table
     exposing
-        ( all
-        , create
+        ( create
         , destroy
+        , index
         , one
         , oneWithAll
         , oneWithFields
@@ -10,7 +10,12 @@ module Request.Table
         , update
         )
 
-import Data.Combined as Combined exposing (TableWithAll, TableWithFields, TableWithSchema)
+import Data.Combined as Combined
+    exposing
+        ( TableWithAll
+        , TableWithFields
+        , TableWithSchema
+        )
 import Data.Table as Table exposing (Table)
 import Http exposing (Request)
 import Json.Decode as JD
@@ -20,21 +25,6 @@ import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 tablesUrl : String
 tablesUrl =
     baseUrl ++ "tables/"
-
-
-withFields : String -> String
-withFields =
-    flip (++) "?" >> flip (++) "&fields=show"
-
-
-withSchema : String -> String
-withSchema =
-    flip (++) "?" >> flip (++) "&schema=show"
-
-
-withAll : String -> String
-withAll =
-    flip (++) "?" >> flip (++) "&schema=show" >> flip (++) "&fields=show"
 
 
 tableUrl : Int -> String
@@ -57,8 +47,8 @@ create table =
 -- READ
 
 
-all : Request (List Table)
-all =
+index : Request (List Table)
+index =
     Http.get tablesUrl (dataDecoder (JD.list Table.decoder))
 
 
@@ -70,21 +60,21 @@ one id =
 oneWithSchema : Int -> Http.Request TableWithSchema
 oneWithSchema id =
     Http.get
-        (tableUrl id |> withSchema)
+        (tableUrl id |> Combined.withSchema)
         (dataDecoder Combined.tableWithSchemaDecoder)
 
 
 oneWithFields : Int -> Http.Request TableWithFields
 oneWithFields id =
     Http.get
-        (tableUrl id |> withFields)
+        (tableUrl id |> Combined.withFields)
         (dataDecoder Combined.tableWithFieldsDecoder)
 
 
 oneWithAll : Int -> Http.Request TableWithAll
 oneWithAll id =
     Http.get
-        (tableUrl id |> withAll)
+        (tableUrl id |> Combined.withSchema |> Combined.andWithFields)
         (dataDecoder Combined.tableWithAllDecoder)
 
 

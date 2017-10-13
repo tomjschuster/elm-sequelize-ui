@@ -1,5 +1,6 @@
 defmodule SequelizeUiWeb.Router do
   use SequelizeUiWeb, :router
+  import SequelizeUiWeb.CombinedWith
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -13,13 +14,18 @@ defmodule SequelizeUiWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :combine_entities do
+    plug :combined_with
+  end
   scope "/api", SequelizeUiWeb do
     pipe_through :api
 
+    resources "/constraints", ConstraintController
+
+    pipe_through :combine_entities
     resources "/schemas", SchemaController
     resources "/tables", TableController
     resources "/fields", FieldController
-    resources "/constraints", ConstraintController
   end
 
   scope "/", SequelizeUiWeb do

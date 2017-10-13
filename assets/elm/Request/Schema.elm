@@ -1,14 +1,14 @@
 module Request.Schema
     exposing
-        ( all
-        , create
+        ( create
         , destroy
+        , index
         , one
         , oneWithTables
         , update
         )
 
-import Data.Combined as Combined exposing (SchemaWithTables)
+import Data.Combined as Combined exposing (SchemaWithTables, withTables)
 import Data.Schema as Schema exposing (Schema)
 import Http
 import Json.Decode as JD
@@ -20,18 +20,13 @@ schemasUrl =
     baseUrl ++ "schemas/"
 
 
-withTables : String -> String
-withTables =
-    flip (++) "?tables=show"
-
-
 schemaUrl : Int -> String
 schemaUrl =
     toString >> (++) schemasUrl
 
 
-all : Http.Request (List Schema)
-all =
+index : Http.Request (List Schema)
+index =
     Http.get
         schemasUrl
         (dataDecoder (JD.list Schema.decoder))
@@ -40,7 +35,7 @@ all =
 oneWithTables : Int -> Http.Request SchemaWithTables
 oneWithTables id =
     Http.get
-        (schemaUrl id |> withTables)
+        (schemaUrl id |> Combined.withTables)
         (dataDecoder Combined.schemaWithTablesDecoder)
 
 
