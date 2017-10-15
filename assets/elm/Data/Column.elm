@@ -12,6 +12,7 @@ module Data.Column
         , updateName
         )
 
+import Data.Constraints as Constraints exposing (ColumnConstraints)
 import Data.DataType as DataType exposing (DataType)
 import Json.Decode as JD exposing (Decoder, int, maybe, string)
 import Json.Decode.Pipeline exposing (custom, decode, hardcoded, optional, required)
@@ -35,6 +36,7 @@ type alias Column =
     , tableId : Int
     , name : String
     , dataType : DataType
+    , constraints : ColumnConstraints
     }
 
 
@@ -44,6 +46,7 @@ empty =
     , tableId = 0
     , name = ""
     , dataType = DataType.none
+    , constraints = Constraints.defaultColumnConstraints
     }
 
 
@@ -90,6 +93,7 @@ decoder =
         |> required "tableId" int
         |> required "name" string
         |> custom DataType.decoder
+        |> hardcoded Constraints.defaultColumnConstraints
 
 
 encode : Column -> Value
