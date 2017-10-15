@@ -1,7 +1,7 @@
 module Views.DataType.Select exposing (Config, view)
 
 import Data.DataType as DataType exposing (DataType)
-import Html as Html exposing (Html, div, input, label, option, select, text)
+import Html as Html exposing (Attribute, Html, div, input, label, option, select, text)
 import Html.Attributes exposing (checked, name, selected, type_, value)
 import Utils.Handlers exposing (onChangeBool, onChangeInt, onIntInput)
 
@@ -27,8 +27,30 @@ children config dataType modifier =
 dataTypeSelect : Config msg -> DataType -> Html msg
 dataTypeSelect config dataType =
     select
-        [ onChangeInt (Maybe.andThen DataType.fromId >> Maybe.withDefault DataType.none >> config.handleDataTypeChange) ]
-        (option [] [ text "Data Type" ] :: List.map (selectOption config dataType) DataType.all)
+        [ onChangeInt (handleDataTypeChange config) ]
+        (dataTypeSelectChildren config dataType)
+
+
+handleDataTypeChange : Config msg -> Maybe Int -> msg
+handleDataTypeChange config =
+    Maybe.andThen DataType.fromId
+        >> Maybe.withDefault DataType.none
+        >> config.handleDataTypeChange
+
+
+dataTypeSelectChildren : Config msg -> DataType -> List (Html msg)
+dataTypeSelectChildren config dataType =
+    defaultOption :: selectOptions config dataType
+
+
+selectOptions : Config msg -> DataType -> List (Html msg)
+selectOptions config dataType =
+    List.map (selectOption config dataType) DataType.all
+
+
+defaultOption : Html msg
+defaultOption =
+    option [] [ text "Data Type" ]
 
 
 selectOption : Config msg -> DataType -> DataType -> Html msg

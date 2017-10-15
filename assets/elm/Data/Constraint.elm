@@ -1,4 +1,12 @@
-module Data.Constraint exposing (Constraint)
+module Data.Constraint
+    exposing
+        ( Constraint(..)
+        , all
+        , fromId
+        , none
+        , toId
+        , toName
+        )
 
 
 type Constraint
@@ -15,6 +23,46 @@ type alias ConstraintConfig =
     , id : Int
     , stringValue : String
     }
+
+
+all : List Constraint
+all =
+    [ emptyPrimaryKey
+    , emptyNotNull
+    , emptyUniqueKey
+    , emptyForeignKey
+    , emptyCheck
+    ]
+
+
+none : Constraint
+none =
+    NoConstraint
+
+
+emptyPrimaryKey : Constraint
+emptyPrimaryKey =
+    PrimaryKey 0
+
+
+emptyNotNull : Constraint
+emptyNotNull =
+    NotNull 0
+
+
+emptyUniqueKey : Constraint
+emptyUniqueKey =
+    Unique []
+
+
+emptyForeignKey : Constraint
+emptyForeignKey =
+    ForeignKey 0 0
+
+
+emptyCheck : Constraint
+emptyCheck =
+    Check Nothing ""
 
 
 toConfig : Constraint -> ConstraintConfig
@@ -60,3 +108,33 @@ toConfig constraint =
 toName : Constraint -> String
 toName =
     toConfig >> .stringValue
+
+
+toId : Constraint -> Int
+toId =
+    toConfig >> .id
+
+
+fromId : Int -> Maybe Constraint
+fromId id =
+    case id of
+        0 ->
+            Just none
+
+        1 ->
+            Just emptyPrimaryKey
+
+        2 ->
+            Just emptyNotNull
+
+        3 ->
+            Just emptyUniqueKey
+
+        4 ->
+            Just emptyForeignKey
+
+        5 ->
+            Just emptyCheck
+
+        badId ->
+            Nothing

@@ -4,6 +4,7 @@ import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Column as Column exposing (Column)
 import Data.Combined as Combined exposing (TableWithAll)
+import Data.Constraint as Constraint exposing (Constraint)
 import Data.DataType as DataType exposing (DataType)
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
@@ -47,8 +48,10 @@ type alias Model =
     { schema : Schema
     , table : Table
     , columns : List Column
+    , constraints : List Constraint
     , editingTable : Maybe Table
     , newColumn : Column
+    , newConstraint : Constraint
     , editingColumn : Maybe Column
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
@@ -60,8 +63,10 @@ initialModel =
     Model Schema.empty
         Table.empty
         []
+        []
         Nothing
         Column.empty
+        Constraint.none
         Nothing
         Nothing
         []
@@ -102,6 +107,7 @@ type Msg
     | InputNewColumnName String
     | SelectNewColumnDataType DataType
     | UpdateNewColumnModifier DataType.Modifier
+    | SelectNewConstraint Constraint
     | CreateColumn
     | LoadNewColumn (Result Http.Error Column)
       -- UPDATE COLUMN
@@ -241,6 +247,9 @@ update msg model =
             , Cmd.none
             , AppUpdate.none
             )
+
+        SelectNewConstraint constraint ->
+            ( { model | newConstraint = constraint }, Cmd.none, AppUpdate.none )
 
         CreateColumn ->
             ( model
@@ -485,7 +494,7 @@ columnsChildren : Model -> List (Html Msg)
 columnsChildren model =
     CE.prependIfErrors model.errors
         [ columnsTitle
-        , createColumn model.newColumn
+        , createColumn model.newColumn model.newConstraint
         , columnList model.editingColumn model.schema.id model.columns
         ]
 
@@ -499,21 +508,102 @@ columnsTitle =
 -- CREATE COLUMN
 
 
-createColumn : Column -> Html Msg
-createColumn { name, dataType, dataTypeModifier } =
+createColumn : Column -> Constraint -> Html Msg
+createColumn { name, dataType, dataTypeModifier } constraint =
     div
         []
         [ createColumnInput name
-        , DTSelect.view selectDataTypeConfig dataType dataTypeModifier
+        , DTSelect.view dataTypeSelectConfig dataType dataTypeModifier
+        , newConstraint constraint
         , createColumnButton
         ]
 
 
-selectDataTypeConfig : DTSelect.Config Msg
-selectDataTypeConfig =
+dataTypeSelectConfig : DTSelect.Config Msg
+dataTypeSelectConfig =
     { handleDataTypeChange = SelectNewColumnDataType
     , handleModifierChange = UpdateNewColumnModifier
     }
+
+
+newConstraint : Constraint -> Html Msg
+newConstraint constraint =
+    div [] (newConstraintChildren constraint)
+
+
+newConstraintChildren : Constraint -> List (Html Msg)
+newConstraintChildren constraint =
+    case constraintModifier constraint of
+        Just modifier ->
+            [ constraintSelect constraint, modifier ]
+
+        Nothing ->
+            [ constraintSelect constraint ]
+
+
+constraintSelect : Constraint -> Html Msg
+constraintSelect constraint =
+    select
+        [ onChangeInt handleNewConstraintChange ]
+        (constraintOptions constraint)
+
+
+handleNewConstraintChange : Maybe Int -> Msg
+handleNewConstraintChange =
+    Maybe.andThen Constraint.fromId
+        >> Maybe.withDefault Constraint.none
+        >> SelectNewConstraint
+
+
+constraintSelectChildren : Constraint -> List (Html Msg)
+constraintSelectChildren constraint =
+    case constraintModifier constraint of
+        Just modifier ->
+            defaultConstraintOption :: constraintOptions constraint ++ [ modifier ]
+
+        Nothing ->
+            defaultConstraintOption :: constraintOptions constraint
+
+
+constraintOptions : Constraint -> List (Html Msg)
+constraintOptions constraint =
+    List.map (constraintOption constraint) Constraint.all
+
+
+defaultConstraintOption : Html msg
+defaultConstraintOption =
+    option [] [ text "Constraint" ]
+
+
+constraintOption : Constraint -> Constraint -> Html Msg
+constraintOption currentConstraint constraint =
+    option
+        [ selected (currentConstraint == constraint)
+        , value (Constraint.toId constraint |> toString)
+        ]
+        [ text (Constraint.toName constraint) ]
+
+
+constraintModifier : Constraint -> Maybe (Html Msg)
+constraintModifier constraint =
+    case constraint of
+        Constraint.NoConstraint ->
+            Nothing
+
+        Constraint.PrimaryKey columnId ->
+            Just (select [] [])
+
+        Constraint.NotNull columnId ->
+            Just (select [] [])
+
+        Constraint.Unique columnIds ->
+            Just (select [] [])
+
+        Constraint.ForeignKey foreignKey references ->
+            Just (select [] [])
+
+        Constraint.Check maybeColumnId checkText ->
+            Just (input [] [])
 
 
 createColumnInput : String -> Html Msg
