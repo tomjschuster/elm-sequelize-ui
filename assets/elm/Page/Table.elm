@@ -4,7 +4,6 @@ import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Column as Column exposing (Column)
 import Data.Combined as Combined exposing (TableWithAll)
-import Data.Constraint as Constraint exposing (Constraint)
 import Data.DataType as DataType exposing (DataType)
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
@@ -49,13 +48,11 @@ type alias Model =
     { schema : Schema
     , table : Table
     , columns : List Column
-    , constraints : List Constraint
     , editingTable : Maybe Table
     , newColumn : Column
     , newColumnIsPrimaryKey : Bool
     , newColumnIsNotNull : Bool
     , newColumnIsUnique : Bool
-    , newConstraint : Constraint
     , editingColumn : Maybe Column
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
@@ -64,16 +61,15 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    Model Schema.empty
+    Model
+        Schema.empty
         Table.empty
-        []
         []
         Nothing
         Column.empty
         False
         False
         False
-        Constraint.none
         Nothing
         Nothing
         []
@@ -116,7 +112,6 @@ type Msg
     | SetNewColumnPrimaryKey Bool
     | SetNewColumnNotNull Bool
     | SetNewColumnUnique Bool
-    | SelectNewConstraint Constraint
     | CreateColumn
     | LoadNewColumn (Result Http.Error Column)
       -- UPDATE COLUMN
@@ -264,9 +259,6 @@ update msg model =
             , Cmd.none
             , AppUpdate.none
             )
-
-        SelectNewConstraint constraint ->
-            ( { model | newConstraint = constraint }, Cmd.none, AppUpdate.none )
 
         CreateColumn ->
             ( model
@@ -531,64 +523,6 @@ createColumn { name, dataType } isPrimaryKey isNotNull isUnique =
         ]
 
 
-newConstraint : Constraint -> Html Msg
-newConstraint constraint =
-    div [] (newConstraintChildren constraint)
-
-
-newConstraintChildren : Constraint -> List (Html Msg)
-newConstraintChildren constraint =
-    case constraintModifier constraint of
-        Just modifier ->
-            [ constraintSelect constraint, modifier ]
-
-        Nothing ->
-            [ constraintSelect constraint ]
-
-
-constraintSelect : Constraint -> Html Msg
-constraintSelect constraint =
-    select
-        [ onChangeInt handleNewConstraintChange ]
-        (constraintOptions constraint)
-
-
-handleNewConstraintChange : Maybe Int -> Msg
-handleNewConstraintChange =
-    Maybe.andThen Constraint.fromId
-        >> Maybe.withDefault Constraint.none
-        >> SelectNewConstraint
-
-
-constraintSelectChildren : Constraint -> List (Html Msg)
-constraintSelectChildren constraint =
-    case constraintModifier constraint of
-        Just modifier ->
-            defaultConstraintOption :: constraintOptions constraint ++ [ modifier ]
-
-        Nothing ->
-            defaultConstraintOption :: constraintOptions constraint
-
-
-constraintOptions : Constraint -> List (Html Msg)
-constraintOptions constraint =
-    List.map (constraintOption constraint) Constraint.all
-
-
-defaultConstraintOption : Html msg
-defaultConstraintOption =
-    option [] [ text "Constraint" ]
-
-
-constraintOption : Constraint -> Constraint -> Html Msg
-constraintOption currentConstraint constraint =
-    option
-        [ selected (currentConstraint == constraint)
-        , value (Constraint.toId constraint |> toString)
-        ]
-        [ text (Constraint.toName constraint) ]
-
-
 newColumnPrimaryKeyCheckbox : Bool -> Html Msg
 newColumnPrimaryKeyCheckbox isPrimaryKey =
     label
@@ -629,28 +563,6 @@ newColumnUniqueCheckbox isUnique =
             ]
             []
         ]
-
-
-constraintModifier : Constraint -> Maybe (Html Msg)
-constraintModifier constraint =
-    case constraint of
-        Constraint.NoConstraint ->
-            Nothing
-
-        Constraint.PrimaryKey columnId ->
-            Just (label [] [ text "Primary Key", input [ type_ "checkbox" ] [] ])
-
-        Constraint.NotNull columnId ->
-            Just (select [] [])
-
-        Constraint.UniqueKey columnIds ->
-            Just (select [] [])
-
-        Constraint.ForeignKey foreignKey references ->
-            Just (select [] [])
-
-        Constraint.Check maybeColumnId checkText ->
-            Just (input [] [])
 
 
 createColumnInput : String -> Html Msg
