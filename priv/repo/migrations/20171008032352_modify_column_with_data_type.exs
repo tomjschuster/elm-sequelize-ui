@@ -6,7 +6,7 @@ defmodule SequelizeUi.Repo.Migrations.ModifyFieldWithDataType do
       add :data_type_id, references(:data_type), null: false
       add :size, :integer
       add :precision, :integer
-      add :decimals, :integer
+      add :scale, :integer
       add :with_timezone, :boolean
     end
   end

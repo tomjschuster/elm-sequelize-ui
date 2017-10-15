@@ -2,18 +2,25 @@ module Data.Constraint
     exposing
         ( Constraint(..)
         , all
+        , createCheck
+        , createForeignKey
+        , createNotNull
+        , createPrimaryKey
+        , createUniqueKey
         , fromId
         , none
         , toId
         , toName
         )
 
+import Json.Encode as JE exposing (Value)
+
 
 type Constraint
     = NoConstraint
     | PrimaryKey Int
     | NotNull Int
-    | Unique (List Int)
+    | UniqueKey (List Int)
     | ForeignKey Int Int
     | Check (Maybe Int) String
 
@@ -35,6 +42,10 @@ all =
     ]
 
 
+
+-- DEFAULTS
+
+
 none : Constraint
 none =
     NoConstraint
@@ -52,7 +63,7 @@ emptyNotNull =
 
 emptyUniqueKey : Constraint
 emptyUniqueKey =
-    Unique []
+    UniqueKey []
 
 
 emptyForeignKey : Constraint
@@ -63,6 +74,39 @@ emptyForeignKey =
 emptyCheck : Constraint
 emptyCheck =
     Check Nothing ""
+
+
+
+-- UPDATE
+
+
+createPrimaryKey : Int -> Constraint
+createPrimaryKey =
+    PrimaryKey
+
+
+createNotNull : Int -> Constraint
+createNotNull =
+    NotNull
+
+
+createUniqueKey : List Int -> Constraint
+createUniqueKey =
+    UniqueKey
+
+
+createForeignKey : Int -> Int -> Constraint
+createForeignKey =
+    ForeignKey
+
+
+createCheck : Maybe Int -> String -> Constraint
+createCheck =
+    Check
+
+
+
+-- CONFIG
 
 
 toConfig : Constraint -> ConstraintConfig
@@ -86,8 +130,8 @@ toConfig constraint =
             , stringValue = "Not Null"
             }
 
-        Unique columnIds ->
-            { constraint = Unique columnIds
+        UniqueKey columnIds ->
+            { constraint = UniqueKey columnIds
             , id = 3
             , stringValue = "Unique Key"
             }

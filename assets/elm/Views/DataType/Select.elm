@@ -1,51 +1,46 @@
-module Views.DataType.Select exposing (Config, view)
+module Views.DataType.Select exposing (view)
 
-import Data.DataType as DataType exposing (DataType)
+import Data.DataType as DataType exposing (DataType(..))
 import Html as Html exposing (Attribute, Html, div, input, label, option, select, text)
-import Html.Attributes exposing (checked, name, selected, type_, value)
+import Html.Attributes exposing (checked, name, placeholder, selected, type_, value)
 import Utils.Handlers exposing (onChangeBool, onChangeInt, onIntInput)
 
 
-type alias Config msg =
-    { handleDataTypeChange : DataType -> msg
-    , handleModifierChange : DataType.Modifier -> msg
-    }
+view : (DataType -> msg) -> DataType -> Html msg
+view handleChange dataType =
+    div [] (children handleChange dataType)
 
 
-view : Config msg -> DataType -> DataType.Modifier -> Html msg
-view config dataType modifier =
-    div [] (children config dataType modifier)
+children : (DataType -> msg) -> DataType -> List (Html msg)
+children handleChange dataType =
+    modifierView handleChange dataType
+        |> Maybe.map
+            (List.singleton >> (::) (dataTypeSelect handleChange dataType))
+        |> Maybe.withDefault [ dataTypeSelect handleChange dataType ]
 
 
-children : Config msg -> DataType -> DataType.Modifier -> List (Html msg)
-children config dataType modifier =
-    modifierView config modifier
-        |> Maybe.map (List.singleton >> (::) (dataTypeSelect config dataType))
-        |> Maybe.withDefault [ dataTypeSelect config dataType ]
-
-
-dataTypeSelect : Config msg -> DataType -> Html msg
-dataTypeSelect config dataType =
+dataTypeSelect : (DataType -> msg) -> DataType -> Html msg
+dataTypeSelect handleChange dataType =
     select
-        [ onChangeInt (handleDataTypeChange config) ]
-        (dataTypeSelectChildren config dataType)
+        [ onChangeInt (mapDataTypeChange handleChange) ]
+        (dataTypeSelectChildren handleChange dataType)
 
 
-handleDataTypeChange : Config msg -> Maybe Int -> msg
-handleDataTypeChange config =
+mapDataTypeChange : (DataType -> msg) -> Maybe Int -> msg
+mapDataTypeChange handleChange =
     Maybe.andThen DataType.fromId
         >> Maybe.withDefault DataType.none
-        >> config.handleDataTypeChange
+        >> handleChange
 
 
-dataTypeSelectChildren : Config msg -> DataType -> List (Html msg)
-dataTypeSelectChildren config dataType =
-    defaultOption :: selectOptions config dataType
+dataTypeSelectChildren : (DataType -> msg) -> DataType -> List (Html msg)
+dataTypeSelectChildren handleChange dataType =
+    defaultOption :: selectOptions handleChange dataType
 
 
-selectOptions : Config msg -> DataType -> List (Html msg)
-selectOptions config dataType =
-    List.map (selectOption config dataType) DataType.all
+selectOptions : (DataType -> msg) -> DataType -> List (Html msg)
+selectOptions handleChange dataType =
+    List.map (selectOption handleChange dataType) DataType.all
 
 
 defaultOption : Html msg
@@ -53,77 +48,97 @@ defaultOption =
     option [] [ text "Data Type" ]
 
 
-selectOption : Config msg -> DataType -> DataType -> Html msg
-selectOption config currentType dataType =
+selectOption : (DataType -> msg) -> DataType -> DataType -> Html msg
+selectOption handleChange currentType dataType =
     option
-        [ selected (currentType == dataType)
+        [ selected (DataType.isSame dataType currentType)
         , value (DataType.toId dataType |> toString)
         ]
-        [ text (DataType.toStringValue dataType) ]
+        [ text (DataType.toShortName dataType) ]
 
 
-modifierView : Config msg -> DataType.Modifier -> Maybe (Html msg)
-modifierView config modifier =
-    case modifier of
-        DataType.NoModifier ->
+modifierView : (DataType -> msg) -> DataType -> Maybe (Html msg)
+modifierView handleChange dataType =
+    case dataType of
+        Char size ->
+            Just <| sizeInput Char handleChange size
+
+        VarChar size ->
+            Just <| sizeInput VarChar handleChange size
+
+        Bit size ->
+            Just <| sizeInput Bit handleChange size
+
+        VarBit size ->
+            Just <| sizeInput VarBit handleChange size
+
+        Numeric precision scale ->
+            Just <| precisionScaleInput Numeric handleChange precision scale
+
+        TimeStamp withTimezone ->
+            Just <| timezoneCheckbox TimeStamp handleChange withTimezone
+
+        Time withTimezone ->
+            Just <| timezoneCheckbox Time handleChange withTimezone
+
+        otherType ->
             Nothing
 
-        DataType.Size size ->
-            Just (sizeInput config.handleModifierChange size)
 
-        DataType.Precision precision decimals ->
-            Just (precisionInput config.handleModifierChange precision decimals)
-
-        DataType.WithTimezone withTimezone ->
-            Just (timezoneCheckbox config.handleModifierChange withTimezone)
-
-
-sizeInput : (DataType.Modifier -> msg) -> Maybe Int -> Html msg
-sizeInput handleModifierChange size =
+sizeInput : (Maybe Int -> DataType) -> (DataType -> msg) -> Maybe Int -> Html msg
+sizeInput toDataType handleChange size =
     div []
         [ label []
             [ text "Size" ]
         , input
             [ type_ "number"
+            , placeholder (toString DataType.defaultSize)
             , value (maybeIntToString size)
-            , onIntInput (DataType.Size >> handleModifierChange)
+            , onIntInput (toDataType >> handleChange)
             ]
             []
         ]
 
 
-precisionInput : (DataType.Modifier -> msg) -> Maybe Int -> Maybe Int -> Html msg
-precisionInput handleModifierChange precision decimals =
+precisionScaleInput :
+    (Maybe Int -> Maybe Int -> DataType)
+    -> (DataType -> msg)
+    -> Maybe Int
+    -> Maybe Int
+    -> Html msg
+precisionScaleInput toDataType handleDataTypeChange precision scale =
     div []
         [ div []
             [ label [] [ text "Precision" ]
             , input
                 [ type_ "number"
-                , onIntInput (flip DataType.Precision decimals >> handleModifierChange)
+                , placeholder (toString DataType.defaultPrecision)
+                , onIntInput (flip toDataType scale >> handleDataTypeChange)
                 , value (maybeIntToString precision)
                 ]
                 []
             ]
         , div []
-            [ label [] [ text "Decimals" ]
+            [ label [] [ text "Scale" ]
             , input
                 [ type_ "number"
-                , onIntInput (DataType.Precision precision >> handleModifierChange)
-                , value (maybeIntToString decimals)
+                , placeholder (toString DataType.defaultScale)
+                , onIntInput (toDataType precision >> handleDataTypeChange)
+                , value (maybeIntToString scale)
                 ]
                 []
             ]
         ]
 
 
-timezoneCheckbox : (DataType.Modifier -> msg) -> Bool -> Html msg
-timezoneCheckbox handleModifierChange isChecked =
+timezoneCheckbox : (Bool -> DataType) -> (DataType -> msg) -> Bool -> Html msg
+timezoneCheckbox toDataType handleDataTypeChange isChecked =
     label []
         [ text "With Timezone"
         , input
             [ type_ "checkbox"
             , checked isChecked
-            , onChangeBool (DataType.WithTimezone >> handleModifierChange)
+            , onChangeBool (toDataType >> handleDataTypeChange)
             ]
             []
         ]

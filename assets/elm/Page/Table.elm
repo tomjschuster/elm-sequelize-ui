@@ -17,6 +17,7 @@ import Html
         , h2
         , h3
         , input
+        , label
         , li
         , main_
         , option
@@ -26,8 +27,8 @@ import Html
         , text
         , ul
         )
-import Html.Attributes exposing (id, selected, value)
-import Html.Events exposing (onClick, onInput)
+import Html.Attributes exposing (checked, id, selected, type_, value)
+import Html.Events exposing (onCheck, onClick, onInput)
 import Http
 import Request.Column as RF
 import Request.Table as RE
@@ -51,6 +52,9 @@ type alias Model =
     , constraints : List Constraint
     , editingTable : Maybe Table
     , newColumn : Column
+    , newColumnIsPrimaryKey : Bool
+    , newColumnIsNotNull : Bool
+    , newColumnIsUnique : Bool
     , newConstraint : Constraint
     , editingColumn : Maybe Column
     , toDeleteId : Maybe Int
@@ -66,6 +70,9 @@ initialModel =
         []
         Nothing
         Column.empty
+        False
+        False
+        False
         Constraint.none
         Nothing
         Nothing
@@ -106,7 +113,9 @@ type Msg
       -- CREATE COLUMN
     | InputNewColumnName String
     | SelectNewColumnDataType DataType
-    | UpdateNewColumnModifier DataType.Modifier
+    | SetNewColumnPrimaryKey Bool
+    | SetNewColumnNotNull Bool
+    | SetNewColumnUnique Bool
     | SelectNewConstraint Constraint
     | CreateColumn
     | LoadNewColumn (Result Http.Error Column)
@@ -114,7 +123,6 @@ type Msg
     | EditColumn Int
     | InputEditingColumnName String
     | SelectEditingColumnDataType DataType
-    | UpdateEditingColumnModifier DataType.Modifier
     | CancelEditColumn
     | SaveEditingColumn
     | UpdateColumn (Result Http.Error Column)
@@ -239,11 +247,20 @@ update msg model =
             , AppUpdate.none
             )
 
-        UpdateNewColumnModifier modifier ->
-            ( { model
-                | newColumn =
-                    Column.updateDataTypeModifier modifier model.newColumn
-              }
+        SetNewColumnPrimaryKey checked ->
+            ( { model | newColumnIsPrimaryKey = checked }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        SetNewColumnNotNull checked ->
+            ( { model | newColumnIsNotNull = checked }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        SetNewColumnUnique checked ->
+            ( { model | newColumnIsUnique = checked }
             , Cmd.none
             , AppUpdate.none
             )
@@ -300,17 +317,6 @@ update msg model =
             ( { model
                 | editingColumn =
                     Maybe.map (Column.updateDataType dataType) model.editingColumn
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        UpdateEditingColumnModifier modifier ->
-            ( { model
-                | editingColumn =
-                    Maybe.map
-                        (Column.updateDataTypeModifier modifier)
-                        model.editingColumn
               }
             , Cmd.none
             , AppUpdate.none
@@ -494,7 +500,11 @@ columnsChildren : Model -> List (Html Msg)
 columnsChildren model =
     CE.prependIfErrors model.errors
         [ columnsTitle
-        , createColumn model.newColumn model.newConstraint
+        , createColumn
+            model.newColumn
+            model.newColumnIsPrimaryKey
+            model.newColumnIsNotNull
+            model.newColumnIsUnique
         , columnList model.editingColumn model.schema.id model.columns
         ]
 
@@ -508,22 +518,17 @@ columnsTitle =
 -- CREATE COLUMN
 
 
-createColumn : Column -> Constraint -> Html Msg
-createColumn { name, dataType, dataTypeModifier } constraint =
+createColumn : Column -> Bool -> Bool -> Bool -> Html Msg
+createColumn { name, dataType } isPrimaryKey isNotNull isUnique =
     div
         []
         [ createColumnInput name
-        , DTSelect.view dataTypeSelectConfig dataType dataTypeModifier
-        , newConstraint constraint
+        , DTSelect.view SelectNewColumnDataType dataType
+        , newColumnPrimaryKeyCheckbox isPrimaryKey
+        , newColumnNotNullCheckbox isNotNull
+        , newColumnUniqueCheckbox isUnique
         , createColumnButton
         ]
-
-
-dataTypeSelectConfig : DTSelect.Config Msg
-dataTypeSelectConfig =
-    { handleDataTypeChange = SelectNewColumnDataType
-    , handleModifierChange = UpdateNewColumnModifier
-    }
 
 
 newConstraint : Constraint -> Html Msg
@@ -584,6 +589,48 @@ constraintOption currentConstraint constraint =
         [ text (Constraint.toName constraint) ]
 
 
+newColumnPrimaryKeyCheckbox : Bool -> Html Msg
+newColumnPrimaryKeyCheckbox isPrimaryKey =
+    label
+        []
+        [ text "Primary Key"
+        , input
+            [ type_ "checkbox"
+            , checked isPrimaryKey
+            , onCheck SetNewColumnPrimaryKey
+            ]
+            []
+        ]
+
+
+newColumnNotNullCheckbox : Bool -> Html Msg
+newColumnNotNullCheckbox isNotNull =
+    label
+        []
+        [ text "Not Null"
+        , input
+            [ type_ "checkbox"
+            , checked isNotNull
+            , onCheck SetNewColumnNotNull
+            ]
+            []
+        ]
+
+
+newColumnUniqueCheckbox : Bool -> Html Msg
+newColumnUniqueCheckbox isUnique =
+    label
+        []
+        [ text "Unique"
+        , input
+            [ type_ "checkbox"
+            , checked isUnique
+            , onCheck SetNewColumnUnique
+            ]
+            []
+        ]
+
+
 constraintModifier : Constraint -> Maybe (Html Msg)
 constraintModifier constraint =
     case constraint of
@@ -591,12 +638,12 @@ constraintModifier constraint =
             Nothing
 
         Constraint.PrimaryKey columnId ->
-            Just (select [] [])
+            Just (label [] [ text "Primary Key", input [ type_ "checkbox" ] [] ])
 
         Constraint.NotNull columnId ->
             Just (select [] [])
 
-        Constraint.Unique columnIds ->
+        Constraint.UniqueKey columnIds ->
             Just (select [] [])
 
         Constraint.ForeignKey foreignKey references ->
@@ -650,7 +697,7 @@ columnItemChildren editingColumn schemaId column =
 normalColumnItemChildren : Int -> Column -> List (Html Msg)
 normalColumnItemChildren schemaId column =
     [ columnLink schemaId column
-    , DTDisplay.view column.dataType column.dataTypeModifier
+    , DTDisplay.view column.dataType
     , editColumnButton column.id
     , deleteColumnButton column.id
     ]
@@ -684,9 +731,9 @@ getEditingColumnItemChildren column editingColumn =
 
 
 editingColumnItemChildren : Column -> List (Html Msg)
-editingColumnItemChildren { name, dataType, dataTypeModifier } =
+editingColumnItemChildren { name, dataType } =
     [ editColumnNameInput name
-    , DTSelect.view columnSelectDataTypeConfig dataType dataTypeModifier
+    , DTSelect.view SelectEditingColumnDataType dataType
     , cancelEditColumnButton
     , saveEditColumnButton
     ]
@@ -714,13 +761,6 @@ onColumnNameKeyDown key =
 
         _ ->
             Nothing
-
-
-columnSelectDataTypeConfig : DTSelect.Config Msg
-columnSelectDataTypeConfig =
-    { handleDataTypeChange = SelectEditingColumnDataType
-    , handleModifierChange = UpdateEditingColumnModifier
-    }
 
 
 cancelEditColumnButton : Html Msg

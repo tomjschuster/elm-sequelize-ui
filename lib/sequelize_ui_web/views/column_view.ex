@@ -22,21 +22,13 @@ defmodule SequelizeUiWeb.ColumnView do
   end
 
   def render("column.json", %{column: column}) do
-    modifier =
-      case {column.size, column.precision, column.decimals, column.with_timezone} do
-        {nil, nil, nil, nil} ->
-          nil
-        {size, nil, nil, nil} ->
-          %{size: size}
-        {nil, precision, decimals, nil} ->
-          %{precision: %{precision: precision, decimals: decimals}}
-        {nil, nil, nil, with_timezone} ->
-          %{withTimezone: with_timezone}
-      end
     %{id: column.id,
       name: column.name,
       tableId: column.table_id,
       dataTypeId: column.data_type_id,
-      modifier: modifier}
+      size: column.size,
+      precision: column.precision,
+      scale: column.scale,
+      withTimezone: column.with_timezone}
   end
 end

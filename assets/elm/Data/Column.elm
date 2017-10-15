@@ -5,21 +5,16 @@ module Data.Column
         , empty
         , encode
         , encodeNew
-        , encodeNewColumn
         , init
         , removeFromList
         , replaceIfMatch
         , updateDataType
-        , updateDataTypeModifier
         , updateName
-        , updatePrecision
-        , updateSize
-        , updateWithTimezone
         )
 
 import Data.DataType as DataType exposing (DataType)
 import Json.Decode as JD exposing (Decoder, int, maybe, string)
-import Json.Decode.Pipeline exposing (decode, hardcoded, optional, required)
+import Json.Decode.Pipeline exposing (custom, decode, hardcoded, optional, required)
 import Json.Encode as JE exposing (Value)
 
 
@@ -40,7 +35,6 @@ type alias Column =
     , tableId : Int
     , name : String
     , dataType : DataType
-    , dataTypeModifier : DataType.Modifier
     }
 
 
@@ -50,7 +44,6 @@ empty =
     , tableId = 0
     , name = ""
     , dataType = DataType.none
-    , dataTypeModifier = DataType.NoModifier
     }
 
 
@@ -70,39 +63,7 @@ updateName name column =
 
 updateDataType : DataType -> Column -> Column
 updateDataType dataType column =
-    { column
-        | dataType = dataType
-        , dataTypeModifier = DataType.toInitialModifier dataType
-    }
-
-
-updateDataTypeModifier : DataType.Modifier -> Column -> Column
-updateDataTypeModifier dataTypeModifier column =
-    { column | dataTypeModifier = dataTypeModifier }
-
-
-updateSize : Maybe Int -> Column -> Column
-updateSize size column =
-    { column
-        | dataTypeModifier =
-            DataType.updateSize size column.dataTypeModifier
-    }
-
-
-updatePrecision : Maybe Int -> Maybe Int -> Column -> Column
-updatePrecision precision decimals column =
-    { column
-        | dataTypeModifier =
-            DataType.updatePrecision precision decimals column.dataTypeModifier
-    }
-
-
-updateWithTimezone : Bool -> Column -> Column
-updateWithTimezone withTimezone column =
-    { column
-        | dataTypeModifier =
-            DataType.updateWithTimezone withTimezone column.dataTypeModifier
-    }
+    { column | dataType = dataType }
 
 
 replaceIfMatch : Column -> Column -> Column
@@ -128,51 +89,33 @@ decoder =
         |> required "id" int
         |> required "tableId" int
         |> required "name" string
-        |> optional "dataTypeId" DataType.decoder DataType.none
-        |> optional "modifier" DataType.modifierDecoder DataType.noModifier
+        |> custom DataType.decoder
 
 
 encode : Column -> Value
-encode { id, tableId, name, dataType, dataTypeModifier } =
+encode { id, tableId, name, dataType } =
     JE.object
         [ ( "column"
           , JE.object
                 ([ ( "id", JE.int id )
                  , ( "table_id", JE.int tableId )
                  , ( "name", JE.string name )
-                 , ( "data_type_id", DataType.encode dataType )
                  ]
-                    ++ DataType.encodeModifier dataTypeModifier
+                    ++ DataType.encode dataType
                 )
           )
         ]
 
 
 encodeNew : Column -> Value
-encodeNew { tableId, name, dataType, dataTypeModifier } =
+encodeNew { tableId, name, dataType } =
     JE.object
         [ ( "column"
           , JE.object
                 ([ ( "table_id", JE.int tableId )
                  , ( "name", JE.string name )
-                 , ( "data_type_id", DataType.encode dataType )
                  ]
-                    ++ DataType.encodeModifier dataTypeModifier
-                )
-          )
-        ]
-
-
-encodeNewColumn : Int -> String -> DataType -> DataType.Modifier -> Value
-encodeNewColumn tableId name dataType modifier =
-    JE.object
-        [ ( "column"
-          , JE.object
-                ([ ( "table_id", JE.int tableId )
-                 , ( "name", JE.string name )
-                 , ( "data_type_id", DataType.encode dataType )
-                 ]
-                    ++ DataType.encodeModifier modifier
+                    ++ DataType.encode dataType
                 )
           )
         ]

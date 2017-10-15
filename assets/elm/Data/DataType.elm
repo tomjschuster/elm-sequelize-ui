@@ -1,22 +1,18 @@
 module Data.DataType
     exposing
         ( DataType(..)
-        , Modifier(..)
         , all
         , decoder
+        , defaultPrecision
+        , defaultScale
+        , defaultSize
         , encode
-        , encodeModifier
         , fromId
-        , modifierDecoder
-        , modifierToString
-        , noModifier
+        , isSame
         , none
         , toId
-        , toInitialModifier
-        , toStringValue
-        , updatePrecision
-        , updateSize
-        , updateWithTimezone
+        , toLongName
+        , toShortName
         )
 
 import Json.Decode as JD exposing (Decoder)
@@ -26,54 +22,336 @@ import Json.Encode as JE exposing (Value)
 
 type DataType
     = NoDataType
-    | Char
-    | VarChar
+    | Char (Maybe Int)
+    | VarChar (Maybe Int)
     | Text
-    | Bit
-    | VarBit
+    | Bit (Maybe Int)
+    | VarBit (Maybe Int)
     | SmallInt
     | Integer
     | BigInt
     | SmallSerial
     | Serial
     | BigSerial
-    | Numeric
+    | Numeric (Maybe Int) (Maybe Int)
     | Double
     | Real
     | Money
     | Boolean
     | Date
-    | TimeStamp
-    | Time
+    | TimeStamp Bool
+    | Time Bool
+
+
+
+-- INITIAL DATATYPES
 
 
 all : List DataType
 all =
-    [ Char
-    , VarChar
-    , Text
-    , Bit
-    , VarBit
-    , SmallInt
-    , Integer
-    , BigInt
-    , SmallSerial
-    , Serial
-    , BigSerial
-    , Numeric
-    , Double
-    , Real
-    , Money
-    , Boolean
-    , Date
-    , TimeStamp
-    , Time
+    [ emptyChar
+    , emptyVarChar
+    , emptyText
+    , emptyBit
+    , emptyVarBit
+    , emptySmallInt
+    , emptyInteger
+    , emptyBigInt
+    , emptySmallSerial
+    , emptySerial
+    , emptyBigSerial
+    , emptyNumeric
+    , emptyDouble
+    , emptyReal
+    , emptyMoney
+    , emptyBoolean
+    , emptyDate
+    , emptyTimeStamp
+    , emptyTime
     ]
 
 
 none : DataType
 none =
     NoDataType
+
+
+emptyChar : DataType
+emptyChar =
+    Char Nothing
+
+
+emptyVarChar : DataType
+emptyVarChar =
+    VarChar Nothing
+
+
+emptyText : DataType
+emptyText =
+    Text
+
+
+emptyBit : DataType
+emptyBit =
+    Bit Nothing
+
+
+emptyVarBit : DataType
+emptyVarBit =
+    VarBit Nothing
+
+
+emptySmallInt : DataType
+emptySmallInt =
+    SmallInt
+
+
+emptyInteger : DataType
+emptyInteger =
+    Integer
+
+
+emptyBigInt : DataType
+emptyBigInt =
+    BigInt
+
+
+emptySmallSerial : DataType
+emptySmallSerial =
+    SmallSerial
+
+
+emptySerial : DataType
+emptySerial =
+    Serial
+
+
+emptyBigSerial : DataType
+emptyBigSerial =
+    BigSerial
+
+
+emptyNumeric : DataType
+emptyNumeric =
+    Numeric Nothing Nothing
+
+
+emptyDouble : DataType
+emptyDouble =
+    Double
+
+
+emptyReal : DataType
+emptyReal =
+    Real
+
+
+emptyMoney : DataType
+emptyMoney =
+    Money
+
+
+emptyBoolean : DataType
+emptyBoolean =
+    Boolean
+
+
+emptyDate : DataType
+emptyDate =
+    Date
+
+
+emptyTimeStamp : DataType
+emptyTimeStamp =
+    TimeStamp False
+
+
+emptyTime : DataType
+emptyTime =
+    Time False
+
+
+
+--DEFAULTS
+
+
+defaultSize : Int
+defaultSize =
+    255
+
+
+defaultPrecision : Int
+defaultPrecision =
+    18
+
+
+defaultScale : Int
+defaultScale =
+    0
+
+
+isSame : DataType -> DataType -> Bool
+isSame dataType1 dataType2 =
+    case dataType1 of
+        NoDataType ->
+            case dataType2 of
+                NoDataType ->
+                    True
+
+                _ ->
+                    False
+
+        Char _ ->
+            case dataType2 of
+                Char _ ->
+                    True
+
+                _ ->
+                    False
+
+        VarChar _ ->
+            case dataType2 of
+                VarChar _ ->
+                    True
+
+                _ ->
+                    False
+
+        Text ->
+            case dataType2 of
+                Text ->
+                    True
+
+                _ ->
+                    False
+
+        Bit _ ->
+            case dataType2 of
+                Bit _ ->
+                    True
+
+                _ ->
+                    False
+
+        VarBit _ ->
+            case dataType2 of
+                VarBit _ ->
+                    True
+
+                _ ->
+                    False
+
+        SmallInt ->
+            case dataType2 of
+                SmallInt ->
+                    True
+
+                _ ->
+                    False
+
+        Integer ->
+            case dataType2 of
+                Integer ->
+                    True
+
+                _ ->
+                    False
+
+        BigInt ->
+            case dataType2 of
+                BigInt ->
+                    True
+
+                _ ->
+                    False
+
+        SmallSerial ->
+            case dataType2 of
+                SmallSerial ->
+                    True
+
+                _ ->
+                    False
+
+        Serial ->
+            case dataType2 of
+                Serial ->
+                    True
+
+                _ ->
+                    False
+
+        BigSerial ->
+            case dataType2 of
+                BigSerial ->
+                    True
+
+                _ ->
+                    False
+
+        Numeric _ _ ->
+            case dataType2 of
+                Numeric _ _ ->
+                    True
+
+                _ ->
+                    False
+
+        Double ->
+            case dataType2 of
+                Double ->
+                    True
+
+                _ ->
+                    False
+
+        Real ->
+            case dataType2 of
+                Real ->
+                    True
+
+                _ ->
+                    False
+
+        Money ->
+            case dataType2 of
+                Money ->
+                    True
+
+                _ ->
+                    False
+
+        Boolean ->
+            case dataType2 of
+                Boolean ->
+                    True
+
+                _ ->
+                    False
+
+        Date ->
+            case dataType2 of
+                Date ->
+                    True
+
+                _ ->
+                    False
+
+        TimeStamp _ ->
+            case dataType2 of
+                TimeStamp _ ->
+                    True
+
+                _ ->
+                    False
+
+        Time _ ->
+            case dataType2 of
+                Time _ ->
+                    True
+
+                _ ->
+                    False
 
 
 
@@ -83,8 +361,12 @@ none =
 type alias DataTypeConfig =
     { dataType : DataType
     , id : Int
-    , stringValue : String
-    , initialModifier : Modifier
+    , shortName : String
+    , longName : String
+    , size : Maybe Int
+    , precision : Maybe Int
+    , scale : Maybe Int
+    , withTimezone : Bool
     }
 
 
@@ -94,142 +376,254 @@ toConfig dataType =
         NoDataType ->
             { dataType = NoDataType
             , id = 0
-            , stringValue = ""
-            , initialModifier = NoModifier
+            , shortName = ""
+            , longName = ""
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
-        Char ->
-            { dataType = Char
+        Char size ->
+            { dataType = Char size
             , id = 1
-            , stringValue = "char"
-            , initialModifier = Size Nothing
+            , shortName = "char"
+            , longName = "char (" ++ displaySize size ++ ")"
+            , size = Just <| Maybe.withDefault defaultSize size
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
-        VarChar ->
-            { dataType = VarChar
+        VarChar size ->
+            { dataType = VarChar size
             , id = 2
-            , stringValue = "varchar"
-            , initialModifier = Size Nothing
+            , shortName = "varchar"
+            , longName = "varchar (" ++ displaySize size ++ ")"
+            , size = Just <| Maybe.withDefault defaultSize size
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
         Text ->
             { dataType = Text
             , id = 3
-            , stringValue = "text"
-            , initialModifier = NoModifier
+            , shortName = "text"
+            , longName = "text"
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
-        Bit ->
-            { dataType = Bit
+        Bit size ->
+            { dataType = Bit size
             , id = 4
-            , stringValue = "bit"
-            , initialModifier = Size Nothing
+            , shortName = "bit"
+            , longName = "bit (" ++ displaySize size ++ ")"
+            , size = Just <| Maybe.withDefault defaultSize size
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
-        VarBit ->
-            { dataType = VarBit
+        VarBit size ->
+            { dataType = VarBit size
             , id = 5
-            , stringValue = "varbit"
-            , initialModifier = Size Nothing
+            , shortName = "varbit"
+            , longName = "varbit (" ++ displaySize size ++ ")"
+            , size = Just <| Maybe.withDefault defaultSize size
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
         SmallInt ->
             { dataType = SmallInt
             , id = 6
-            , stringValue = "smallint"
-            , initialModifier = NoModifier
+            , shortName = "smallint"
+            , longName = "smallint"
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
         Integer ->
             { dataType = Integer
             , id = 7
-            , stringValue = "int"
-            , initialModifier = NoModifier
+            , shortName = "int"
+            , longName = "int"
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
         BigInt ->
             { dataType = BigInt
             , id = 8
-            , stringValue = "bigint"
-            , initialModifier = NoModifier
+            , shortName = "bigint"
+            , longName = "bigint"
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
         SmallSerial ->
             { dataType = SmallSerial
             , id = 9
-            , stringValue = "smallserial"
-            , initialModifier = NoModifier
+            , shortName = "smallserial"
+            , longName = "smallserial"
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
         Serial ->
             { dataType = Serial
             , id = 10
-            , stringValue = "serial"
-            , initialModifier = NoModifier
+            , shortName = "serial"
+            , longName = "serial"
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
         BigSerial ->
             { dataType = BigSerial
             , id = 11
-            , stringValue = "bigserial"
-            , initialModifier = NoModifier
+            , shortName = "bigserial"
+            , longName = "bigserial"
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
-        Numeric ->
-            { dataType = Numeric
+        Numeric precision scale ->
+            { dataType = Numeric precision scale
             , id = 12
-            , stringValue = "numeric"
-            , initialModifier = Precision Nothing Nothing
+            , shortName = "numeric"
+            , longName =
+                "numeric ("
+                    ++ displayPrecision precision
+                    ++ ", "
+                    ++ displayScale scale
+                    ++ ")"
+            , size = Nothing
+            , precision = Just <| Maybe.withDefault defaultPrecision precision
+            , scale = Just <| Maybe.withDefault defaultScale scale
+            , withTimezone = False
             }
 
         Double ->
             { dataType = Double
             , id = 13
-            , stringValue = "double"
-            , initialModifier = NoModifier
+            , shortName = "double"
+            , longName = "double"
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
         Real ->
             { dataType = Real
             , id = 14
-            , stringValue = "real"
-            , initialModifier = NoModifier
+            , shortName = "real"
+            , longName = "real"
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
         Money ->
             { dataType = Money
             , id = 15
-            , stringValue = "money"
-            , initialModifier = NoModifier
+            , shortName = "money"
+            , longName = "money"
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
         Boolean ->
             { dataType = Boolean
             , id = 16
-            , stringValue = "bool"
-            , initialModifier = NoModifier
+            , shortName = "bool"
+            , longName = "bool"
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
         Date ->
             { dataType = Date
             , id = 17
-            , stringValue = "date"
-            , initialModifier = NoModifier
+            , shortName = "date"
+            , longName = "date"
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = False
             }
 
-        TimeStamp ->
-            { dataType = TimeStamp
+        TimeStamp withTimezone ->
+            { dataType = TimeStamp withTimezone
             , id = 18
-            , stringValue = "timestamp"
-            , initialModifier = WithTimezone False
+            , shortName = "timestamp"
+            , longName =
+                if withTimezone then
+                    "timestamp with timezone"
+                else
+                    "timestamp without timezone"
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = withTimezone
             }
 
-        Time ->
-            { dataType = Time
+        Time withTimezone ->
+            { dataType = Time withTimezone
             , id = 19
-            , stringValue = "time"
-            , initialModifier = WithTimezone False
+            , shortName = "time"
+            , longName =
+                if withTimezone then
+                    "time with timezone"
+                else
+                    "time without timezone"
+            , size = Nothing
+            , precision = Nothing
+            , scale = Nothing
+            , withTimezone = withTimezone
             }
+
+
+
+-- HELPERS
+
+
+displaySize : Maybe Int -> String
+displaySize =
+    Maybe.withDefault defaultSize >> toString
+
+
+displayPrecision : Maybe Int -> String
+displayPrecision =
+    Maybe.withDefault defaultPrecision >> toString
+
+
+displayScale : Maybe Int -> String
+displayScale =
+    Maybe.withDefault defaultScale >> toString
 
 
 toId : DataType -> Int
@@ -237,146 +631,98 @@ toId =
     toConfig >> .id
 
 
-toStringValue : DataType -> String
-toStringValue =
-    toConfig >> .stringValue
+toShortName : DataType -> String
+toShortName =
+    toConfig >> .shortName
 
 
-toInitialModifier : DataType -> Modifier
-toInitialModifier =
-    toConfig >> .initialModifier
+toLongName : DataType -> String
+toLongName =
+    toConfig >> .longName
+
+
+toSize : DataType -> Maybe Int
+toSize =
+    toConfig >> .size
+
+
+toPrecision : DataType -> Maybe Int
+toPrecision =
+    toConfig >> .precision
+
+
+toScale : DataType -> Maybe Int
+toScale =
+    toConfig >> .scale
+
+
+toWithTimezone : DataType -> Bool
+toWithTimezone =
+    toConfig >> .withTimezone
 
 
 fromId : Int -> Maybe DataType
 fromId id =
     case id of
         1 ->
-            Just Char
+            Just emptyChar
 
         2 ->
-            Just VarChar
+            Just emptyVarChar
 
         3 ->
-            Just Text
+            Just emptyText
 
         4 ->
-            Just Bit
+            Just emptyBit
 
         5 ->
-            Just VarBit
+            Just emptyVarBit
 
         6 ->
-            Just SmallInt
+            Just emptySmallInt
 
         7 ->
-            Just Integer
+            Just emptyInteger
 
         8 ->
-            Just BigInt
+            Just emptyBigInt
 
         9 ->
-            Just SmallSerial
+            Just emptySmallSerial
 
         10 ->
-            Just Serial
+            Just emptySerial
 
         11 ->
-            Just BigSerial
+            Just emptyBigSerial
 
         12 ->
-            Just Numeric
+            Just emptyNumeric
 
         13 ->
-            Just Double
+            Just emptyDouble
 
         14 ->
-            Just Real
+            Just emptyReal
 
         15 ->
-            Just Money
+            Just emptyMoney
 
         16 ->
-            Just Boolean
+            Just emptyBoolean
 
         17 ->
-            Just Date
+            Just emptyDate
 
         18 ->
-            Just TimeStamp
+            Just emptyTimeStamp
 
         19 ->
-            Just Time
+            Just emptyTime
 
         _ ->
             Nothing
-
-
-
--- MODIFIERS
-
-
-type Modifier
-    = NoModifier
-    | Size (Maybe Int)
-    | Precision (Maybe Int) (Maybe Int)
-    | WithTimezone Bool
-
-
-noModifier : Modifier
-noModifier =
-    NoModifier
-
-
-modifierToString : Modifier -> Maybe String
-modifierToString modifier =
-    case modifier of
-        NoModifier ->
-            Nothing
-
-        Size size ->
-            Maybe.map (toString >> (++) "(" >> flip (++) ")") size
-
-        Precision precision decimals ->
-            Maybe.map2
-                (\p s -> "(" ++ toString p ++ ", " ++ toString s ++ ")")
-                precision
-                decimals
-
-        WithTimezone withTimezone ->
-            if withTimezone then
-                Just "with time zone"
-            else
-                Just "without time zone"
-
-
-updateSize : Maybe Int -> Modifier -> Modifier
-updateSize size modifier =
-    case modifier of
-        Size _ ->
-            Size size
-
-        _ ->
-            modifier
-
-
-updatePrecision : Maybe Int -> Maybe Int -> Modifier -> Modifier
-updatePrecision precision decimals modifier =
-    case modifier of
-        Precision _ _ ->
-            Precision precision decimals
-
-        _ ->
-            modifier
-
-
-updateWithTimezone : Bool -> Modifier -> Modifier
-updateWithTimezone withTimezone modifier =
-    case modifier of
-        WithTimezone _ ->
-            WithTimezone withTimezone
-
-        _ ->
-            modifier
 
 
 
@@ -385,80 +731,83 @@ updateWithTimezone withTimezone modifier =
 
 decoder : Decoder DataType
 decoder =
-    JD.map (fromId >> Maybe.withDefault NoDataType) JD.int
+    JD.field "dataTypeId" JD.int
+        |> JD.andThen
+            (fromId >> Maybe.withDefault NoDataType >> dataTypeDecoder)
 
 
-modifierDecoder : Decoder Modifier
-modifierDecoder =
-    JD.oneOf
-        [ sizeDecoder
-        , precisionDecoder
-        , withTimezoneDecoder
-        , JD.succeed NoModifier
-        ]
+dataTypeDecoder : DataType -> Decoder DataType
+dataTypeDecoder dataType =
+    case dataType of
+        Char size ->
+            sizeDecoder Char
+
+        VarChar size ->
+            sizeDecoder VarChar
+
+        Bit size ->
+            sizeDecoder Bit
+
+        VarBit size ->
+            sizeDecoder VarBit
+
+        Numeric precision scale ->
+            precisionScaleDecoder Numeric
+
+        TimeStamp withTimezone ->
+            withTimezoneDecoder TimeStamp
+
+        Time withTimezone ->
+            withTimezoneDecoder Time
+
+        otherType ->
+            JD.succeed otherType
 
 
-sizeDecoder : Decoder Modifier
-sizeDecoder =
-    JD.field "size" (JD.maybe JD.int |> JD.map Size)
+sizeDecoder : (Maybe Int -> DataType) -> Decoder DataType
+sizeDecoder toDataType =
+    JDP.decode toDataType
+        |> JDP.required "size" (JD.maybe JD.int)
 
 
-precisionDecoder : Decoder Modifier
-precisionDecoder =
-    JD.field "precision"
-        (JDP.decode Precision
-            |> JDP.required "precision" (JD.maybe JD.int)
-            |> JDP.required "decimals" (JD.maybe JD.int)
-        )
+precisionScaleDecoder : (Maybe Int -> Maybe Int -> DataType) -> Decoder DataType
+precisionScaleDecoder toDataType =
+    JDP.decode toDataType
+        |> JDP.required "precision" (JD.maybe JD.int)
+        |> JDP.required "scale" (JD.maybe JD.int)
 
 
-withTimezoneDecoder : Decoder Modifier
-withTimezoneDecoder =
-    JD.field "withTimezone" (JD.bool |> JD.map WithTimezone)
+withTimezoneDecoder : (Bool -> DataType) -> Decoder DataType
+withTimezoneDecoder toDataType =
+    JDP.decode toDataType
+        |> JDP.required "withTimezone" JD.bool
 
 
 
 -- ENCODERS
 
 
-encode : DataType -> Value
-encode dataType =
+encode : DataType -> List ( String, Value )
+encode =
+    toConfig >> encodeConfig
+
+
+encodeConfig : DataTypeConfig -> List ( String, Value )
+encodeConfig { dataType, id, size, precision, scale, withTimezone } =
+    [ ( "data_type_id", encodeDataTypeId dataType )
+    , ( "size", encodeNullableInt size )
+    , ( "precision", encodeNullableInt precision )
+    , ( "scale", encodeNullableInt scale )
+    , ( "with_timezone", JE.bool withTimezone )
+    ]
+
+
+encodeDataTypeId : DataType -> Value
+encodeDataTypeId dataType =
     if dataType == NoDataType then
         JE.null
     else
         JE.int (toId dataType)
-
-
-encodeModifier : Modifier -> List ( String, Value )
-encodeModifier modifier =
-    case modifier of
-        NoModifier ->
-            [ ( "size", JE.null )
-            , ( "precision", JE.null )
-            , ( "decimals", JE.null )
-            , ( "with_timezone", JE.null )
-            ]
-
-        Size size ->
-            [ ( "size", encodeNullableInt size )
-            , ( "precision", JE.null )
-            , ( "decimals", JE.null )
-            , ( "with_timezone", JE.null )
-            ]
-
-        Precision precision decimals ->
-            [ ( "size", JE.null )
-            , ( "precision", encodeNullableInt precision )
-            , ( "decimals", encodeNullableInt decimals )
-            , ( "with_timezone", JE.null )
-            ]
-
-        WithTimezone withTimezone ->
-            [ ( "size", JE.null )
-            , ( "precision", JE.null )
-            , ( "decimals", JE.null )
-            , ( "with_timezone", JE.bool withTimezone )
-            ]
 
 
 encodeNullableInt : Maybe Int -> Value

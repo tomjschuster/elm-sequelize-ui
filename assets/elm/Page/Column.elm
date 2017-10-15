@@ -79,8 +79,7 @@ type Msg
     | LoadColumn (Result Http.Error Column)
     | EditColumn
     | InputColumnName String
-    | SelectDataType DataType
-    | UpdateModifier DataType.Modifier
+    | UpdateDataType DataType
     | CancelEditColumn
     | SaveColumn
     | Destroy
@@ -157,21 +156,10 @@ update msg model =
             , AppUpdate.none
             )
 
-        SelectDataType dataType ->
+        UpdateDataType dataType ->
             ( { model
                 | editingColumn =
                     Maybe.map (Column.updateDataType dataType) model.editingColumn
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        UpdateModifier modifier ->
-            ( { model
-                | editingColumn =
-                    Maybe.map
-                        (Column.updateDataTypeModifier modifier)
-                        model.editingColumn
               }
             , Cmd.none
             , AppUpdate.none
@@ -283,8 +271,8 @@ columnChildren editingColumn column =
 
 
 readColumnChildren : Column -> List (Html Msg)
-readColumnChildren { name, dataType, dataTypeModifier } =
-    [ nameTitle name, DTDisplay.view dataType dataTypeModifier ]
+readColumnChildren { name, dataType } =
+    [ nameTitle name, DTDisplay.view dataType ]
 
 
 nameTitle : String -> Html Msg
@@ -292,20 +280,13 @@ nameTitle name =
     h2 [] [ text name ]
 
 
-dtSelectConfig : DTSelect.Config Msg
-dtSelectConfig =
-    { handleDataTypeChange = SelectDataType
-    , handleModifierChange = UpdateModifier
-    }
-
-
 
 -- UPDATE FIELD
 
 
 editingColumnChildren : Column -> List (Html Msg)
-editingColumnChildren { name, dataType, dataTypeModifier } =
-    [ columnNameInput name, DTSelect.view dtSelectConfig dataType dataTypeModifier ]
+editingColumnChildren { name, dataType } =
+    [ columnNameInput name, DTSelect.view UpdateDataType dataType ]
 
 
 columnNameInput : String -> Html Msg
