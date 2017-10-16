@@ -14,24 +14,28 @@ type Index
     = Index (List Int)
 
 
+type ForeignKeyIndex
+    = ForeignKeyIndex (List ( Int, Int ))
+
+
 type PrimaryKey
-    = PrimaryKey String Index
+    = PrimaryKey { id : Int, name : String, index : Index }
 
 
 type NotNull
-    = NotNull String Int
+    = NotNull { id : Int, name : String, columnId : Int }
 
 
 type DefaultValue
-    = DefaultValue String Int String
+    = DefaultValue { id : Int, name : String, columnId : Int, value : String }
 
 
 type UniqueKey
-    = UniqueKey String Index
+    = UniqueKey { id : Int, name : String, index : Index }
 
 
 type ForeignKey
-    = ForeignKey String Index Index
+    = ForeignKey { id : Int, name : String, index : ForeignKeyIndex }
 
 
 empty : Constraints
@@ -54,43 +58,53 @@ idIsIndex id (Index ids) =
     ids == [ id ]
 
 
+idIsForeignKeyIndex : Int -> ForeignKeyIndex -> Bool
+idIsForeignKeyIndex id (ForeignKeyIndex indexPairs) =
+    case indexPairs of
+        [ ( foreignKey, _ ) ] ->
+            foreignKey == id
+
+        _ ->
+            False
+
+
 idInPrimaryKey : Int -> PrimaryKey -> Bool
-idInPrimaryKey id (PrimaryKey _ index) =
+idInPrimaryKey id (PrimaryKey { index }) =
     idInIndex id index
 
 
 idIsNotNull : Int -> NotNull -> Bool
-idIsNotNull id (NotNull _ notNullId) =
-    id == notNullId
+idIsNotNull id (NotNull { columnId }) =
+    id == columnId
 
 
 getDefaultValue : Int -> DefaultValue -> Maybe String
-getDefaultValue id (DefaultValue _ defaultValueId defaultValue) =
-    if defaultValueId == id then
-        Just defaultValue
+getDefaultValue id (DefaultValue { columnId, value }) =
+    if columnId == id then
+        Just value
     else
         Nothing
 
 
 idInUnique : Int -> UniqueKey -> Bool
-idInUnique id (UniqueKey _ index) =
+idInUnique id (UniqueKey { index }) =
     idInIndex id index
 
 
 idIsUnique : Int -> UniqueKey -> Bool
-idIsUnique id (UniqueKey _ index) =
+idIsUnique id (UniqueKey { index }) =
     idIsIndex id index
 
 
 idInSingleForeignKey : Int -> ForeignKey -> Bool
-idInSingleForeignKey id (ForeignKey _ sourceIndex _) =
-    idIsIndex id sourceIndex
+idInSingleForeignKey id (ForeignKey { index }) =
+    idIsForeignKeyIndex id index
 
 
 getSingleReference : ForeignKey -> Maybe Int
-getSingleReference (ForeignKey _ _ (Index ids)) =
-    case ids of
-        [ singleId ] ->
+getSingleReference (ForeignKey { index }) =
+    case index of
+        ForeignKeyIndex [ ( singleId, _ ) ] ->
             Just singleId
 
         _ ->
@@ -118,6 +132,10 @@ defaultColumnConstraints =
     , isUnique = False
     , references = []
     }
+
+
+
+-- CHECK VALUES
 
 
 getColumnConstraints : Int -> Constraints -> ColumnConstraints
@@ -153,3 +171,35 @@ columnIsUnique columnId =
 columnSingleReferences : Int -> List ForeignKey -> List Int
 columnSingleReferences columnId =
     List.filter (idInSingleForeignKey columnId) >> List.filterMap getSingleReference
+
+
+
+-- UPDATE VALUES
+
+
+updateColumnIsPrimaryKey : Bool -> ColumnConstraints -> ColumnConstraints
+updateColumnIsPrimaryKey isPrimaryKey constraints =
+    { constraints | isPrimaryKey = isPrimaryKey }
+
+
+updateColumnIsNotNull : Bool -> ColumnConstraints -> ColumnConstraints
+updateColumnIsNotNull isNotNull constraints =
+    { constraints | isNotNull = isNotNull }
+
+
+updateColumnHasDefaultValue : Bool -> ColumnConstraints -> ColumnConstraints
+updateColumnHasDefaultValue hasDefaultValue constraints =
+    if hasDefaultValue then
+        { constraints | defaultValue = Just "" }
+    else
+        { constraints | defaultValue = Nothing }
+
+
+updateColumnDefaultValue : String -> ColumnConstraints -> ColumnConstraints
+updateColumnDefaultValue defaultValue constraints =
+    { constraints | defaultValue = Just defaultValue }
+
+
+updateColumnIsUnique : Bool -> ColumnConstraints -> ColumnConstraints
+updateColumnIsUnique isUnique constraints =
+    { constraints | isUnique = isUnique }

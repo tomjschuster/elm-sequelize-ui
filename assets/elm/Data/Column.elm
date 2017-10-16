@@ -8,6 +8,7 @@ module Data.Column
         , init
         , removeFromList
         , replaceIfMatch
+        , updateConstraints
         , updateDataType
         , updateName
         )
@@ -75,6 +76,11 @@ replaceIfMatch newColumn column =
         newColumn
     else
         column
+
+
+updateConstraints : ColumnConstraints -> Column -> Column
+updateConstraints constraints column =
+    { column | constraints = constraints }
 
 
 removeFromList : List Column -> Int -> List Column

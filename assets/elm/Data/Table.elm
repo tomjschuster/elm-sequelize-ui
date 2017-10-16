@@ -10,8 +10,9 @@ module Data.Table
         , updateName
         )
 
+import Data.Constraints as Constraints exposing (Constraints)
 import Json.Decode as JD exposing (Decoder, int, string)
-import Json.Decode.Pipeline exposing (decode, optional, required)
+import Json.Decode.Pipeline exposing (decode, hardcoded, optional, required)
 import Json.Encode as JE exposing (Value)
 
 
@@ -19,6 +20,7 @@ type alias Table =
     { id : Int
     , name : String
     , schemaId : Int
+    , constraints : Constraints
     }
 
 
@@ -27,6 +29,7 @@ empty =
     { id = 0
     , name = ""
     , schemaId = 0
+    , constraints = Constraints.empty
     }
 
 
@@ -62,6 +65,7 @@ decoder =
         |> required "id" int
         |> required "name" string
         |> required "schemaId" int
+        |> hardcoded Constraints.empty
 
 
 encode : Table -> Value

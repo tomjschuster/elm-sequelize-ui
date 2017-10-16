@@ -4,6 +4,7 @@ import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Column as Column exposing (Column)
 import Data.Combined as Combined exposing (TableWithAll)
+import Data.Constraints as Constraints exposing (ColumnConstraints, Constraints)
 import Data.DataType as DataType exposing (DataType)
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
@@ -48,11 +49,10 @@ type alias Model =
     { schema : Schema
     , table : Table
     , columns : List Column
+    , constraints : Constraints
     , editingTable : Maybe Table
     , newColumn : Column
-    , newColumnIsPrimaryKey : Bool
-    , newColumnIsNotNull : Bool
-    , newColumnIsUnique : Bool
+    , newColumnConstraints : ColumnConstraints
     , editingColumn : Maybe Column
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
@@ -65,11 +65,10 @@ initialModel =
         Schema.empty
         Table.empty
         []
+        Constraints.empty
         Nothing
         Column.empty
-        False
-        False
-        False
+        Constraints.defaultColumnConstraints
         Nothing
         Nothing
         []
@@ -110,8 +109,10 @@ type Msg
     | InputNewColumnName String
     | SelectNewColumnDataType DataType
     | SetNewColumnPrimaryKey Bool
-    | SetNewColumnNotNull Bool
-    | SetNewColumnUnique Bool
+    | SetNewColumnIsNotNull Bool
+    | SetNewColumnDefaultValue Bool
+    | UpdateNewColumnDefaultValue String
+    | SetNewColumnIsUnique Bool
     | CreateColumn
     | LoadNewColumn (Result Http.Error Column)
       -- UPDATE COLUMN
@@ -163,7 +164,11 @@ update msg model =
 
         -- ENTITY
         LoadTable (Ok table) ->
-            ( { model | table = table, editingTable = Nothing, errors = [] }
+            ( { model
+                | table = table
+                , editingTable = Nothing
+                , errors = []
+              }
             , Cmd.none
             , AppUpdate.none
             )
@@ -243,19 +248,56 @@ update msg model =
             )
 
         SetNewColumnPrimaryKey checked ->
-            ( { model | newColumnIsPrimaryKey = checked }
+            ( { model
+                | newColumnConstraints =
+                    Constraints.updateColumnIsPrimaryKey
+                        checked
+                        model.newColumnConstraints
+              }
             , Cmd.none
             , AppUpdate.none
             )
 
-        SetNewColumnNotNull checked ->
-            ( { model | newColumnIsNotNull = checked }
+        SetNewColumnIsNotNull checked ->
+            ( { model
+                | newColumnConstraints =
+                    Constraints.updateColumnIsNotNull
+                        checked
+                        model.newColumnConstraints
+              }
             , Cmd.none
             , AppUpdate.none
             )
 
-        SetNewColumnUnique checked ->
-            ( { model | newColumnIsUnique = checked }
+        SetNewColumnDefaultValue checked ->
+            ( { model
+                | newColumnConstraints =
+                    Constraints.updateColumnHasDefaultValue
+                        checked
+                        model.newColumnConstraints
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        UpdateNewColumnDefaultValue value ->
+            ( { model
+                | newColumnConstraints =
+                    Constraints.updateColumnDefaultValue
+                        value
+                        model.newColumnConstraints
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        SetNewColumnIsUnique checked ->
+            ( { model
+                | newColumnConstraints =
+                    Constraints.updateColumnIsUnique
+                        checked
+                        model.newColumnConstraints
+              }
             , Cmd.none
             , AppUpdate.none
             )
@@ -492,11 +534,7 @@ columnsChildren : Model -> List (Html Msg)
 columnsChildren model =
     CE.prependIfErrors model.errors
         [ columnsTitle
-        , createColumn
-            model.newColumn
-            model.newColumnIsPrimaryKey
-            model.newColumnIsNotNull
-            model.newColumnIsUnique
+        , createColumn model.newColumn model.newColumnConstraints
         , columnList model.editingColumn model.schema.id model.columns
         ]
 
@@ -510,16 +548,36 @@ columnsTitle =
 -- CREATE COLUMN
 
 
-createColumn : Column -> Bool -> Bool -> Bool -> Html Msg
-createColumn { name, dataType } isPrimaryKey isNotNull isUnique =
+createColumn : Column -> ColumnConstraints -> Html Msg
+createColumn { name, dataType } constraint =
     div
         []
-        [ createColumnInput name
+        [ newColumnInput name
         , DTSelect.view SelectNewColumnDataType dataType
-        , newColumnPrimaryKeyCheckbox isPrimaryKey
-        , newColumnNotNullCheckbox isNotNull
-        , newColumnUniqueCheckbox isUnique
+        , newColumnConstraints constraint
         , createColumnButton
+        ]
+
+
+newColumnInput : String -> Html Msg
+newColumnInput name =
+    input
+        [ id "create-column"
+        , value name
+        , onInput InputNewColumnName
+        , onEnter CreateColumn
+        ]
+        []
+
+
+newColumnConstraints : ColumnConstraints -> Html Msg
+newColumnConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique } =
+    div
+        []
+        [ newColumnPrimaryKeyCheckbox isPrimaryKey
+        , newColumnNotNullCheckbox isNotNull
+        , newColumnDefaultView defaultValue
+        , newColumnUniqueCheckbox isUnique
         ]
 
 
@@ -545,7 +603,7 @@ newColumnNotNullCheckbox isNotNull =
         , input
             [ type_ "checkbox"
             , checked isNotNull
-            , onCheck SetNewColumnNotNull
+            , onCheck SetNewColumnIsNotNull
             ]
             []
         ]
@@ -559,19 +617,47 @@ newColumnUniqueCheckbox isUnique =
         , input
             [ type_ "checkbox"
             , checked isUnique
-            , onCheck SetNewColumnUnique
+            , onCheck SetNewColumnIsUnique
             ]
             []
         ]
 
 
-createColumnInput : String -> Html Msg
-createColumnInput name =
+newColumnDefaultView : Maybe String -> Html Msg
+newColumnDefaultView maybeDefaultValue =
+    case maybeDefaultValue of
+        Just value ->
+            div
+                []
+                [ newColumnDefaultCheckBox True
+                , newColumnDefaultInput value
+                ]
+
+        Nothing ->
+            div
+                []
+                [ newColumnDefaultCheckBox False ]
+
+
+newColumnDefaultCheckBox : Bool -> Html Msg
+newColumnDefaultCheckBox hasDefault =
+    label
+        []
+        [ text "Default Value"
+        , input
+            [ type_ "checkbox"
+            , checked hasDefault
+            , onCheck SetNewColumnDefaultValue
+            ]
+            []
+        ]
+
+
+newColumnDefaultInput : String -> Html Msg
+newColumnDefaultInput defaultValue =
     input
-        [ id "create-column"
-        , value name
-        , onInput InputNewColumnName
-        , onEnter CreateColumn
+        [ value defaultValue
+        , onInput UpdateNewColumnDefaultValue
         ]
         []
 
