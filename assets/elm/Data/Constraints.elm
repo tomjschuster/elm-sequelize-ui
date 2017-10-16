@@ -1,4 +1,15 @@
-module Data.Constraints exposing (..)
+module Data.Constraints
+    exposing
+        ( ColumnConstraints
+        , Constraints
+        , defaultColumnConstraints
+        , empty
+        , updateColumnDefaultValue
+        , updateColumnHasDefaultValue
+        , updateColumnIsNotNull
+        , updateColumnIsPrimaryKey
+        , updateColumnIsUnique
+        )
 
 
 type alias Constraints =
