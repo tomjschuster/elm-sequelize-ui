@@ -117,8 +117,8 @@ encode { id, tableId, name, dataType } =
         ]
 
 
-encodeNew : Column -> Value
-encodeNew { tableId, name, dataType } =
+encodeNew : Column -> ColumnConstraints -> Value
+encodeNew { tableId, name, dataType } constraints =
     JE.object
         [ ( "column"
           , JE.object
@@ -128,4 +128,5 @@ encodeNew { tableId, name, dataType } =
                     ++ DataType.encode dataType
                 )
           )
+        , ( "constraints", Constraints.encodeColumnConstraints constraints )
         ]

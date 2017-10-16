@@ -4,12 +4,15 @@ module Data.Constraints
         , Constraints
         , defaultColumnConstraints
         , empty
+        , encodeColumnConstraints
         , updateColumnDefaultValue
         , updateColumnHasDefaultValue
         , updateColumnIsNotNull
         , updateColumnIsPrimaryKey
         , updateColumnIsUnique
         )
+
+import Json.Encode as JE exposing (Value)
 
 
 type alias Constraints =
@@ -214,3 +217,19 @@ updateColumnDefaultValue defaultValue constraints =
 updateColumnIsUnique : Bool -> ColumnConstraints -> ColumnConstraints
 updateColumnIsUnique isUnique constraints =
     { constraints | isUnique = isUnique }
+
+
+
+-- ENCODE/DECODE
+
+
+encodeColumnConstraints : ColumnConstraints -> Value
+encodeColumnConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique } =
+    JE.object
+        [ ( "is_primary_key", JE.bool isPrimaryKey )
+        , ( "is_not_null", JE.bool isNotNull )
+        , ( "default_value"
+          , defaultValue |> Maybe.map JE.string |> Maybe.withDefault JE.null
+          )
+        , ( "is_unique", JE.bool isUnique )
+        ]

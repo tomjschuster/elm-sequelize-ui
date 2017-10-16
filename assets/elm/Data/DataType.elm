@@ -2,6 +2,10 @@ module Data.DataType
     exposing
         ( DataType(..)
         , all
+        , bitStringGroup
+        , booleanGroup
+        , characterGroup
+        , dateTimeGroup
         , decoder
         , defaultPrecision
         , defaultScale
@@ -9,7 +13,9 @@ module Data.DataType
         , encode
         , fromId
         , isSame
+        , monetaryGroup
         , none
+        , numericGroup
         , toId
         , toLongName
         , toShortName
@@ -33,7 +39,7 @@ type DataType
     | SmallSerial
     | Serial
     | BigSerial
-    | Numeric (Maybe Int) (Maybe Int)
+    | Decimal (Maybe Int) (Maybe Int)
     | Double
     | Real
     | Money
@@ -49,25 +55,72 @@ type DataType
 
 all : List DataType
 all =
-    [ emptyChar
-    , emptyVarChar
-    , emptyText
-    , emptyBit
-    , emptyVarBit
-    , emptySmallInt
-    , emptyInteger
-    , emptyBigInt
-    , emptySmallSerial
-    , emptySerial
-    , emptyBigSerial
-    , emptyNumeric
-    , emptyDouble
-    , emptyReal
-    , emptyMoney
-    , emptyBoolean
-    , emptyDate
-    , emptyTimeStamp
-    , emptyTime
+    [ char
+    , varChar
+    , text
+    , smallInt
+    , integer
+    , bigInt
+    , smallSerial
+    , serial
+    , bigSerial
+    , decimal
+    , double
+    , real
+    , boolean
+    , bit
+    , varBit
+    , money
+    , date
+    , timeStamp
+    , time
+    ]
+
+
+characterGroup : List DataType
+characterGroup =
+    [ char
+    , varChar
+    , text
+    ]
+
+
+numericGroup : List DataType
+numericGroup =
+    [ smallInt
+    , integer
+    , bigInt
+    , smallSerial
+    , serial
+    , bigSerial
+    , decimal
+    , double
+    , real
+    ]
+
+
+booleanGroup : List DataType
+booleanGroup =
+    [ boolean ]
+
+
+bitStringGroup : List DataType
+bitStringGroup =
+    [ bit
+    , varBit
+    ]
+
+
+monetaryGroup : List DataType
+monetaryGroup =
+    [ money ]
+
+
+dateTimeGroup : List DataType
+dateTimeGroup =
+    [ date
+    , timeStamp
+    , time
     ]
 
 
@@ -76,98 +129,98 @@ none =
     NoDataType
 
 
-emptyChar : DataType
-emptyChar =
+char : DataType
+char =
     Char Nothing
 
 
-emptyVarChar : DataType
-emptyVarChar =
+varChar : DataType
+varChar =
     VarChar Nothing
 
 
-emptyText : DataType
-emptyText =
+text : DataType
+text =
     Text
 
 
-emptyBit : DataType
-emptyBit =
+bit : DataType
+bit =
     Bit Nothing
 
 
-emptyVarBit : DataType
-emptyVarBit =
+varBit : DataType
+varBit =
     VarBit Nothing
 
 
-emptySmallInt : DataType
-emptySmallInt =
+smallInt : DataType
+smallInt =
     SmallInt
 
 
-emptyInteger : DataType
-emptyInteger =
+integer : DataType
+integer =
     Integer
 
 
-emptyBigInt : DataType
-emptyBigInt =
+bigInt : DataType
+bigInt =
     BigInt
 
 
-emptySmallSerial : DataType
-emptySmallSerial =
+smallSerial : DataType
+smallSerial =
     SmallSerial
 
 
-emptySerial : DataType
-emptySerial =
+serial : DataType
+serial =
     Serial
 
 
-emptyBigSerial : DataType
-emptyBigSerial =
+bigSerial : DataType
+bigSerial =
     BigSerial
 
 
-emptyNumeric : DataType
-emptyNumeric =
-    Numeric Nothing Nothing
+decimal : DataType
+decimal =
+    Decimal Nothing Nothing
 
 
-emptyDouble : DataType
-emptyDouble =
+double : DataType
+double =
     Double
 
 
-emptyReal : DataType
-emptyReal =
+real : DataType
+real =
     Real
 
 
-emptyMoney : DataType
-emptyMoney =
+money : DataType
+money =
     Money
 
 
-emptyBoolean : DataType
-emptyBoolean =
+boolean : DataType
+boolean =
     Boolean
 
 
-emptyDate : DataType
-emptyDate =
+date : DataType
+date =
     Date
 
 
-emptyTimeStamp : DataType
-emptyTimeStamp =
+timeStamp : DataType
+timeStamp =
     TimeStamp False
 
 
-emptyTime : DataType
-emptyTime =
+time : DataType
+time =
     Time False
 
 
@@ -289,9 +342,9 @@ isSame dataType1 dataType2 =
                 _ ->
                     False
 
-        Numeric _ _ ->
+        Decimal _ _ ->
             case dataType2 of
-                Numeric _ _ ->
+                Decimal _ _ ->
                     True
 
                 _ ->
@@ -505,12 +558,12 @@ toConfig dataType =
             , withTimezone = False
             }
 
-        Numeric precision scale ->
-            { dataType = Numeric precision scale
+        Decimal precision scale ->
+            { dataType = Decimal precision scale
             , id = 12
-            , shortName = "numeric"
+            , shortName = "decimal"
             , longName =
-                "numeric ("
+                "decimal ("
                     ++ displayPrecision precision
                     ++ ", "
                     ++ displayScale scale
@@ -665,61 +718,61 @@ fromId : Int -> Maybe DataType
 fromId id =
     case id of
         1 ->
-            Just emptyChar
+            Just char
 
         2 ->
-            Just emptyVarChar
+            Just varChar
 
         3 ->
-            Just emptyText
+            Just text
 
         4 ->
-            Just emptyBit
+            Just bit
 
         5 ->
-            Just emptyVarBit
+            Just varBit
 
         6 ->
-            Just emptySmallInt
+            Just smallInt
 
         7 ->
-            Just emptyInteger
+            Just integer
 
         8 ->
-            Just emptyBigInt
+            Just bigInt
 
         9 ->
-            Just emptySmallSerial
+            Just smallSerial
 
         10 ->
-            Just emptySerial
+            Just serial
 
         11 ->
-            Just emptyBigSerial
+            Just bigSerial
 
         12 ->
-            Just emptyNumeric
+            Just decimal
 
         13 ->
-            Just emptyDouble
+            Just double
 
         14 ->
-            Just emptyReal
+            Just real
 
         15 ->
-            Just emptyMoney
+            Just money
 
         16 ->
-            Just emptyBoolean
+            Just boolean
 
         17 ->
-            Just emptyDate
+            Just date
 
         18 ->
-            Just emptyTimeStamp
+            Just timeStamp
 
         19 ->
-            Just emptyTime
+            Just time
 
         _ ->
             Nothing
@@ -751,8 +804,8 @@ dataTypeDecoder dataType =
         VarBit size ->
             sizeDecoder VarBit
 
-        Numeric precision scale ->
-            precisionScaleDecoder Numeric
+        Decimal precision scale ->
+            precisionScaleDecoder Decimal
 
         TimeStamp withTimezone ->
             withTimezoneDecoder TimeStamp

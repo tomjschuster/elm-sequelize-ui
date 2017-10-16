@@ -8,6 +8,7 @@
 
 # TODO
 * Constraints
+* Enum Types, Geometric Types
 * Template builder (SQL, Sequelize, Ecto)
 * Elm CSS
 * UI/UX

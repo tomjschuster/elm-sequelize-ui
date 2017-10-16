@@ -286,7 +286,7 @@ nameTitle name =
 
 editingColumnChildren : Column -> List (Html Msg)
 editingColumnChildren { name, dataType } =
-    [ columnNameInput name, DTSelect.view UpdateDataType dataType ]
+    [ columnNameInput name, DTSelect.view "edit-column" UpdateDataType dataType ]
 
 
 columnNameInput : String -> Html Msg

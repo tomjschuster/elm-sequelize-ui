@@ -14,24 +14,28 @@ import Html
         ( Html
         , button
         , div
+        , fieldset
+        , form
         , h2
         , h3
         , input
         , label
+        , legend
         , li
         , main_
         , option
+        , p
         , section
         , select
         , span
         , text
         , ul
         )
-import Html.Attributes exposing (checked, id, selected, type_, value)
+import Html.Attributes exposing (checked, for, id, name, selected, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput)
 import Http
-import Request.Column as RF
-import Request.Table as RE
+import Request.Column as RC
+import Request.Table as RT
 import Router exposing (Route)
 import Task
 import Utils.Handlers exposing (customOnKeyDown, onChangeInt, onEnter)
@@ -83,7 +87,7 @@ type alias InitialData =
 init : Int -> Int -> ( Model, Cmd Msg )
 init schemaId tableId =
     ( { initialModel | newColumn = Column.init tableId }
-    , RE.oneWithAll tableId |> Http.toTask |> Task.attempt LoadTableWithAll
+    , RT.oneWithAll tableId |> Http.toTask |> Task.attempt LoadTableWithAll
     )
 
 
@@ -207,14 +211,14 @@ update msg model =
         SaveTableName ->
             ( model
             , model.editingTable
-                |> Maybe.map (RE.update >> Http.send LoadTable)
+                |> Maybe.map (RT.update >> Http.send LoadTable)
                 |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
 
         Destroy ->
             ( model
-            , RE.destroy model.table.id |> Http.send RemoveTable
+            , RT.destroy model.table.id |> Http.send RemoveTable
             , AppUpdate.none
             )
 
@@ -304,7 +308,8 @@ update msg model =
 
         CreateColumn ->
             ( model
-            , RF.create model.newColumn |> Http.send LoadNewColumn
+            , RC.create model.newColumn model.newColumnConstraints
+                |> Http.send LoadNewColumn
             , AppUpdate.none
             )
 
@@ -312,6 +317,7 @@ update msg model =
             ( { model
                 | columns = model.columns ++ [ column ]
                 , newColumn = Column.init model.table.id
+                , newColumnConstraints = Constraints.defaultColumnConstraints
                 , errors = []
               }
             , Dom.focus "create-column" |> Task.attempt FocusResult
@@ -365,7 +371,7 @@ update msg model =
         SaveEditingColumn ->
             ( model
             , model.editingColumn
-                |> Maybe.map (RF.update >> Http.send UpdateColumn)
+                |> Maybe.map (RC.update >> Http.send UpdateColumn)
                 |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
@@ -388,7 +394,7 @@ update msg model =
 
         DestroyColumn id ->
             ( { model | toDeleteId = Just id }
-            , RF.destroy id |> Http.send RemoveColumn
+            , RC.destroy id |> Http.send RemoveColumn
             , AppUpdate.none
             )
 
@@ -550,34 +556,40 @@ columnsTitle =
 
 createColumn : Column -> ColumnConstraints -> Html Msg
 createColumn { name, dataType } constraint =
-    div
+    form
         []
-        [ newColumnInput name
-        , DTSelect.view SelectNewColumnDataType dataType
-        , newColumnConstraints constraint
-        , createColumnButton
+        [ fieldset []
+            [ legend [] [ text "Create a column" ]
+            , p [] [ newColumnInput name ]
+            , p [] [ DTSelect.view "create-column" SelectNewColumnDataType dataType ]
+            , newColumnConstraints constraint
+            , createColumnButton
+            ]
         ]
 
 
 newColumnInput : String -> Html Msg
 newColumnInput name =
-    input
-        [ id "create-column"
-        , value name
-        , onInput InputNewColumnName
-        , onEnter CreateColumn
+    label []
+        [ text "Name"
+        , input
+            [ id "create-column"
+            , value name
+            , onInput InputNewColumnName
+            , onEnter CreateColumn
+            ]
+            []
         ]
-        []
 
 
 newColumnConstraints : ColumnConstraints -> Html Msg
 newColumnConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique } =
-    div
+    ul
         []
-        [ newColumnPrimaryKeyCheckbox isPrimaryKey
-        , newColumnNotNullCheckbox isNotNull
-        , newColumnDefaultView defaultValue
-        , newColumnUniqueCheckbox isUnique
+        [ li [] [ newColumnPrimaryKeyCheckbox isPrimaryKey ]
+        , li [] [ newColumnNotNullCheckbox isNotNull ]
+        , li [] [ newColumnDefaultView defaultValue ]
+        , li [] [ newColumnUniqueCheckbox isUnique ]
         ]
 
 
@@ -627,30 +639,29 @@ newColumnDefaultView : Maybe String -> Html Msg
 newColumnDefaultView maybeDefaultValue =
     case maybeDefaultValue of
         Just value ->
-            div
+            label
                 []
-                [ newColumnDefaultCheckBox True
+                [ text "Default Value"
+                , newColumnDefaultCheckBox True
                 , newColumnDefaultInput value
                 ]
 
         Nothing ->
-            div
+            label
                 []
-                [ newColumnDefaultCheckBox False ]
+                [ text "Default Value"
+                , newColumnDefaultCheckBox False
+                ]
 
 
 newColumnDefaultCheckBox : Bool -> Html Msg
 newColumnDefaultCheckBox hasDefault =
-    label
-        []
-        [ text "Default Value"
-        , input
-            [ type_ "checkbox"
-            , checked hasDefault
-            , onCheck SetNewColumnDefaultValue
-            ]
-            []
+    input
+        [ type_ "checkbox"
+        , checked hasDefault
+        , onCheck SetNewColumnDefaultValue
         ]
+        []
 
 
 newColumnDefaultInput : String -> Html Msg
@@ -664,7 +675,7 @@ newColumnDefaultInput defaultValue =
 
 createColumnButton : Html Msg
 createColumnButton =
-    button [ onClick CreateColumn ] [ text "Create" ]
+    button [ type_ "button", onClick CreateColumn ] [ text "Create" ]
 
 
 
@@ -731,7 +742,7 @@ getEditingColumnItemChildren column editingColumn =
 editingColumnItemChildren : Column -> List (Html Msg)
 editingColumnItemChildren { name, dataType } =
     [ editColumnNameInput name
-    , DTSelect.view SelectEditingColumnDataType dataType
+    , DTSelect.view "edit-column" SelectEditingColumnDataType dataType
     , cancelEditColumnButton
     , saveEditColumnButton
     ]

@@ -6,6 +6,7 @@ import Data.Combined as Combined
         ( ColumnWithAll
         , ColumnWithTable
         )
+import Data.Constraints as Constraints exposing (ColumnConstraints)
 import Http exposing (Request)
 import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
@@ -20,11 +21,11 @@ columnUrl =
     toString >> (++) columnsUrl
 
 
-create : Column -> Request Column
-create column =
+create : Column -> ColumnConstraints -> Request Column
+create column constraints =
     Http.post
         columnsUrl
-        (Column.encodeNew column |> Http.jsonBody)
+        (Column.encodeNew column constraints |> Http.jsonBody)
         (dataDecoder Column.decoder)
 
 
