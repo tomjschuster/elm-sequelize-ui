@@ -1,6 +1,7 @@
 module Data.Table
     exposing
         ( Table
+        , TableConstraints
         , decoder
         , empty
         , encode
@@ -10,7 +11,14 @@ module Data.Table
         , updateName
         )
 
-import Data.Constraints as Constraints exposing (Constraints)
+import Data.Constraints as Constraints
+    exposing
+        ( DefaultValue
+        , ForeignKey
+        , NotNull
+        , PrimaryKey
+        , UniqueKey
+        )
 import Json.Decode as JD exposing (Decoder, int, string)
 import Json.Decode.Pipeline exposing (decode, hardcoded, optional, required)
 import Json.Encode as JE exposing (Value)
@@ -20,7 +28,7 @@ type alias Table =
     { id : Int
     , name : String
     , schemaId : Int
-    , constraints : Constraints
+    , constraints : TableConstraints
     }
 
 
@@ -29,7 +37,26 @@ empty =
     { id = 0
     , name = ""
     , schemaId = 0
-    , constraints = Constraints.empty
+    , constraints = emptyConstraints
+    }
+
+
+type alias TableConstraints =
+    { primaryKey : Maybe PrimaryKey
+    , notNulls : List NotNull
+    , defaultValues : List DefaultValue
+    , uniqueKeys : List UniqueKey
+    , foreignKeys : List ForeignKey
+    }
+
+
+emptyConstraints : TableConstraints
+emptyConstraints =
+    { primaryKey = Nothing
+    , notNulls = []
+    , defaultValues = []
+    , uniqueKeys = []
+    , foreignKeys = []
     }
 
 
@@ -65,7 +92,7 @@ decoder =
         |> required "id" int
         |> required "name" string
         |> required "schemaId" int
-        |> hardcoded Constraints.empty
+        |> hardcoded emptyConstraints
 
 
 encode : Table -> Value

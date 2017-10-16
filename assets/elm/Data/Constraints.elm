@@ -1,35 +1,19 @@
 module Data.Constraints
     exposing
-        ( ColumnConstraints
-        , Constraints
-        , defaultColumnConstraints
-        , empty
-        , encodeColumnConstraints
-        , updateColumnDefaultValue
-        , updateColumnHasDefaultValue
-        , updateColumnIsNotNull
-        , updateColumnIsPrimaryKey
-        , updateColumnIsUnique
+        ( DefaultValue
+        , ForeignKey
+        , NotNull
+        , PrimaryKey
+        , UniqueKey
+        , defaultValue
+        , inPrimaryKey
+        , inSingleForeignKey
+        , isNotNull
+        , isUnique
+        , singleReference
         )
 
-import Json.Encode as JE exposing (Value)
-
-
-type alias Constraints =
-    { primaryKey : Maybe PrimaryKey
-    , notNulls : List NotNull
-    , defaultValues : List DefaultValue
-    , uniqueKeys : List UniqueKey
-    , foreignKeys : List ForeignKey
-    }
-
-
-type Index
-    = Index (List Int)
-
-
-type ForeignKeyIndex
-    = ForeignKeyIndex (List ( Int, Int ))
+-- CONSTRAINTS
 
 
 type PrimaryKey
@@ -52,71 +36,57 @@ type ForeignKey
     = ForeignKey { id : Int, name : String, index : ForeignKeyIndex }
 
 
-empty : Constraints
-empty =
-    { primaryKey = Nothing
-    , notNulls = []
-    , defaultValues = []
-    , uniqueKeys = []
-    , foreignKeys = []
-    }
+
+-- INDEXES
 
 
-idInIndex : Int -> Index -> Bool
-idInIndex id (Index ids) =
-    List.member id ids
+type Index
+    = Index (List Int)
 
 
-idIsIndex : Int -> Index -> Bool
-idIsIndex id (Index ids) =
-    ids == [ id ]
+type ForeignKeyIndex
+    = ForeignKeyIndex (List ( Int, Int ))
 
 
-idIsForeignKeyIndex : Int -> ForeignKeyIndex -> Bool
-idIsForeignKeyIndex id (ForeignKeyIndex indexPairs) =
-    case indexPairs of
-        [ ( foreignKey, _ ) ] ->
-            foreignKey == id
 
-        _ ->
-            False
+-- EXPOSED FUNCTIONS
 
 
-idInPrimaryKey : Int -> PrimaryKey -> Bool
-idInPrimaryKey id (PrimaryKey { index }) =
-    idInIndex id index
+inPrimaryKey : Int -> PrimaryKey -> Bool
+inPrimaryKey id (PrimaryKey { index }) =
+    inIndex id index
 
 
-idIsNotNull : Int -> NotNull -> Bool
-idIsNotNull id (NotNull { columnId }) =
+isNotNull : Int -> NotNull -> Bool
+isNotNull id (NotNull { columnId }) =
     id == columnId
 
 
-getDefaultValue : Int -> DefaultValue -> Maybe String
-getDefaultValue id (DefaultValue { columnId, value }) =
+defaultValue : Int -> DefaultValue -> Maybe String
+defaultValue id (DefaultValue { columnId, value }) =
     if columnId == id then
         Just value
     else
         Nothing
 
 
-idInUnique : Int -> UniqueKey -> Bool
-idInUnique id (UniqueKey { index }) =
-    idInIndex id index
+inUnique : Int -> UniqueKey -> Bool
+inUnique id (UniqueKey { index }) =
+    inIndex id index
 
 
-idIsUnique : Int -> UniqueKey -> Bool
-idIsUnique id (UniqueKey { index }) =
-    idIsIndex id index
+isUnique : Int -> UniqueKey -> Bool
+isUnique id (UniqueKey { index }) =
+    isIndex id index
 
 
-idInSingleForeignKey : Int -> ForeignKey -> Bool
-idInSingleForeignKey id (ForeignKey { index }) =
-    idIsForeignKeyIndex id index
+inSingleForeignKey : Int -> ForeignKey -> Bool
+inSingleForeignKey id (ForeignKey { index }) =
+    isForeignKeyIndex id index
 
 
-getSingleReference : ForeignKey -> Maybe Int
-getSingleReference (ForeignKey { index }) =
+singleReference : ForeignKey -> Maybe Int
+singleReference (ForeignKey { index }) =
     case index of
         ForeignKeyIndex [ ( singleId, _ ) ] ->
             Just singleId
@@ -126,110 +96,24 @@ getSingleReference (ForeignKey { index }) =
 
 
 
--- COLUMN CONSTRAINTS
+-- HELPERS
 
 
-type alias ColumnConstraints =
-    { isPrimaryKey : Bool
-    , isNotNull : Bool
-    , defaultValue : Maybe String
-    , isUnique : Bool
-    , references : List Int
-    }
+inIndex : Int -> Index -> Bool
+inIndex id (Index ids) =
+    List.member id ids
 
 
-defaultColumnConstraints : ColumnConstraints
-defaultColumnConstraints =
-    { isPrimaryKey = False
-    , isNotNull = False
-    , defaultValue = Nothing
-    , isUnique = False
-    , references = []
-    }
+isIndex : Int -> Index -> Bool
+isIndex id (Index ids) =
+    ids == [ id ]
 
 
+isForeignKeyIndex : Int -> ForeignKeyIndex -> Bool
+isForeignKeyIndex id (ForeignKeyIndex indexPairs) =
+    case indexPairs of
+        [ ( foreignKey, _ ) ] ->
+            foreignKey == id
 
--- CHECK VALUES
-
-
-getColumnConstraints : Int -> Constraints -> ColumnConstraints
-getColumnConstraints columnId constraints =
-    { isPrimaryKey = columnIsPrimaryKey columnId constraints.primaryKey
-    , isNotNull = columnIsNotNull columnId constraints.notNulls
-    , defaultValue = columnDefaultValue columnId constraints.defaultValues
-    , isUnique = columnIsUnique columnId constraints.uniqueKeys
-    , references = columnSingleReferences columnId constraints.foreignKeys
-    }
-
-
-columnIsPrimaryKey : Int -> Maybe PrimaryKey -> Bool
-columnIsPrimaryKey columnId =
-    Maybe.map (idInPrimaryKey columnId) >> Maybe.withDefault False
-
-
-columnIsNotNull : Int -> List NotNull -> Bool
-columnIsNotNull columnId =
-    List.filter (idIsNotNull columnId) >> List.isEmpty >> not
-
-
-columnDefaultValue : Int -> List DefaultValue -> Maybe String
-columnDefaultValue columnId =
-    List.filterMap (getDefaultValue columnId) >> List.head
-
-
-columnIsUnique : Int -> List UniqueKey -> Bool
-columnIsUnique columnId =
-    List.filter (idIsUnique columnId) >> List.isEmpty >> not
-
-
-columnSingleReferences : Int -> List ForeignKey -> List Int
-columnSingleReferences columnId =
-    List.filter (idInSingleForeignKey columnId) >> List.filterMap getSingleReference
-
-
-
--- UPDATE VALUES
-
-
-updateColumnIsPrimaryKey : Bool -> ColumnConstraints -> ColumnConstraints
-updateColumnIsPrimaryKey isPrimaryKey constraints =
-    { constraints | isPrimaryKey = isPrimaryKey }
-
-
-updateColumnIsNotNull : Bool -> ColumnConstraints -> ColumnConstraints
-updateColumnIsNotNull isNotNull constraints =
-    { constraints | isNotNull = isNotNull }
-
-
-updateColumnHasDefaultValue : Bool -> ColumnConstraints -> ColumnConstraints
-updateColumnHasDefaultValue hasDefaultValue constraints =
-    if hasDefaultValue then
-        { constraints | defaultValue = Just "" }
-    else
-        { constraints | defaultValue = Nothing }
-
-
-updateColumnDefaultValue : String -> ColumnConstraints -> ColumnConstraints
-updateColumnDefaultValue defaultValue constraints =
-    { constraints | defaultValue = Just defaultValue }
-
-
-updateColumnIsUnique : Bool -> ColumnConstraints -> ColumnConstraints
-updateColumnIsUnique isUnique constraints =
-    { constraints | isUnique = isUnique }
-
-
-
--- ENCODE/DECODE
-
-
-encodeColumnConstraints : ColumnConstraints -> Value
-encodeColumnConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique } =
-    JE.object
-        [ ( "is_primary_key", JE.bool isPrimaryKey )
-        , ( "is_not_null", JE.bool isNotNull )
-        , ( "default_value"
-          , defaultValue |> Maybe.map JE.string |> Maybe.withDefault JE.null
-          )
-        , ( "is_unique", JE.bool isUnique )
-        ]
+        _ ->
+            False

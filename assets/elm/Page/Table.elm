@@ -2,9 +2,9 @@ module Page.Table exposing (Model, Msg, init, initialModel, update, view)
 
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
-import Data.Column as Column exposing (Column)
+import Data.Column as Column exposing (Column, ColumnConstraints)
 import Data.Combined as Combined exposing (TableWithAll)
-import Data.Constraints as Constraints exposing (ColumnConstraints, Constraints)
+import Data.Constraints as Constraints
 import Data.DataType as DataType exposing (DataType)
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
@@ -42,7 +42,7 @@ import Utils.Handlers exposing (customOnKeyDown, onChangeInt, onEnter)
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
-import Views.Constraints.ColumnFields as CCFields
+import Views.Column.ConstraintFields as CCFields
 import Views.DataType.Display as DTDisplay
 import Views.DataType.Select as DTSelect
 
@@ -54,10 +54,8 @@ type alias Model =
     { schema : Schema
     , table : Table
     , columns : List Column
-    , constraints : Constraints
     , editingTable : Maybe Table
     , newColumn : Column
-    , newColumnConstraints : ColumnConstraints
     , editingColumn : Maybe Column
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
@@ -70,10 +68,8 @@ initialModel =
         Schema.empty
         Table.empty
         []
-        Constraints.empty
         Nothing
         Column.empty
-        Constraints.defaultColumnConstraints
         Nothing
         Nothing
         []
@@ -113,12 +109,7 @@ type Msg
       -- CREATE COLUMN
     | InputNewColumnName String
     | SelectNewColumnDataType DataType
-    | UpdateNewColumnConstraints ColumnConstraints
-    | SetNewColumnPrimaryKey Bool
-    | SetNewColumnIsNotNull Bool
-    | SetNewColumnDefaultValue Bool
-    | UpdateNewColumnDefaultValue String
-    | SetNewColumnIsUnique Bool
+    | UpdateNewColumn Column
     | CreateColumn
     | LoadNewColumn (Result Http.Error Column)
       -- UPDATE COLUMN
@@ -238,6 +229,12 @@ update msg model =
 
         -- COLUMNS
         -- NEW COLUMN
+        UpdateNewColumn column ->
+            ( { model | newColumn = column }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
         InputNewColumnName name ->
             ( { model | newColumn = Column.updateName name model.newColumn }
             , Cmd.none
@@ -253,70 +250,9 @@ update msg model =
             , AppUpdate.none
             )
 
-        UpdateNewColumnConstraints newColumnConstraints ->
-            ( { model | newColumnConstraints = newColumnConstraints }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        SetNewColumnPrimaryKey checked ->
-            ( { model
-                | newColumnConstraints =
-                    Constraints.updateColumnIsPrimaryKey
-                        checked
-                        model.newColumnConstraints
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        SetNewColumnIsNotNull checked ->
-            ( { model
-                | newColumnConstraints =
-                    Constraints.updateColumnIsNotNull
-                        checked
-                        model.newColumnConstraints
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        SetNewColumnDefaultValue checked ->
-            ( { model
-                | newColumnConstraints =
-                    Constraints.updateColumnHasDefaultValue
-                        checked
-                        model.newColumnConstraints
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        UpdateNewColumnDefaultValue value ->
-            ( { model
-                | newColumnConstraints =
-                    Constraints.updateColumnDefaultValue
-                        value
-                        model.newColumnConstraints
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        SetNewColumnIsUnique checked ->
-            ( { model
-                | newColumnConstraints =
-                    Constraints.updateColumnIsUnique
-                        checked
-                        model.newColumnConstraints
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
         CreateColumn ->
             ( model
-            , RC.create model.newColumn model.newColumnConstraints
+            , RC.create model.newColumn
                 |> Http.send LoadNewColumn
             , AppUpdate.none
             )
@@ -325,7 +261,6 @@ update msg model =
             ( { model
                 | columns = model.columns ++ [ column ]
                 , newColumn = Column.init model.table.id
-                , newColumnConstraints = Constraints.defaultColumnConstraints
                 , errors = []
               }
             , Dom.focus "create-column" |> Task.attempt FocusResult
@@ -371,7 +306,10 @@ update msg model =
             )
 
         CancelEditColumn ->
-            ( { model | editingColumn = Nothing, errors = [] }
+            ( { model
+                | editingColumn = Nothing
+                , errors = []
+              }
             , Cmd.none
             , AppUpdate.none
             )
@@ -548,7 +486,7 @@ columnsChildren : Model -> List (Html Msg)
 columnsChildren model =
     CE.prependIfErrors model.errors
         [ columnsTitle
-        , createColumn model.newColumn model.newColumnConstraints
+        , createColumn model.newColumn
         , columnList model.editingColumn model.schema.id model.columns
         ]
 
@@ -562,15 +500,19 @@ columnsTitle =
 -- CREATE COLUMN
 
 
-createColumn : Column -> ColumnConstraints -> Html Msg
-createColumn { name, dataType } constraints =
+createColumn : Column -> Html Msg
+createColumn column =
     form
         []
         [ fieldset []
             [ legend [] [ text "Create a column" ]
-            , p [] [ newColumnInput name ]
-            , p [] [ DTSelect.view "create-column-data-type" SelectNewColumnDataType dataType ]
-            , CCFields.view "create-column-constraints" UpdateNewColumnConstraints constraints
+            , p
+                []
+                [ newColumnInput column.name ]
+            , p
+                []
+                [ DTSelect.view "create-column-data-type" SelectNewColumnDataType column.dataType ]
+            , CCFields.view "create-column-constraints" UpdateNewColumn column
             , createColumnButton
             ]
         ]
@@ -588,44 +530,6 @@ newColumnInput name =
             ]
             []
         ]
-
-
-newColumnDefaultView : Maybe String -> Html Msg
-newColumnDefaultView maybeDefaultValue =
-    case maybeDefaultValue of
-        Just value ->
-            label
-                []
-                [ text "Default Value"
-                , newColumnDefaultCheckBox True
-                , newColumnDefaultInput value
-                ]
-
-        Nothing ->
-            label
-                []
-                [ text "Default Value"
-                , newColumnDefaultCheckBox False
-                ]
-
-
-newColumnDefaultCheckBox : Bool -> Html Msg
-newColumnDefaultCheckBox hasDefault =
-    input
-        [ type_ "checkbox"
-        , checked hasDefault
-        , onCheck SetNewColumnDefaultValue
-        ]
-        []
-
-
-newColumnDefaultInput : String -> Html Msg
-newColumnDefaultInput defaultValue =
-    input
-        [ value defaultValue
-        , onInput UpdateNewColumnDefaultValue
-        ]
-        []
 
 
 createColumnButton : Html Msg
