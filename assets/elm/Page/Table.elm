@@ -42,6 +42,7 @@ import Utils.Handlers exposing (customOnKeyDown, onChangeInt, onEnter)
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
+import Views.Constraints.ColumnFields as CCFields
 import Views.DataType.Display as DTDisplay
 import Views.DataType.Select as DTSelect
 
@@ -112,6 +113,7 @@ type Msg
       -- CREATE COLUMN
     | InputNewColumnName String
     | SelectNewColumnDataType DataType
+    | UpdateNewColumnConstraints ColumnConstraints
     | SetNewColumnPrimaryKey Bool
     | SetNewColumnIsNotNull Bool
     | SetNewColumnDefaultValue Bool
@@ -247,6 +249,12 @@ update msg model =
                 | newColumn =
                     Column.updateDataType dataType model.newColumn
               }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        UpdateNewColumnConstraints newColumnConstraints ->
+            ( { model | newColumnConstraints = newColumnConstraints }
             , Cmd.none
             , AppUpdate.none
             )
@@ -555,14 +563,14 @@ columnsTitle =
 
 
 createColumn : Column -> ColumnConstraints -> Html Msg
-createColumn { name, dataType } constraint =
+createColumn { name, dataType } constraints =
     form
         []
         [ fieldset []
             [ legend [] [ text "Create a column" ]
             , p [] [ newColumnInput name ]
-            , p [] [ DTSelect.view "create-column" SelectNewColumnDataType dataType ]
-            , newColumnConstraints constraint
+            , p [] [ DTSelect.view "create-column-data-type" SelectNewColumnDataType dataType ]
+            , CCFields.view "create-column-constraints" UpdateNewColumnConstraints constraints
             , createColumnButton
             ]
         ]
@@ -577,59 +585,6 @@ newColumnInput name =
             , value name
             , onInput InputNewColumnName
             , onEnter CreateColumn
-            ]
-            []
-        ]
-
-
-newColumnConstraints : ColumnConstraints -> Html Msg
-newColumnConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique } =
-    ul
-        []
-        [ li [] [ newColumnPrimaryKeyCheckbox isPrimaryKey ]
-        , li [] [ newColumnNotNullCheckbox isNotNull ]
-        , li [] [ newColumnDefaultView defaultValue ]
-        , li [] [ newColumnUniqueCheckbox isUnique ]
-        ]
-
-
-newColumnPrimaryKeyCheckbox : Bool -> Html Msg
-newColumnPrimaryKeyCheckbox isPrimaryKey =
-    label
-        []
-        [ text "Primary Key"
-        , input
-            [ type_ "checkbox"
-            , checked isPrimaryKey
-            , onCheck SetNewColumnPrimaryKey
-            ]
-            []
-        ]
-
-
-newColumnNotNullCheckbox : Bool -> Html Msg
-newColumnNotNullCheckbox isNotNull =
-    label
-        []
-        [ text "Not Null"
-        , input
-            [ type_ "checkbox"
-            , checked isNotNull
-            , onCheck SetNewColumnIsNotNull
-            ]
-            []
-        ]
-
-
-newColumnUniqueCheckbox : Bool -> Html Msg
-newColumnUniqueCheckbox isUnique =
-    label
-        []
-        [ text "Unique"
-        , input
-            [ type_ "checkbox"
-            , checked isUnique
-            , onCheck SetNewColumnIsUnique
             ]
             []
         ]
@@ -742,7 +697,7 @@ getEditingColumnItemChildren column editingColumn =
 editingColumnItemChildren : Column -> List (Html Msg)
 editingColumnItemChildren { name, dataType } =
     [ editColumnNameInput name
-    , DTSelect.view "edit-column" SelectEditingColumnDataType dataType
+    , DTSelect.view "edit-column-data-type" SelectEditingColumnDataType dataType
     , cancelEditColumnButton
     , saveEditColumnButton
     ]
