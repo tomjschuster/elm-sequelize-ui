@@ -38,8 +38,8 @@ import Utils.Handlers
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
-import Views.DataType.Display as DTDisplay
-import Views.DataType.Select as DTSelect
+import Views.Column.DataTypeDisplay as DTDisplay
+import Views.Column.DataTypeSelect as DTSelect
 
 
 -- MODEL

@@ -4,7 +4,6 @@ import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Column as Column exposing (Column, ColumnConstraints)
 import Data.Combined as Combined exposing (TableWithAll)
-import Data.Constraints as Constraints
 import Data.DataType as DataType exposing (DataType)
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
@@ -42,9 +41,9 @@ import Utils.Handlers exposing (customOnKeyDown, onChangeInt, onEnter)
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
-import Views.Column.ConstraintFields as CCFields
-import Views.DataType.Display as DTDisplay
-import Views.DataType.Select as DTSelect
+import Views.Column.ConstraintFields as CFields
+import Views.Column.DataTypeDisplay as DTDisplay
+import Views.Column.DataTypeSelect as DTSelect
 
 
 -- MODEL
@@ -107,9 +106,9 @@ type Msg
     | RemoveTable (Result Http.Error ())
       -- COLUMNS
       -- CREATE COLUMN
+    | UpdateNewColumn Column
     | InputNewColumnName String
     | SelectNewColumnDataType DataType
-    | UpdateNewColumn Column
     | CreateColumn
     | LoadNewColumn (Result Http.Error Column)
       -- UPDATE COLUMN
@@ -375,6 +374,7 @@ view model =
     main_ []
         [ breadCrumbs model.schema model.table
         , tableView model.editingTable model.table
+        , createColumn model.newColumn
         , columnsView model
         ]
 
@@ -474,29 +474,6 @@ saveEditTableButton =
 
 
 
--- COLUMNS VIEW
-
-
-columnsView : Model -> Html Msg
-columnsView model =
-    section [] (columnsChildren model)
-
-
-columnsChildren : Model -> List (Html Msg)
-columnsChildren model =
-    CE.prependIfErrors model.errors
-        [ columnsTitle
-        , createColumn model.newColumn
-        , columnList model.editingColumn model.schema.id model.columns
-        ]
-
-
-columnsTitle : Html msg
-columnsTitle =
-    h3 [] [ text "Columns" ]
-
-
-
 -- CREATE COLUMN
 
 
@@ -511,8 +488,15 @@ createColumn column =
                 [ newColumnInput column.name ]
             , p
                 []
-                [ DTSelect.view "create-column-data-type" SelectNewColumnDataType column.dataType ]
-            , CCFields.view "create-column-constraints" UpdateNewColumn column
+                [ DTSelect.view
+                    "create-column-data-type"
+                    SelectNewColumnDataType
+                    column.dataType
+                ]
+            , CFields.view
+                "create-column-constraints"
+                UpdateNewColumn
+                column
             , createColumnButton
             ]
         ]
@@ -538,7 +522,25 @@ createColumnButton =
 
 
 
--- COLUMN LIST
+-- COLUMNS VIEW
+
+
+columnsView : Model -> Html Msg
+columnsView model =
+    section [] (columnsChildren model)
+
+
+columnsChildren : Model -> List (Html Msg)
+columnsChildren model =
+    CE.prependIfErrors model.errors
+        [ columnsTitle
+        , columnList model.editingColumn model.schema.id model.columns
+        ]
+
+
+columnsTitle : Html msg
+columnsTitle =
+    h3 [] [ text "Columns" ]
 
 
 columnList : Maybe Column -> Int -> List Column -> Html Msg
@@ -547,7 +549,7 @@ columnList editingColumn schemaId columns =
 
 
 
--- READ COLUMNS
+-- READ COLUMN ITEM
 
 
 columnItem : Maybe Column -> Int -> Column -> Html Msg
@@ -587,7 +589,7 @@ deleteColumnButton id =
 
 
 
--- UPDATE COLUMNS
+-- WRITE COLUMN CHILD
 
 
 getEditingColumnItemChildren : Column -> Column -> List (Html Msg)
@@ -601,7 +603,10 @@ getEditingColumnItemChildren column editingColumn =
 editingColumnItemChildren : Column -> List (Html Msg)
 editingColumnItemChildren { name, dataType } =
     [ editColumnNameInput name
-    , DTSelect.view "edit-column-data-type" SelectEditingColumnDataType dataType
+    , DTSelect.view
+        "edit-column-data-type"
+        SelectEditingColumnDataType
+        dataType
     , cancelEditColumnButton
     , saveEditColumnButton
     ]
