@@ -113,6 +113,7 @@ type Msg
     | LoadNewColumn (Result Http.Error Column)
       -- UPDATE COLUMN
     | EditColumn Int
+    | UpdateEditingColumn Column
     | InputEditingColumnName String
     | SelectEditingColumnDataType DataType
     | CancelEditColumn
@@ -283,6 +284,12 @@ update msg model =
                 , errors = []
               }
             , Dom.focus "edit-column-name" |> Task.attempt FocusResult
+            , AppUpdate.none
+            )
+
+        UpdateEditingColumn column ->
+            ( { model | editingColumn = Just column }
+            , Cmd.none
             , AppUpdate.none
             )
 
@@ -601,12 +608,16 @@ getEditingColumnItemChildren column editingColumn =
 
 
 editingColumnItemChildren : Column -> List (Html Msg)
-editingColumnItemChildren { name, dataType } =
-    [ editColumnNameInput name
+editingColumnItemChildren column =
+    [ editColumnNameInput column.name
     , DTSelect.view
         "edit-column-data-type"
         SelectEditingColumnDataType
-        dataType
+        column.dataType
+    , CFields.view
+        "create-column-constraints"
+        UpdateEditingColumn
+        column
     , cancelEditColumnButton
     , saveEditColumnButton
     ]
