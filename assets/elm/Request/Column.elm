@@ -7,6 +7,7 @@ import Data.Combined as Combined
         , ColumnWithTable
         )
 import Http exposing (Request)
+import Json.Decode as JD
 import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
 
@@ -25,7 +26,7 @@ create column =
     Http.post
         columnsUrl
         (Column.encodeNew column |> Http.jsonBody)
-        (dataDecoder Column.decoder)
+        (dataDecoder <| JD.field "column" Column.decoder)
 
 
 one : Int -> Request Column

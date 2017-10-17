@@ -5,8 +5,8 @@ defmodule SequelizeUi.Repo.Migrations.CreateSqlConstraint do
     create table(:sql_constraint) do
       add :name, :string
       add :constraint_type_id, references(:constraint_type, on_delete: :nothing), null: false
-      add :table_id, references(:sql_table, on_delete: :nothing), null: false
-      add :schema_id, references(:schema, on_delete: :nothing), null: false
+      add :table_id, references(:sql_table, on_delete: :delete_all), null: false
+      add :schema_id, references(:schema, on_delete: :delete_all), null: false
       add :value, :string
 
       timestamps()

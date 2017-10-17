@@ -4,6 +4,9 @@
 ## In Progress
 
 * Constraints
+  * Decode
+  * View
+  * `Ecto.Multi`
 * Field Order
 
 # TODO

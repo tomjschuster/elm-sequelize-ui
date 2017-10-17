@@ -3,9 +3,9 @@ defmodule SequelizeUi.Repo.Migrations.CreateColumnConstraint do
 
   def change do
     create table(:column_constraint) do
-      add :column_id, references(:sql_column, on_delete: :nothing), null: false
-      add :constraint_id, references(:sql_constraint, on_delete: :nothing), null: false
-      add :references_id, references(:sql_column, on_delete: :nothing)
+      add :column_id, references(:sql_column, on_delete: :delete_all), null: false
+      add :constraint_id, references(:sql_constraint, on_delete: :delete_all), null: false
+      add :references_id, references(:sql_column, on_delete: :delete_all)
 
       timestamps()
     end
