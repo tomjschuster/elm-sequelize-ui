@@ -250,7 +250,7 @@ decoder =
 
 
 encode : Column -> Value
-encode { id, tableId, name, dataType } =
+encode { id, tableId, name, dataType, constraints } =
     JE.object
         [ ( "column"
           , JE.object
@@ -261,6 +261,7 @@ encode { id, tableId, name, dataType } =
                     ++ DataType.encode dataType
                 )
           )
+        , ( "constraints", encodeConstraints constraints )
         ]
 
 
