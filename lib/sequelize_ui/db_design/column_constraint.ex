@@ -4,9 +4,10 @@ defmodule SequelizeUi.DbDesign.ColumnConstraint do
   alias SequelizeUi.DbDesign.ColumnConstraint
 
 
-  schema "sql_column" do
-    field :field_id, :id
+  schema "column_constraint" do
+    field :column_id, :id
     field :constraint_id, :id
+    field :references_id, :id
 
     timestamps()
   end
@@ -14,7 +15,7 @@ defmodule SequelizeUi.DbDesign.ColumnConstraint do
   @doc false
   def changeset(%ColumnConstraint{} = column, attrs) do
     column
-    |> cast(attrs, [])
-    |> validate_required([])
+    |> cast(attrs, [:column_id, :constraint_id, :references_id])
+    |> validate_required([:column_id, :constraint_id])
   end
 end

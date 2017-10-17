@@ -5,11 +5,13 @@ defmodule SequelizeUi.Repo.Migrations.CreateColumnConstraint do
     create table(:column_constraint) do
       add :column_id, references(:sql_column, on_delete: :nothing), null: false
       add :constraint_id, references(:sql_constraint, on_delete: :nothing), null: false
+      add :references_id, references(:sql_column, on_delete: :nothing)
 
       timestamps()
     end
 
     create index(:column_constraint, [:column_id])
     create index(:column_constraint, [:constraint_id])
+    create index(:column_constraint, [:references_id])
   end
 end

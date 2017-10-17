@@ -514,18 +514,131 @@ defmodule SequelizeUi.DbDesign do
     Constraint.changeset(constraint, %{})
   end
 
-  alias SequelizeUi.DbDesign.Constraint
+  alias SequelizeUi.DbDesign.ConstraintType
+
+  def get_constraint_type_id(enum_name) do
+    with %ConstraintType{id: id} <- Repo.get_by(ConstraintType, enum_name: enum_name),
+      do: id
+  end
+
+  def get_table_constraints(table_id) do
+    Repo.all from con in Constraint,
+      join: table in assoc(con, :table),
+      join: col in assoc(con, :columns),
+      join: col_con in assoc(con, :column_constraints),
+      where: con.table_id == ^table_id,
+      preload: [table: table, columns: col, column_constraints: col_con]
+  end
+
+  def create_column_constraints(%Table{} = table, %Column{} = column, params \\ %{}) do
+    with {:ok, pk_constraint} <- create_column_pk(table, column, params),
+         {:ok, nn_constraint} <- create_column_nn(table, column, params),
+         {:ok, dv_constraint} <- create_column_dv(table, column, params),
+         {:ok, uq_constraint} <- create_column_uq(table, column, params),
+         do: :ok
+  end
+
+  defp create_column_pk(_table, _column, %{"is_primary_key" => false}), do: {:ok, nil}
+  defp create_column_pk(%Table{} = table, %Column{} = column, _params) do
+    attrs = constraint_attrs(table, "primary_key")
+    build_constraint(table, column, attrs)
+  end
+
+  defp create_column_nn(_table, _column, %{"is_not_null" => false}), do: {:ok, nil}
+  defp create_column_nn(%Table{} = table, %Column{} = column, _params) do
+    attrs = constraint_attrs(table, "not_null")
+    build_constraint(table, column, attrs)
+  end
+
+  defp create_column_dv(_table, _column, %{"default_value" => nil}), do: {:ok, nil}
+  defp create_column_dv(%Table{} = table, %Column{} = column, params) do
+    attrs = constraint_attrs(table, "default_value", params["default_value"])
+    build_constraint(table, column, attrs)
+  end
+
+  defp create_column_uq(_table, _column, %{"is_unique" => false}), do: {:ok, nil}
+  defp create_column_uq(%Table{} = table, %Column{} = column, _params) do
+    attrs = constraint_attrs(table, "unique_key")
+    build_constraint(table, column, attrs)
+  end
+
+   defp constraint_attrs(%Table{} = table, enum, value \\ nil) do
+    IO.inspect(table)
+    %{
+        constraint_type_id: get_constraint_type_id(enum),
+        table_id: table.id,
+        schema_id: table.schema_id,
+        value: value
+      }
+  end
+
+  defp build_constraint(%Table{} = table, %Column{} = column, attrs) do
+    with {:ok, constraint} <- create_constraint(attrs),
+         col_con_attrs <- con_coll_attrs(column.id, constraint.id),
+         {:ok, column_constraint} <- create_column_constraint(col_con_attrs),
+         do: {:ok, constraint}
+  end
+  defp con_coll_attrs(column_id, constraint_id) do
+    %{column_id: column_id, constraint_id: constraint_id}
+  end
+  def get_column_constraints(column_id) do
+    Repo.all from con in Constraint,
+      join: col in assoc(con, :columns),
+      join: col_con in assoc(con, :column_constraints),
+      group_by: col_con.constraint_id,
+      where: col.id == ^column_id and count(con.id) == 1
+  end
+
+  def delete_column_constraints(column_id) do
+    Repo.delete_all from con in Constraint,
+      join: col in assoc(con, :columns),
+      join: col_con in assoc(con, :column_constraints),
+      group_by: col_con.constraint_id,
+      where: col.id == ^column_id and count(con.id) == 1
+  end
 
   @doc """
-  Returns the list of constraint types.
+  Creates all column constraints described in `params` and returns list of
+  `%Constraint{}`.
 
-  ## Examples
+  ## Example
 
-      iex> list_constraint_types()
-      [%ConstraintType{}, ...]
-
+      iex> with %Column{} = column <- get_column(1),
+      ...>      %{"is_primary_}
+      iex> build_column_constraints
   """
-  def list_constraint_types do
-    Repo.all(ConstraintType)
+  # def build_column_constraints(schema_id, %Column{} = column, params \\ %{}) do
+
+  # end
+
+  # def constraint_types_from_params(params \\ %{}) do
+  #   %{
+  #     "is_primary_key" => primary_key?,
+  #     "is_not_null" => not_null?,
+  #     "default_value" => default_value,
+  #     "is_unique" => unique?
+  #     } = params
+
+  #   pk_id = pk_from_params(params)
+  #   nn_id = nn_from_params(params)
+  #   dv_id = dv_rom_params(params)
+  #   uq_id = uq_from_params
+
+  #   constraints =
+  #     [{pk_from_params(params)}]
+  #   Enum.filter([{pk_id, nil}, {nn_id, nil}, {dv_id, default_value}, {uq_id], &(&1))
+  # end
+
+  # defp pk_from_params(params \\ %{}), do: Map.get(params, "primary_key")
+  # defp nn_from_params(params \\ %{}), do: Map.get(params, "not_null")
+  # defp dv_from_params(params \\ %{}), do: Map.get(params, "default_value")
+  # defp uq_from_params(params \\ %{}), do: Map.get(params, "unique_key")
+  alias SequelizeUi.DbDesign.ColumnConstraint
+
+  def create_column_constraint(attrs \\ %{}) do
+    %ColumnConstraint{}
+    |> ColumnConstraint.changeset(attrs)
+    |> Repo.insert()
   end
 end
+

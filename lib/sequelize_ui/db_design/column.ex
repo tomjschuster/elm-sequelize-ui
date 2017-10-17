@@ -16,6 +16,7 @@ defmodule SequelizeUi.DbDesign.Column do
     belongs_to :table, Table, define_field: false
     belongs_to :data_type, DataType, define_field: false
     many_to_many :constraints, Constraint, join_through: ColumnConstraint
+    has_many :column_constraints, ColumnConstraint, foreign_key: :column_id
 
     timestamps()
   end

@@ -2,7 +2,7 @@ defmodule SequelizeUiWeb.ColumnController do
   use SequelizeUiWeb, :controller
 
   alias SequelizeUi.DbDesign
-  alias SequelizeUi.DbDesign.Column
+  alias SequelizeUi.DbDesign.{Column, Table, Constraint}
 
   action_fallback SequelizeUiWeb.FallbackController
 
@@ -11,12 +11,16 @@ defmodule SequelizeUiWeb.ColumnController do
     render(conn, "index.json", columns: columns)
   end
 
-  def create(conn, %{"column" => column_params}) do
-    with {:ok, %Column{} = column} <- DbDesign.create_column(column_params) do
+  def create(conn, %{"column" => col_params, "constraints" => con_params}) do
+    with {:ok, %Column{} = column} <- DbDesign.create_column(col_params),
+         %Table{} = table <- DbDesign.get_table!(column.table_id),
+         :ok <- DbDesign.create_column_constraints(table, column, con_params),
+         all_constraints <- DbDesign.get_table_constraints(table.id) do
+
       conn
       |> put_status(:created)
       |> put_resp_header("location", column_path(conn, :show, column))
-      |> render("show.json", column: column)
+      |> render("show-with-constraints.json", column: column, constraints: all_constraints)
     end
   end
 

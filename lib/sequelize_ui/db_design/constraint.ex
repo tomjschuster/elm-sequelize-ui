@@ -9,12 +9,14 @@ defmodule SequelizeUi.DbDesign.Constraint do
     field :constraint_type_id, :id
     field :schema_id, :id
     field :table_id, :id
+    field :value, :string
 
     belongs_to :constraint_type, ConstraintType, define_field: false
     belongs_to :schema, Schema, define_field: false
     belongs_to :table, Table, define_field: false
 
     many_to_many :columns, Column, join_through: ColumnConstraint
+    has_many :column_constraints, ColumnConstraint, foreign_key: :constraint_id
 
     timestamps()
   end
@@ -22,8 +24,8 @@ defmodule SequelizeUi.DbDesign.Constraint do
   @doc false
   def changeset(%Constraint{} = constraint, attrs) do
     constraint
-    |> cast(attrs, [:name, :constraint_type_id, :schema_id])
-    |> validate_required([:name, :constraint_type_id, :schema_id])
+    |> cast(attrs, [:name, :constraint_type_id, :schema_id, :table_id, :value])
+    |> validate_required([:constraint_type_id, :schema_id, :table_id])
     |> assoc_constraint(:constraint_type)
     |> assoc_constraint(:schema)
     |> assoc_constraint(:table)
