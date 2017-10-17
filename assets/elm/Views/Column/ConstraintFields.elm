@@ -56,7 +56,7 @@ uniqueCheckbox viewId toMsg column =
             [ id (viewId ++ "-unique")
             , type_ "checkbox"
             , checked column.constraints.isUnique
-            , onDefaultValueCheck toMsg column
+            , onUniqueCheck toMsg column
             ]
             []
         ]
