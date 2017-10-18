@@ -13,27 +13,104 @@ module Data.Constraints
         , singleReference
         )
 
+import Json.Decode as JD exposing (Decoder)
+import Json.Decode.Pipeline exposing (custom, decode, optional, required)
+import Utils.Serialization exposing (listSingletonDecoder)
+
+
 -- CONSTRAINTS
 
 
 type PrimaryKey
-    = PrimaryKey { id : Int, name : String, index : Index }
+    = PrimaryKey ConstraintId ConstraintName Index
 
 
 type NotNull
-    = NotNull { id : Int, name : String, columnId : Int }
+    = NotNull ConstraintId ConstraintName ColumnId
 
 
 type DefaultValue
-    = DefaultValue { id : Int, name : String, columnId : Int, value : String }
+    = DefaultValue ConstraintId ConstraintName ColumnId String
 
 
 type UniqueKey
-    = UniqueKey { id : Int, name : String, index : Index }
+    = UniqueKey ConstraintId ConstraintName Index
 
 
 type ForeignKey
-    = ForeignKey { id : Int, name : String, index : ForeignKeyIndex }
+    = ForeignKey ConstraintId ConstraintName ForeignKeyIndex
+
+
+primaryKeyDecoder : Decoder PrimaryKey
+primaryKeyDecoder =
+    decode PrimaryKey
+        |> custom constraintIdDecoder
+        |> custom constraintNameDecoder
+        |> custom indexDecoder
+
+
+notNullDecoder : Decoder NotNull
+notNullDecoder =
+    decode NotNull
+        |> custom constraintIdDecoder
+        |> custom constraintNameDecoder
+        |> custom columnIdDecoder
+
+
+defaultValueDecoder : Decoder DefaultValue
+defaultValueDecoder =
+    decode DefaultValue
+        |> custom constraintIdDecoder
+        |> custom constraintNameDecoder
+        |> custom columnIdDecoder
+        |> required "value" JD.string
+
+
+uniqueKeyDecoder : Decoder UniqueKey
+uniqueKeyDecoder =
+    decode UniqueKey
+        |> custom constraintIdDecoder
+        |> custom constraintNameDecoder
+        |> custom indexDecoder
+
+
+foreignKeyDecoder : Decoder ForeignKey
+foreignKeyDecoder =
+    decode ForeignKey
+        |> custom constraintIdDecoder
+        |> custom constraintNameDecoder
+        |> custom foreignKeyIndexDecoder
+
+
+
+-- Helper Types
+
+
+type alias ConstraintId =
+    Int
+
+
+type alias ConstraintName =
+    Maybe String
+
+
+type alias ColumnId =
+    Int
+
+
+constraintIdDecoder : Decoder ConstraintId
+constraintIdDecoder =
+    JD.field "id" JD.int
+
+
+constraintNameDecoder : Decoder ConstraintName
+constraintNameDecoder =
+    JD.field "name" (JD.maybe JD.string)
+
+
+columnIdDecoder : Decoder ColumnId
+columnIdDecoder =
+    JD.field "columnId" (JD.list JD.int) |> JD.andThen listSingletonDecoder
 
 
 
@@ -41,52 +118,66 @@ type ForeignKey
 
 
 type Index
-    = Index (List Int)
+    = Index (List ColumnId)
 
 
 type ForeignKeyIndex
-    = ForeignKeyIndex (List ( Int, Int ))
+    = ForeignKeyIndex (List ( ColumnId, ColumnId ))
+
+
+indexDecoder : Decoder Index
+indexDecoder =
+    JD.field "columns" (JD.list (JD.field "columnId" JD.int) |> JD.map Index)
+
+
+foreignKeyIndexDecoder : Decoder ForeignKeyIndex
+foreignKeyIndexDecoder =
+    JD.map2 (,)
+        (JD.field "columnId" JD.int)
+        (JD.field "referencesId" JD.int)
+        |> JD.list
+        |> JD.map ForeignKeyIndex
 
 
 
 -- EXPOSED FUNCTIONS
 
 
-inPrimaryKey : Int -> PrimaryKey -> Bool
-inPrimaryKey id (PrimaryKey { index }) =
+inPrimaryKey : ColumnId -> PrimaryKey -> Bool
+inPrimaryKey id (PrimaryKey _ _ index) =
     inIndex id index
 
 
-isNotNull : Int -> NotNull -> Bool
-isNotNull id (NotNull { columnId }) =
+isNotNull : ColumnId -> NotNull -> Bool
+isNotNull id (NotNull _ _ columnId) =
     id == columnId
 
 
-defaultValue : Int -> DefaultValue -> Maybe String
-defaultValue id (DefaultValue { columnId, value }) =
+defaultValue : ColumnId -> DefaultValue -> Maybe String
+defaultValue id (DefaultValue _ _ columnId value) =
     if columnId == id then
         Just value
     else
         Nothing
 
 
-inUnique : Int -> UniqueKey -> Bool
-inUnique id (UniqueKey { index }) =
+inUnique : ColumnId -> UniqueKey -> Bool
+inUnique id (UniqueKey _ _ index) =
     inIndex id index
 
 
-isUnique : Int -> UniqueKey -> Bool
-isUnique id (UniqueKey { index }) =
+isUnique : ColumnId -> UniqueKey -> Bool
+isUnique id (UniqueKey _ _ index) =
     isIndex id index
 
 
-inSingleForeignKey : Int -> ForeignKey -> Bool
-inSingleForeignKey id (ForeignKey { index }) =
+inSingleForeignKey : ColumnId -> ForeignKey -> Bool
+inSingleForeignKey id (ForeignKey _ _ index) =
     isForeignKeyIndex id index
 
 
-singleReference : ForeignKey -> Maybe Int
-singleReference (ForeignKey { index }) =
+singleReference : ForeignKey -> Maybe ColumnId
+singleReference (ForeignKey _ _ index) =
     case index of
         ForeignKeyIndex [ ( singleId, _ ) ] ->
             Just singleId
@@ -99,17 +190,17 @@ singleReference (ForeignKey { index }) =
 -- HELPERS
 
 
-inIndex : Int -> Index -> Bool
+inIndex : ColumnId -> Index -> Bool
 inIndex id (Index ids) =
     List.member id ids
 
 
-isIndex : Int -> Index -> Bool
+isIndex : ColumnId -> Index -> Bool
 isIndex id (Index ids) =
     ids == [ id ]
 
 
-isForeignKeyIndex : Int -> ForeignKeyIndex -> Bool
+isForeignKeyIndex : ColumnId -> ForeignKeyIndex -> Bool
 isForeignKeyIndex id (ForeignKeyIndex indexPairs) =
     case indexPairs of
         [ ( foreignKey, _ ) ] ->
