@@ -6,11 +6,16 @@ module Data.Constraints
         , PrimaryKey
         , UniqueKey
         , defaultValue
+        , defaultValueDecoder
+        , foreignKeyDecoder
         , inPrimaryKey
         , inSingleForeignKey
         , isNotNull
         , isUnique
+        , notNullDecoder
+        , primaryKeyDecoder
         , singleReference
+        , uniqueKeyDecoder
         )
 
 import Json.Decode as JD exposing (Decoder)

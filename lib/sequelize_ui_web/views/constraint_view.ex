@@ -10,24 +10,30 @@ defmodule SequelizeUiWeb.ConstraintView do
     %{data: render_one(constraint, ConstraintView, "constraint.json")}
   end
 
-  def render("constraints.json", %{constraints: constraints}) do
-    Enum.group_by(
-      constraints,
-      &get_camel_enum/1,
-      &render_one(&1, ConstraintView, "constraint.json")
-    )
+  def render("table-constraints.json", %{constraints: constraints}) do
+    table_constraints =
+      Enum.group_by(
+        constraints,
+        &(&1.constraint_type.enum_name),
+        &render_one(&1, ConstraintView, "constraint.json")
+      )
+    %{primaryKey: table_constraints |> Map.get("primary_key") |> List.first,
+      notNulls: table_constraints |> Map.get("not_null", []),
+      defaultValues: table_constraints |> Map.get("default_value", []),
+      uniqueKey: table_constraints |> Map.get("unique_key", []),
+      foreignKeys: table_constraints |> Map.get("foreign_key", [])}
   end
 
   def render("constraint.json", %{constraint: constraint}) do
-
     %{id: constraint.id,
       name: constraint.name,
       constraintTypeId: constraint.constraint_type_id,
       value: constraint.value,
-      columns: render_many(constraint.column_constraints, ColumnConstraintView, "column-constraint.json")}
-  end
-
-  defp get_camel_enum(constraint) do
-    constraint.constraint_type.enum_name |> Recase.to_camel()
+      columns:
+        render_many(
+          constraint.column_constraints,
+          ColumnConstraintView,
+          "column-constraint.json"
+        )}
   end
 end

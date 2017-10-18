@@ -19,8 +19,8 @@ import Data.Constraints as Constraints
         , PrimaryKey
         , UniqueKey
         )
-import Json.Decode as JD exposing (Decoder, int, string)
-import Json.Decode.Pipeline exposing (decode, hardcoded, optional, required)
+import Json.Decode as JD exposing (Decoder)
+import Json.Decode.Pipeline exposing (decode, required)
 import Json.Encode as JE exposing (Value)
 
 
@@ -89,15 +89,20 @@ replaceIfMatch newTable table =
 decoder : Decoder Table
 decoder =
     decode Table
-        |> required "id" int
-        |> required "name" string
-        |> required "schemaId" int
-        |> hardcoded emptyConstraints
+        |> required "id" JD.int
+        |> required "name" JD.string
+        |> required "schemaId" JD.int
+        |> required "constraints" constraintsDecoder
 
 
 constraintsDecoder : Decoder TableConstraints
 constraintsDecoder =
-    JD.succeed emptyConstraints
+    decode TableConstraints
+        |> required "primaryKey" (JD.maybe Constraints.primaryKeyDecoder)
+        |> required "notNulls" (JD.list Constraints.notNullDecoder)
+        |> required "defaultValues" (JD.list Constraints.defaultValueDecoder)
+        |> required "uniqueKeys" (JD.list Constraints.uniqueKeyDecoder)
+        |> required "foreignKeys" (JD.list Constraints.foreignKeyDecoder)
 
 
 encode : Table -> Value

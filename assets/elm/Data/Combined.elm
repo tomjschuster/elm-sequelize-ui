@@ -129,6 +129,7 @@ tableWithAllDecoder =
         |> required "table" Table.decoder
         |> required "schema" Schema.decoder
         |> required "columns" (JD.list Column.decoder)
+        |> required "constraints" Table.constraintsDecoder
 
 
 type alias ColumnWithTable =

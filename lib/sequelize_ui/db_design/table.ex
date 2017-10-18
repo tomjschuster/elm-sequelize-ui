@@ -10,7 +10,7 @@ defmodule SequelizeUi.DbDesign.Table do
 
     belongs_to :schema, Schema, define_field: false
     has_many :columns, Column
-    has_many :constraints, Constraint
+    has_many :constraints, Constraint, foreign_key: :table_id
 
     timestamps()
   end

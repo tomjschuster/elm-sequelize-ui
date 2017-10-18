@@ -207,11 +207,14 @@ defmodule SequelizeUi.DbDesign do
       ** (Ecto.NoResultsError)
   """
   def get_table_with_all!(id) do
-    Repo.one! from e in Table,
-      join: s in assoc(e, :schema),
-      left_join: f in assoc(e, :columns),
-      where: e.id == ^id,
-      preload: [schema: s, columns: f]
+    Repo.one! from t in Table,
+      join: s in assoc(t, :schema),
+      left_join: col in assoc(t, :columns),
+      left_join: con in assoc(t, :constraints),
+      left_join: col_con in assoc(con, :column_constraints),
+      join: con_type in assoc(con, :constraint_type),
+      where: t.id == ^id,
+      preload: [schema: s, columns: col, constraints: {con, [column_constraints: col_con, constraint_type: con_type]}]
   end
 
   @doc """

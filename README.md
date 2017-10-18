@@ -4,12 +4,13 @@
 ## In Progress
 
 * Constraints
-  * Decode
+  * Logic for updating/reading primary key
   * View
   * `Ecto.Multi`
+  * Associations
 * Field Order
 
-# TODO
+# Todo
 * Constraints
 * Comments
 * Enum Types, Geometric Types
