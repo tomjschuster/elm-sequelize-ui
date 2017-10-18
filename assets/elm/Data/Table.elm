@@ -95,6 +95,11 @@ decoder =
         |> hardcoded emptyConstraints
 
 
+constraintsDecoder : Decoder TableConstraints
+constraintsDecoder =
+    JD.succeed emptyConstraints
+
+
 encode : Table -> Value
 encode table =
     JE.object

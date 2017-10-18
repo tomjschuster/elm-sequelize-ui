@@ -17,7 +17,7 @@ defmodule SequelizeUiWeb.ColumnView do
 
   def render("show-with-constraints.json", %{column: column, constraints: constraints}) do
     %{data: %{column: render_one(column, ColumnView, "column.json"),
-              constraints: render_many(constraints, ConstraintView, "constraint.json")}}
+              constraints: render(ConstraintView, "constraints.json", constraints: constraints)}}
   end
 
   def render("show-with-all.json", %{column: column}) do

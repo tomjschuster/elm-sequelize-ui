@@ -526,8 +526,9 @@ defmodule SequelizeUi.DbDesign do
       join: table in assoc(con, :table),
       join: col in assoc(con, :columns),
       join: col_con in assoc(con, :column_constraints),
+      join: type in assoc(con, :constraint_type),
       where: con.table_id == ^table_id,
-      preload: [table: table, columns: col, column_constraints: col_con]
+      preload: [table: table, columns: col, column_constraints: col_con, constraint_type: type]
   end
 
   def create_column_constraints(%Table{} = table, %Column{} = column, params \\ %{}) do
@@ -563,7 +564,6 @@ defmodule SequelizeUi.DbDesign do
   end
 
    defp constraint_attrs(%Table{} = table, enum, value \\ nil) do
-    IO.inspect(table)
     %{
         constraint_type_id: get_constraint_type_id(enum),
         table_id: table.id,
