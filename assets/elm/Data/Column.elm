@@ -19,9 +19,16 @@ module Data.Column
         , updateName
         )
 
-import Data.Constraints as Constraints exposing (DefaultValue, ForeignKey, NotNull, PrimaryKey, UniqueKey)
+import Data.Constraints as Constraints
+    exposing
+        ( Constraints
+        , DefaultValue
+        , ForeignKey
+        , NotNull
+        , PrimaryKey
+        , UniqueKey
+        )
 import Data.DataType as DataType exposing (DataType)
-import Data.Table as Table exposing (TableConstraints)
 import Json.Decode as JD exposing (Decoder, int, maybe, string)
 import Json.Decode.Pipeline exposing (custom, decode, hardcoded, optional, required)
 import Json.Encode as JE exposing (Value)
@@ -88,7 +95,7 @@ replaceIfMatch newColumn column =
         column
 
 
-findConstraints : Int -> TableConstraints -> ColumnConstraints
+findConstraints : Int -> Constraints -> ColumnConstraints
 findConstraints columnId tableConstraints =
     { isPrimaryKey = isPrimaryKey columnId tableConstraints
     , isNotNull = isNotNull columnId tableConstraints
@@ -198,14 +205,14 @@ updateConstraintsIsUnique isUnique constraints =
 -- HELPERS
 
 
-isPrimaryKey : Int -> TableConstraints -> Bool
+isPrimaryKey : Int -> Constraints -> Bool
 isPrimaryKey columnId =
     .primaryKey
         >> Maybe.map (Constraints.inPrimaryKey columnId)
         >> Maybe.withDefault False
 
 
-isNotNull : Int -> TableConstraints -> Bool
+isNotNull : Int -> Constraints -> Bool
 isNotNull columnId =
     .notNulls
         >> List.filter (Constraints.isNotNull columnId)
@@ -213,14 +220,14 @@ isNotNull columnId =
         >> not
 
 
-defaultValue : Int -> TableConstraints -> Maybe String
+defaultValue : Int -> Constraints -> Maybe String
 defaultValue columnId =
     .defaultValues
         >> List.filterMap (Constraints.defaultValue columnId)
         >> List.head
 
 
-isUnique : Int -> TableConstraints -> Bool
+isUnique : Int -> Constraints -> Bool
 isUnique columnId =
     .uniqueKeys
         >> List.filter (Constraints.isUnique columnId)
@@ -228,7 +235,7 @@ isUnique columnId =
         >> not
 
 
-singleReferences : Int -> TableConstraints -> List Int
+singleReferences : Int -> Constraints -> List Int
 singleReferences columnId =
     .foreignKeys
         >> List.filter (Constraints.inSingleForeignKey columnId)

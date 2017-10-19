@@ -17,12 +17,14 @@ module Data.Combined
         , tableWithColumnsDecoder
         , tableWithSchemaDecoder
         , withColumns
+        , withConstraints
         , withSchema
         , withTable
         , withTables
         )
 
 import Data.Column as Column exposing (Column)
+import Data.Constraints as Constraints exposing (Constraints)
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
 import Json.Decode as JD exposing (Decoder)
@@ -55,6 +57,11 @@ withTables =
 withColumns : String -> String
 withColumns =
     with "columns"
+
+
+withConstraints : String -> String
+withConstraints =
+    with "constraints"
 
 
 andWith : String -> String -> String
@@ -120,7 +127,7 @@ tableWithColumnsDecoder =
 
 
 type alias TableWithAll =
-    { table : Table, schema : Schema, columns : List Column }
+    { table : Table, schema : Schema, columns : List Column, constraints : Constraints }
 
 
 tableWithAllDecoder : Decoder TableWithAll
@@ -129,7 +136,7 @@ tableWithAllDecoder =
         |> required "table" Table.decoder
         |> required "schema" Schema.decoder
         |> required "columns" (JD.list Column.decoder)
-        |> required "constraints" Table.constraintsDecoder
+        |> required "constraints" Constraints.decoder
 
 
 type alias ColumnWithTable =

@@ -17,10 +17,10 @@ defmodule SequelizeUiWeb.ConstraintView do
         &(&1.constraint_type.enum_name),
         &render_one(&1, ConstraintView, "constraint.json")
       )
-    %{primaryKey: table_constraints |> Map.get("primary_key") |> List.first,
+    %{primaryKey: table_constraints |> Map.get("primary_key", []) |> List.first,
       notNulls: table_constraints |> Map.get("not_null", []),
       defaultValues: table_constraints |> Map.get("default_value", []),
-      uniqueKey: table_constraints |> Map.get("unique_key", []),
+      uniqueKeys: table_constraints |> Map.get("unique_key", []),
       foreignKeys: table_constraints |> Map.get("foreign_key", [])}
   end
 

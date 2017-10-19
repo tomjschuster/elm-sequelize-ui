@@ -212,7 +212,7 @@ defmodule SequelizeUi.DbDesign do
       left_join: col in assoc(t, :columns),
       left_join: con in assoc(t, :constraints),
       left_join: col_con in assoc(con, :column_constraints),
-      join: con_type in assoc(con, :constraint_type),
+      left_join: con_type in assoc(con, :constraint_type),
       where: t.id == ^id,
       preload: [schema: s, columns: col, constraints: {con, [column_constraints: col_con, constraint_type: con_type]}]
   end

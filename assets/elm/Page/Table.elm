@@ -4,6 +4,7 @@ import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Column as Column exposing (Column, ColumnConstraints)
 import Data.Combined as Combined exposing (TableWithAll)
+import Data.Constraints as Constraints exposing (Constraints)
 import Data.DataType as DataType exposing (DataType)
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
@@ -38,6 +39,7 @@ import Request.Table as RT
 import Router exposing (Route)
 import Task
 import Utils.Handlers exposing (customOnKeyDown, onChangeInt, onEnter)
+import Utils.Http exposing (isUnprocessableEntity)
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
@@ -53,6 +55,7 @@ type alias Model =
     { schema : Schema
     , table : Table
     , columns : List Column
+    , constraints : Constraints
     , editingTable : Maybe Table
     , newColumn : Column
     , editingColumn : Maybe Column
@@ -67,6 +70,7 @@ initialModel =
         Schema.empty
         Table.empty
         []
+        Constraints.empty
         Nothing
         Column.empty
         Nothing
@@ -96,7 +100,7 @@ type Msg
     | FocusResult (Result Dom.Error ())
     | Goto Route
     | LoadTableWithAll (Result Http.Error TableWithAll)
-      -- ENTITY
+      -- TABLE
     | LoadTable (Result Http.Error Table)
     | EditTable
     | InputTableName String
@@ -142,11 +146,12 @@ update msg model =
             , AppUpdate.none
             )
 
-        LoadTableWithAll (Ok { schema, table, columns }) ->
+        LoadTableWithAll (Ok { schema, table, columns, constraints }) ->
             ( { model
                 | table = table
                 , schema = schema
                 , columns = columns
+                , constraints = constraints
                 , errors = []
               }
             , Cmd.none
@@ -154,12 +159,15 @@ update msg model =
             )
 
         LoadTableWithAll (Err error) ->
-            ( { model | errors = ChangesetError.parseHttpError error }
-            , Cmd.none
-            , AppUpdate.none
-            )
+            if isUnprocessableEntity error then
+                ( { model | errors = ChangesetError.parseHttpError error }
+                , Cmd.none
+                , AppUpdate.none
+                )
+            else
+                ( model, Cmd.none, AppUpdate.httpError error )
 
-        -- ENTITY
+        -- TABLE
         LoadTable (Ok table) ->
             ( { model
                 | table = table
@@ -171,10 +179,13 @@ update msg model =
             )
 
         LoadTable (Err error) ->
-            ( { model | errors = ChangesetError.parseHttpError error }
-            , Cmd.none
-            , AppUpdate.none
-            )
+            if isUnprocessableEntity error then
+                ( { model | errors = ChangesetError.parseHttpError error }
+                , Cmd.none
+                , AppUpdate.none
+                )
+            else
+                ( model, Cmd.none, AppUpdate.httpError error )
 
         EditTable ->
             ( { model
@@ -392,7 +403,7 @@ breadCrumbs schema table =
 
 
 
--- ENTITY VIEW
+-- TABLE VIEW
 
 
 tableView : Maybe Table -> Table -> Html Msg
@@ -408,7 +419,7 @@ tableChildren editingTable table =
 
 
 
--- READ ENTITY
+-- READ TABLE
 
 
 readTableChildren : Table -> List (Html Msg)
@@ -435,7 +446,7 @@ deleteTableButton =
 
 
 
--- UPDATE ENTITY
+-- UPDATE TABLE
 
 
 editingTableChildren : Table -> List (Html Msg)

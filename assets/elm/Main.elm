@@ -146,8 +146,11 @@ updatePage msg page =
 handleAppUpdate : AppUpdate -> Model -> Cmd Msg -> ( Model, Cmd Msg )
 handleAppUpdate appUpdate model cmd =
     case appUpdate of
-        AppUpdate.DisplayError error ->
-            ( { model | error = Just error }, cmd )
+        AppUpdate.GeneralError error ->
+            ( { model | error = Just error }, Cmd.none )
+
+        AppUpdate.HttpError error ->
+            ( { model | error = Just (toString error) }, cmd )
 
         AppUpdate.HideError ->
             ( { model | error = Nothing }, cmd )
@@ -185,14 +188,20 @@ subscriptions model =
 
 
 view : Model -> Html Msg
-view =
-    pageView >> Html.map PageMsg >> layout
+view model =
+    model |> pageView |> Html.map PageMsg |> layout model
 
 
-layout : Html Msg -> Html Msg
-layout content =
+errorView : Maybe String -> Html msg
+errorView error =
+    Maybe.withDefault "" error |> text
+
+
+layout : Model -> Html Msg -> Html Msg
+layout model content =
     div []
-        [ header []
+        [ errorView model.error
+        , header []
             [ headerLink ]
         , content
         , footer []

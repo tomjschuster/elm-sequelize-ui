@@ -1,12 +1,15 @@
 module Data.Constraints
     exposing
-        ( DefaultValue
+        ( Constraints
+        , DefaultValue
         , ForeignKey
         , NotNull
         , PrimaryKey
         , UniqueKey
+        , decoder
         , defaultValue
         , defaultValueDecoder
+        , empty
         , foreignKeyDecoder
         , inPrimaryKey
         , inSingleForeignKey
@@ -24,6 +27,35 @@ import Utils.Serialization exposing (listSingletonDecoder)
 
 
 -- CONSTRAINTS
+
+
+type alias Constraints =
+    { primaryKey : Maybe PrimaryKey
+    , notNulls : List NotNull
+    , defaultValues : List DefaultValue
+    , uniqueKeys : List UniqueKey
+    , foreignKeys : List ForeignKey
+    }
+
+
+empty : Constraints
+empty =
+    { primaryKey = Nothing
+    , notNulls = []
+    , defaultValues = []
+    , uniqueKeys = []
+    , foreignKeys = []
+    }
+
+
+decoder : Decoder Constraints
+decoder =
+    decode Constraints
+        |> required "primaryKey" (JD.maybe primaryKeyDecoder)
+        |> required "notNulls" (JD.list notNullDecoder)
+        |> required "defaultValues" (JD.list defaultValueDecoder)
+        |> required "uniqueKeys" (JD.list uniqueKeyDecoder)
+        |> required "foreignKeys" (JD.list foreignKeyDecoder)
 
 
 type PrimaryKey
@@ -59,7 +91,7 @@ notNullDecoder =
     decode NotNull
         |> custom constraintIdDecoder
         |> custom constraintNameDecoder
-        |> custom columnIdDecoder
+        |> custom singleColumnDecoder
 
 
 defaultValueDecoder : Decoder DefaultValue
@@ -67,7 +99,7 @@ defaultValueDecoder =
     decode DefaultValue
         |> custom constraintIdDecoder
         |> custom constraintNameDecoder
-        |> custom columnIdDecoder
+        |> custom singleColumnDecoder
         |> required "value" JD.string
 
 
@@ -113,9 +145,14 @@ constraintNameDecoder =
     JD.field "name" (JD.maybe JD.string)
 
 
+singleColumnDecoder : Decoder ColumnId
+singleColumnDecoder =
+    JD.field "columns" (JD.list columnIdDecoder) |> JD.andThen listSingletonDecoder
+
+
 columnIdDecoder : Decoder ColumnId
 columnIdDecoder =
-    JD.field "columnId" (JD.list JD.int) |> JD.andThen listSingletonDecoder
+    JD.field "columnId" JD.int
 
 
 

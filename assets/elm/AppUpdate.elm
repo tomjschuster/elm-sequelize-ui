@@ -1,15 +1,23 @@
-module AppUpdate exposing (AppUpdate(..), displayError, hideError, none)
+module AppUpdate exposing (AppUpdate(..), generalError, hideError, httpError, none)
+
+import Http
 
 
 type AppUpdate
-    = DisplayError String
+    = GeneralError String
+    | HttpError Http.Error
     | HideError
     | None
 
 
-displayError : String -> AppUpdate
-displayError =
-    DisplayError
+generalError : String -> AppUpdate
+generalError =
+    GeneralError
+
+
+httpError : Http.Error -> AppUpdate
+httpError =
+    HttpError
 
 
 hideError : AppUpdate

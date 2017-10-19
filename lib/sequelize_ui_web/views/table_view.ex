@@ -12,10 +12,10 @@ defmodule SequelizeUiWeb.TableView do
 
   def render("show-with-all.json", %{table: table}) do
     IO.inspect table
-    %{data: %{table: render(TableView, "table-with-constraints.json", table: table),
+    %{data: %{table: render(TableView, "table.json", table: table),
               schema: render_one(table.schema, SchemaView, "schema.json"),
-              columns: render_many(table.columns, ColumnView, "column.json")}}
-              # constraints: render(ConstraintView, "table-constraints.json", constraints: table.constraints)}}
+              columns: render_many(table.columns, ColumnView, "column.json"),
+              constraints: render(ConstraintView, "table-constraints.json", constraints: table.constraints)}}
   end
 
   def render("show-with-schema.json", %{table: table}) do

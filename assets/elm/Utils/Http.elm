@@ -4,6 +4,7 @@ module Utils.Http
         , dataDecoder
         , delete
         , errorBody
+        , isUnprocessableEntity
         , isUnprocessableTable
         , put
         )
@@ -113,3 +114,13 @@ errorBody error =
 dataDecoder : Decoder a -> Decoder a
 dataDecoder decoder =
     JD.field "data" decoder
+
+
+isUnprocessableEntity : Http.Error -> Bool
+isUnprocessableEntity error =
+    case error of
+        Http.BadStatus { status } ->
+            status.code == 422
+
+        _ ->
+            False
