@@ -544,8 +544,20 @@ defmodule SequelizeUi.DbDesign do
 
   defp create_column_pk(_table, _column, %{"is_primary_key" => false}), do: {:ok, nil}
   defp create_column_pk(%Table{} = table, %Column{} = column, _params) do
-    attrs = constraint_attrs(table, "primary_key")
-    build_constraint(table, column, attrs)
+    case get_pks(table.id) do
+      [pk | _rest] ->
+        add_primary_key(column, pk)
+      [] ->
+        attrs = constraint_attrs(table, "primary_key")
+        build_constraint(table, column, attrs)
+    end
+
+  end
+
+  defp get_pks(table_id) do
+    Repo.all from con in Constraint,
+      join: type in assoc(con, :constraint_type),
+      where: type.enum_name == "primary_key" and con.table_id == ^table_id
   end
 
   defp create_column_nn(_table, _column, %{"is_not_null" => false}), do: {:ok, nil}
@@ -581,6 +593,13 @@ defmodule SequelizeUi.DbDesign do
          {:ok, column_constraint} <- create_column_constraint(col_con_attrs),
          do: {:ok, constraint}
   end
+
+  defp add_primary_key(%Column{} = column, %Constraint{} = constraint) do
+    with col_con_attrs <- con_coll_attrs(column.id, constraint.id),
+     {:ok, column_constraint} <- create_column_constraint(col_con_attrs),
+     do: {:ok, constraint}
+  end
+
   defp con_coll_attrs(column_id, constraint_id) do
     %{column_id: column_id, constraint_id: constraint_id}
   end

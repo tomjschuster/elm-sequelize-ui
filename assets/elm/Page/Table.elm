@@ -3,7 +3,7 @@ module Page.Table exposing (Model, Msg, init, initialModel, update, view)
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Column as Column exposing (Column, ColumnConstraints)
-import Data.Combined as Combined exposing (TableWithAll)
+import Data.Combined as Combined exposing (ColumnWithConstraints, TableWithAll)
 import Data.Constraints as Constraints exposing (Constraints)
 import Data.DataType as DataType exposing (DataType)
 import Data.Schema as Schema exposing (Schema)
@@ -114,7 +114,7 @@ type Msg
     | InputNewColumnName String
     | SelectNewColumnDataType DataType
     | CreateColumn
-    | LoadNewColumn (Result Http.Error Column)
+    | LoadNewColumnWithConstraints (Result Http.Error ColumnWithConstraints)
       -- UPDATE COLUMN
     | EditColumn Int
     | UpdateEditingColumn Column
@@ -264,13 +264,14 @@ update msg model =
         CreateColumn ->
             ( model
             , RC.create model.newColumn
-                |> Http.send LoadNewColumn
+                |> Http.send LoadNewColumnWithConstraints
             , AppUpdate.none
             )
 
-        LoadNewColumn (Ok column) ->
+        LoadNewColumnWithConstraints (Ok { column, constraints }) ->
             ( { model
                 | columns = model.columns ++ [ column ]
+                , constraints = constraints
                 , newColumn = Column.init model.table.id
                 , errors = []
               }
@@ -278,11 +279,14 @@ update msg model =
             , AppUpdate.none
             )
 
-        LoadNewColumn (Err error) ->
-            ( { model | errors = ChangesetError.parseHttpError error }
-            , Dom.focus "create-column" |> Task.attempt FocusResult
-            , AppUpdate.none
-            )
+        LoadNewColumnWithConstraints (Err error) ->
+            if isUnprocessableEntity error then
+                ( { model | errors = ChangesetError.parseHttpError error }
+                , Dom.focus "create-column" |> Task.attempt FocusResult
+                , AppUpdate.none
+                )
+            else
+                ( model, Cmd.none, AppUpdate.httpError error )
 
         -- EDIT COLUMN
         EditColumn id ->

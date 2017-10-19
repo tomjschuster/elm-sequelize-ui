@@ -4,6 +4,7 @@ import Data.Column as Column exposing (Column)
 import Data.Combined as Combined
     exposing
         ( ColumnWithAll
+        , ColumnWithConstraints
         , ColumnWithTable
         )
 import Http exposing (Request)
@@ -21,12 +22,12 @@ columnUrl =
     toString >> (++) columnsUrl
 
 
-create : Column -> Request Column
+create : Column -> Request ColumnWithConstraints
 create column =
     Http.post
         columnsUrl
         (Column.encodeNew column |> Http.jsonBody)
-        (dataDecoder <| JD.field "column" Column.decoder)
+        (dataDecoder <| Combined.columnWithConstraintsDecoder)
 
 
 one : Int -> Request Column

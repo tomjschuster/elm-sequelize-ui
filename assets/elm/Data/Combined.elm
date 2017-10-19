@@ -1,6 +1,7 @@
 module Data.Combined
     exposing
         ( ColumnWithAll
+        , ColumnWithConstraints
         , ColumnWithTable
         , SchemaWithTables
         , TableWithAll
@@ -11,6 +12,7 @@ module Data.Combined
         , andWithTable
         , andWithTables
         , columnWithAllDecoder
+        , columnWithConstraintsDecoder
         , columnWithTableDecoder
         , schemaWithTablesDecoder
         , tableWithAllDecoder
@@ -148,6 +150,17 @@ columnWithTableDecoder =
     decode ColumnWithTable
         |> required "column" Column.decoder
         |> required "table" Table.decoder
+
+
+type alias ColumnWithConstraints =
+    { column : Column, constraints : Constraints }
+
+
+columnWithConstraintsDecoder : Decoder ColumnWithConstraints
+columnWithConstraintsDecoder =
+    decode ColumnWithConstraints
+        |> required "column" Column.decoder
+        |> required "constraints" Constraints.decoder
 
 
 type alias ColumnWithAll =
