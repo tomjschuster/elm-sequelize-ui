@@ -4,7 +4,6 @@
 ## In Progress
 
 * Constraints
-  * Logic for updating/reading primary key
   * View
   * `Ecto.Multi`
   * Associations
