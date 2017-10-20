@@ -44,6 +44,7 @@ import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
 import Views.Column.ConstraintFields as CFields
+import Views.Column.ConstraintsDisplay as ConDisplay
 import Views.Column.DataTypeDisplay as DTDisplay
 import Views.Column.DataTypeSelect as DTSelect
 
@@ -122,7 +123,7 @@ type Msg
     | SelectEditingColumnDataType DataType
     | CancelEditColumn
     | SaveEditingColumn
-    | UpdateColumn (Result Http.Error Column)
+    | LoadEditingColumnWithConstraints (Result Http.Error ColumnWithConstraints)
       -- DELETE COLUMN
     | DestroyColumn Int
     | RemoveColumn (Result Http.Error ())
@@ -338,23 +339,23 @@ update msg model =
         SaveEditingColumn ->
             ( model
             , model.editingColumn
-                |> Maybe.map (RC.update >> Http.send UpdateColumn)
+                |> Maybe.map (RC.updateWithConstraints >> Http.send LoadEditingColumnWithConstraints)
                 |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
 
-        UpdateColumn (Ok column) ->
+        LoadEditingColumnWithConstraints (Ok { column, constraints }) ->
             ( { model
-                | columns = List.map (Column.replaceIfMatch column) model.columns
+                | constraints = constraints
                 , editingColumn = Nothing
                 , errors = []
               }
-            , Cmd.none
+            , Dom.focus "create-column" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
-        UpdateColumn (Err error) ->
-            ( { model | errors = ChangesetError.parseHttpError error }
+        LoadEditingColumnWithConstraints (Err error) ->
+            ( { model | errors = ChangesetError.parseHttpError (Debug.log "" error) }
             , Dom.focus "edit-column-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
@@ -556,7 +557,7 @@ columnsChildren : Model -> List (Html Msg)
 columnsChildren model =
     CE.prependIfErrors model.errors
         [ columnsTitle
-        , columnList model.editingColumn model.schema.id model.columns
+        , columnList model.editingColumn model.schema.id model.columns model.constraints
         ]
 
 
@@ -565,34 +566,41 @@ columnsTitle =
     h3 [] [ text "Columns" ]
 
 
-columnList : Maybe Column -> Int -> List Column -> Html Msg
-columnList editingColumn schemaId columns =
-    ul [] (List.map (columnItem editingColumn schemaId) columns)
+columnList : Maybe Column -> Int -> List Column -> Constraints -> Html Msg
+columnList editingColumn schemaId columns constraints =
+    ul [] (List.map (columnItem editingColumn schemaId constraints) columns)
 
 
 
--- READ COLUMN ITEM
+-- COLUMN ITEM
 
 
-columnItem : Maybe Column -> Int -> Column -> Html Msg
-columnItem editingColumn schemaId column =
-    li [] (columnItemChildren editingColumn schemaId column)
+columnItem : Maybe Column -> Int -> Constraints -> Column -> Html Msg
+columnItem editingColumn schemaId constraints column =
+    li [] (columnItemChildren editingColumn schemaId column (Column.findConstraints column.id constraints))
 
 
-columnItemChildren : Maybe Column -> Int -> Column -> List (Html Msg)
-columnItemChildren editingColumn schemaId column =
-    editingColumn
-        |> Maybe.map (getEditingColumnItemChildren column)
-        |> Maybe.withDefault (normalColumnItemChildren schemaId column)
+columnItemChildren : Maybe Column -> Int -> Column -> ColumnConstraints -> List (Html Msg)
+columnItemChildren maybeEditingColumn schemaId column constraints =
+    case maybeEditingColumn of
+        Just editingColumn ->
+            if column.id == editingColumn.id then
+                [ editColumnNameInput column.name
+                , DTSelect.view "edit-column-data-type" SelectEditingColumnDataType column.dataType
+                , CFields.view "create-column-constraints" UpdateEditingColumn { editingColumn | constraints = constraints }
+                , cancelEditColumnButton
+                , saveEditColumnButton
+                ]
+            else
+                [ text column.name, ConDisplay.view constraints ]
 
-
-normalColumnItemChildren : Int -> Column -> List (Html Msg)
-normalColumnItemChildren schemaId column =
-    [ columnLink schemaId column
-    , DTDisplay.view column.dataType
-    , editColumnButton column.id
-    , deleteColumnButton column.id
-    ]
+        Nothing ->
+            [ columnLink schemaId column
+            , DTDisplay.view column.dataType
+            , editColumnButton column.id
+            , deleteColumnButton column.id
+            , ConDisplay.view constraints
+            ]
 
 
 columnLink : Int -> Column -> Html Msg
@@ -608,34 +616,6 @@ editColumnButton id =
 deleteColumnButton : Int -> Html Msg
 deleteColumnButton id =
     button [ onClick (DestroyColumn id) ] [ text "Delete" ]
-
-
-
--- WRITE COLUMN CHILD
-
-
-getEditingColumnItemChildren : Column -> Column -> List (Html Msg)
-getEditingColumnItemChildren column editingColumn =
-    if column.id == editingColumn.id then
-        editingColumnItemChildren editingColumn
-    else
-        [ text column.name ]
-
-
-editingColumnItemChildren : Column -> List (Html Msg)
-editingColumnItemChildren column =
-    [ editColumnNameInput column.name
-    , DTSelect.view
-        "edit-column-data-type"
-        SelectEditingColumnDataType
-        column.dataType
-    , CFields.view
-        "create-column-constraints"
-        UpdateEditingColumn
-        column
-    , cancelEditColumnButton
-    , saveEditColumnButton
-    ]
 
 
 editColumnNameInput : String -> Html Msg

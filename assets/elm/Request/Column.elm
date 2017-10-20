@@ -1,4 +1,13 @@
-module Request.Column exposing (create, destroy, one, oneWithAll, oneWithTable, update)
+module Request.Column
+    exposing
+        ( create
+        , destroy
+        , one
+        , oneWithAll
+        , oneWithTable
+        , update
+        , updateWithConstraints
+        )
 
 import Data.Column as Column exposing (Column)
 import Data.Combined as Combined
@@ -8,7 +17,6 @@ import Data.Combined as Combined
         , ColumnWithTable
         )
 import Http exposing (Request)
-import Json.Decode as JD
 import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
 
@@ -54,6 +62,13 @@ update column =
     put (columnUrl column.id)
         (Column.encode column |> Http.jsonBody)
         (dataDecoder Column.decoder)
+
+
+updateWithConstraints : Column -> Request ColumnWithConstraints
+updateWithConstraints column =
+    put (columnUrl column.id)
+        (Column.encode column |> Http.jsonBody)
+        (dataDecoder Combined.columnWithConstraintsDecoder)
 
 
 destroy : Int -> Request ()

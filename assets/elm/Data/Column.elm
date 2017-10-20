@@ -6,6 +6,7 @@ module Data.Column
         , empty
         , encode
         , encodeNew
+        , findConstraints
         , init
         , removeFromList
         , replaceIfMatch
