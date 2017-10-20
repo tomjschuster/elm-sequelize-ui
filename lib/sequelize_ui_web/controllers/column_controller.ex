@@ -48,7 +48,8 @@ defmodule SequelizeUiWeb.ColumnController do
 
   def delete(conn, %{"id" => id}) do
     column = DbDesign.get_column!(id)
-    with {:ok, %Column{}} <- DbDesign.delete_column(column) do
+    with {:ok, count} <- DbDesign.delete_column_constraints(id),
+         {:ok, %Column{}} <- DbDesign.delete_column(column) do
       send_resp(conn, :no_content, "")
     end
   end

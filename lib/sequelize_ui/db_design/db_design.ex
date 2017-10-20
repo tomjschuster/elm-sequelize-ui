@@ -604,19 +604,17 @@ defmodule SequelizeUi.DbDesign do
     %{column_id: column_id, constraint_id: constraint_id}
   end
   def get_column_constraints(column_id) do
-    Repo.all from con in Constraint,
+    (Repo.all from con in Constraint,
       join: col in assoc(con, :columns),
-      join: col_con in assoc(con, :column_constraints),
-      group_by: col_con.constraint_id,
-      where: col.id == ^column_id and count(con.id) == 1
+      where: col.id == ^column_id,
+      preload: [columns: col]
+    ) |> Enum.filter(fn %Constraint{columns: columns} -> length(columns) <= 1 end)
   end
 
   def delete_column_constraints(column_id) do
-    Repo.delete_all from con in Constraint,
-      join: col in assoc(con, :columns),
-      join: col_con in assoc(con, :column_constraints),
-      group_by: col_con.constraint_id,
-      where: col.id == ^column_id and count(con.id) == 1
+    constraints = get_column_constraints(column_id)
+    Enum.each(constraints, &(Repo.delete!(&1)))
+    {:ok, length(constraints)}
   end
 
   @doc """
