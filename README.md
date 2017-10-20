@@ -4,7 +4,7 @@
 ## In Progress
 
 * Constraints
-  * View
+  * Fix edit defaults
   * `Ecto.Multi`
   * Associations
 * Field Order
