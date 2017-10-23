@@ -4,8 +4,8 @@
 ## In Progress
 
 * Constraints
-  * Fix edit defaults
   * `Ecto.Multi`
+  * Type ID helper functions
   * Associations
 * Field Order
 
