@@ -4,13 +4,12 @@
 ## In Progress
 
 * Constraints
-  * `Ecto.Multi`
   * Type ID helper functions
   * Associations
-* Field Order
 
 # Todo
 * Constraints
+* Field Order
 * Comments
 * Enum Types, Geometric Types
 * Template builder (SQL, Sequelize, Ecto)
