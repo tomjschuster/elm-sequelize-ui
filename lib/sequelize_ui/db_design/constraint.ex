@@ -27,17 +27,17 @@ defmodule SequelizeUi.DbDesign.Constraint do
     constraint
     |> cast(attrs, [:name, :constraint_type_id, :schema_id, :table_id, :value])
     |> validate_required([:constraint_type_id, :schema_id, :table_id])
-    |> validate_default_value()
     |> assoc_constraint(:constraint_type)
     |> assoc_constraint(:schema)
     |> assoc_constraint(:table)
     |> unique_constraint(:name, name: :sql_constraint_schema_id_name_index)
+    |> validate_default_value()
   end
 
   defp validate_default_value(%Changeset{} = changeset) do
-    IO.inspect(changeset)
     validate_change(changeset, :constraint_type_id, fn _, type_id ->
-      case {type_id, changeset.data.value} do
+
+      case {type_id, Map.get(changeset.changes, :value)} do
         {3, nil} -> [{:value, "can't be blank"}]
         _ -> []
       end

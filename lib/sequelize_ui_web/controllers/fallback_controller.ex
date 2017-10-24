@@ -12,9 +12,21 @@ defmodule SequelizeUiWeb.FallbackController do
     |> render(SequelizeUiWeb.ChangesetView, "error.json", changeset: changeset)
   end
 
+  def call(conn, {:error, failed_op, %Ecto.Changeset{} = changeset, changes}) do
+    conn
+    |> put_status(:unprocessable_entity)
+    |> render(SequelizeUiWeb.ChangesetView, "error.json", changeset: changeset)
+  end
+
   def call(conn, {:error, :not_found}) do
     conn
     |> put_status(:not_found)
     |> render(SequelizeUiWeb.ErrorView, :"404")
+  end
+
+  def call(conn, _) do
+    conn
+    |> put_status(:internal_server_error)
+    |> render(SequelizeUiWeb.ErrorView, :"500")
   end
 end
