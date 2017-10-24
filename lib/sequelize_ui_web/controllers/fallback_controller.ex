@@ -24,7 +24,8 @@ defmodule SequelizeUiWeb.FallbackController do
     |> render(SequelizeUiWeb.ErrorView, :"404")
   end
 
-  def call(conn, _) do
+  def call(conn, what_is_it?) do
+    IO.inspect(what_is_it?)
     conn
     |> put_status(:internal_server_error)
     |> render(SequelizeUiWeb.ErrorView, :"500")
