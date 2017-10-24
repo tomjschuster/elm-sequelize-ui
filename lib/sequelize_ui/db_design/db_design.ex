@@ -535,6 +535,17 @@ defmodule SequelizeUi.DbDesign do
       preload: [table: table, columns: col, column_constraints: col_con, constraint_type: type]
   end
 
+  def update_column_with_constraints(%{"id" => id, "column" => column_params, "constraints" => con_params}) do
+    column = get_column!(id)
+    Multi.new
+    |> Multi.run(:table, fn _ -> {:ok, get_table!(column.table_id)} end)
+    |> Multi.run(:column, fn _ -> update_column(column, column_params) end)
+    |> Multi.run(:deleted_constraints, fn _ -> delete_column_constraints(id) end)
+    |> Multi.run(:col_constraints, &(create_column_constraints(&1, con_params)))
+    |> Multi.run(:constraints, &({:ok, get_table_constraints(&1.table.id)}))
+    |> Repo.transaction
+  end
+
   def create_column_with_constraints(%{"column" => col_params, "constraints" => con_params}) do
     Multi.new
     |> Multi.insert(:column, Column.changeset(%Column{}, col_params))
@@ -616,7 +627,7 @@ defmodule SequelizeUi.DbDesign do
     %{column_id: column_id, constraint_id: constraint_id}
   end
 
-  def delete_column_constraints(column_id) do
+  defp delete_column_constraints(column_id) do
     constraints = get_column_constraints(column_id)
     Enum.each(constraints, &(Repo.delete!(&1)))
     {:ok, length(constraints)}

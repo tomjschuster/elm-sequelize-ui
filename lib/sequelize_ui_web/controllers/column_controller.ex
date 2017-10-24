@@ -36,14 +36,13 @@ defmodule SequelizeUiWeb.ColumnController do
     end
   end
 
-  def update(conn, %{"id" => id, "column" => column_params, "constraints" => con_params}) do
-    column = DbDesign.get_column!(id)
-    table = DbDesign.get_table!(column.table_id)
-    with {:ok, %Column{} = column} <- DbDesign.update_column(column, column_params),
-         {:ok, count} <- DbDesign.delete_column_constraints(id),
-         :ok <- DbDesign.create_column_constraints(table, column, con_params),
-         all_constraints <- DbDesign.get_table_constraints(table.id) do
-      render(conn, "show-with-constraints.json", column: column, constraints: all_constraints)
+  def update(conn, params) do
+    with {:ok, result} <- DbDesign.update_column_with_constraints(params),
+         %{column: column, constraints: constraints} <- result do
+      conn
+      |> put_status(:created)
+      |> put_resp_header("location", column_path(conn, :show, column))
+      |> render("show-with-constraints.json", column: column, constraints: constraints)
     end
   end
 
