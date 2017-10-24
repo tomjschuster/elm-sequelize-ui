@@ -111,14 +111,14 @@ type Msg
     | RemoveTable (Result Http.Error ())
       -- COLUMNS
       -- CREATE COLUMN
-    | UpdateNewColumn Column
+    | UpdateNewColumnConstraints ColumnConstraints
     | InputNewColumnName String
     | SelectNewColumnDataType DataType
     | CreateColumn
     | LoadNewColumnWithConstraints (Result Http.Error ColumnWithConstraints)
       -- UPDATE COLUMN
     | EditColumn Int
-    | UpdateEditingColumn Column
+    | UpdateEditingColumnConstraints ColumnConstraints
     | InputEditingColumnName String
     | SelectEditingColumnDataType DataType
     | CancelEditColumn
@@ -241,8 +241,8 @@ update msg model =
 
         -- COLUMNS
         -- NEW COLUMN
-        UpdateNewColumn column ->
-            ( { model | newColumn = column }
+        UpdateNewColumnConstraints constraints ->
+            ( { model | newColumn = Column.updateConstraints constraints model.newColumn }
             , Cmd.none
             , AppUpdate.none
             )
@@ -297,14 +297,15 @@ update msg model =
                     model.columns
                         |> List.filter (.id >> (==) id)
                         |> List.head
+                        |> Maybe.map (Column.findAndAddConstraints model.constraints)
                 , errors = []
               }
             , Dom.focus "edit-column-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
-        UpdateEditingColumn column ->
-            ( { model | editingColumn = Just column }
+        UpdateEditingColumnConstraints constraints ->
+            ( { model | editingColumn = Maybe.map (Column.updateConstraints constraints) model.editingColumn }
             , Cmd.none
             , AppUpdate.none
             )
@@ -518,8 +519,8 @@ createColumn column =
                 ]
             , CFields.view
                 "create-column-constraints"
-                UpdateNewColumn
-                column
+                UpdateNewColumnConstraints
+                column.constraints
             , createColumnButton
             ]
         ]
@@ -587,7 +588,7 @@ columnItemChildren maybeEditingColumn schemaId column constraints =
             if column.id == editingColumn.id then
                 [ editColumnNameInput column.name
                 , DTSelect.view "edit-column-data-type" SelectEditingColumnDataType column.dataType
-                , CFields.view "create-column-constraints" UpdateEditingColumn { editingColumn | constraints = constraints }
+                , CFields.view "create-column-constraints" UpdateEditingColumnConstraints editingColumn.constraints
                 , cancelEditColumnButton
                 , saveEditColumnButton
                 ]

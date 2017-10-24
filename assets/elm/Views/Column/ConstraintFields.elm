@@ -6,98 +6,98 @@ import Html.Attributes exposing (checked, for, id, type_, value)
 import Html.Events exposing (onCheck, onInput)
 
 
-view : String -> (Column -> msg) -> Column -> Html msg
-view viewId toMsg column =
+view : String -> (ColumnConstraints -> msg) -> ColumnConstraints -> Html msg
+view viewId toMsg constraints =
     ul
         []
-        [ li [] [ primaryKeyCheckbox viewId toMsg column ]
-        , li [] [ notNullCheckbox viewId toMsg column ]
-        , li [] [ defaultView viewId toMsg column ]
-        , li [] [ uniqueCheckbox viewId toMsg column ]
+        [ li [] [ primaryKeyCheckbox viewId toMsg constraints ]
+        , li [] [ notNullCheckbox viewId toMsg constraints ]
+        , li [] [ defaultView viewId toMsg constraints ]
+        , li [] [ uniqueCheckbox viewId toMsg constraints ]
         ]
 
 
-primaryKeyCheckbox : String -> (Column -> msg) -> Column -> Html msg
-primaryKeyCheckbox viewId toMsg column =
+primaryKeyCheckbox : String -> (ColumnConstraints -> msg) -> ColumnConstraints -> Html msg
+primaryKeyCheckbox viewId toMsg constraints =
     label
         [ for (viewId ++ "-primary-key") ]
         [ text "Primary Key"
         , input
             [ id (viewId ++ "-primary-key")
             , type_ "checkbox"
-            , checked column.constraints.isPrimaryKey
-            , onPrimaryKeyCheck toMsg column
+            , checked constraints.isPrimaryKey
+            , onPrimaryKeyCheck toMsg constraints
             ]
             []
         ]
 
 
-notNullCheckbox : String -> (Column -> msg) -> Column -> Html msg
-notNullCheckbox viewId toMsg column =
+notNullCheckbox : String -> (ColumnConstraints -> msg) -> ColumnConstraints -> Html msg
+notNullCheckbox viewId toMsg constraints =
     label
         [ for (viewId ++ "-not-null") ]
         [ text "Not Null"
         , input
             [ id (viewId ++ "-not-null")
             , type_ "checkbox"
-            , checked column.constraints.isNotNull
-            , onNotNullCheck toMsg column
+            , checked constraints.isNotNull
+            , onNotNullCheck toMsg constraints
             ]
             []
         ]
 
 
-uniqueCheckbox : String -> (Column -> msg) -> Column -> Html msg
-uniqueCheckbox viewId toMsg column =
+uniqueCheckbox : String -> (ColumnConstraints -> msg) -> ColumnConstraints -> Html msg
+uniqueCheckbox viewId toMsg constraints =
     label
         [ for (viewId ++ "-unique") ]
         [ text "Unique"
         , input
             [ id (viewId ++ "-unique")
             , type_ "checkbox"
-            , checked column.constraints.isUnique
-            , onUniqueCheck toMsg column
+            , checked constraints.isUnique
+            , onUniqueCheck toMsg constraints
             ]
             []
         ]
 
 
-defaultView : String -> (Column -> msg) -> Column -> Html msg
-defaultView viewId toMsg column =
-    case column.constraints.defaultValue of
+defaultView : String -> (ColumnConstraints -> msg) -> ColumnConstraints -> Html msg
+defaultView viewId toMsg constraints =
+    case constraints.defaultValue of
         Just value ->
             label
                 [ for (viewId ++ "-default") ]
                 [ text "Default Value"
-                , defaultCheckBox viewId toMsg column
-                , defaultInput viewId toMsg column
+                , defaultCheckBox viewId toMsg constraints
+                , defaultInput viewId toMsg constraints
                 ]
 
         Nothing ->
             label
                 [ for (viewId ++ "-default") ]
                 [ text "Default Value"
-                , defaultCheckBox viewId toMsg column
+                , defaultCheckBox viewId toMsg constraints
                 ]
 
 
-defaultCheckBox : String -> (Column -> msg) -> Column -> Html msg
-defaultCheckBox viewId toMsg column =
+defaultCheckBox : String -> (ColumnConstraints -> msg) -> ColumnConstraints -> Html msg
+defaultCheckBox viewId toMsg constraints =
     input
         [ id (viewId ++ "-default")
         , type_ "checkbox"
-        , checked (column.constraints.defaultValue /= Nothing)
-        , onDefaultValueCheck toMsg column
+        , checked (constraints.defaultValue /= Nothing)
+        , onDefaultValueCheck toMsg constraints
         ]
         []
 
 
-defaultInput : String -> (Column -> msg) -> Column -> Html msg
-defaultInput viewId toMsg column =
+defaultInput : String -> (ColumnConstraints -> msg) -> ColumnConstraints -> Html msg
+defaultInput viewId toMsg constraints =
     input
         [ id (viewId ++ "-default")
-        , value (Maybe.withDefault "" column.constraints.defaultValue)
-        , onDefaultValueInput toMsg column
+        , value (Maybe.withDefault "" constraints.defaultValue)
+        , onDefaultValueInput toMsg constraints
         ]
         []
 
@@ -106,26 +106,26 @@ defaultInput viewId toMsg column =
 -- CUSTOM HANDLERS
 
 
-onPrimaryKeyCheck : (Column -> msg) -> Column -> Attribute msg
+onPrimaryKeyCheck : (ColumnConstraints -> msg) -> ColumnConstraints -> Attribute msg
 onPrimaryKeyCheck toMsg column =
-    onCheck (flip Column.updateIsPrimaryKey column >> toMsg)
+    onCheck (flip Column.updateConstraintsIsPrimaryKey column >> toMsg)
 
 
-onNotNullCheck : (Column -> msg) -> Column -> Attribute msg
+onNotNullCheck : (ColumnConstraints -> msg) -> ColumnConstraints -> Attribute msg
 onNotNullCheck toMsg column =
-    onCheck (flip Column.updateIsNotNull column >> toMsg)
+    onCheck (flip Column.updateConstraintsIsNotNull column >> toMsg)
 
 
-onDefaultValueCheck : (Column -> msg) -> Column -> Attribute msg
+onDefaultValueCheck : (ColumnConstraints -> msg) -> ColumnConstraints -> Attribute msg
 onDefaultValueCheck toMsg column =
-    onCheck (flip Column.updateHasDefaultValue column >> toMsg)
+    onCheck (flip Column.updateConstraintsHasDefaultValue column >> toMsg)
 
 
-onDefaultValueInput : (Column -> msg) -> Column -> Attribute msg
+onDefaultValueInput : (ColumnConstraints -> msg) -> ColumnConstraints -> Attribute msg
 onDefaultValueInput toMsg column =
-    onInput (flip Column.updateDefaultValue column >> toMsg)
+    onInput (flip Column.updateConstraintsDefaultValue column >> toMsg)
 
 
-onUniqueCheck : (Column -> msg) -> Column -> Attribute msg
+onUniqueCheck : (ColumnConstraints -> msg) -> ColumnConstraints -> Attribute msg
 onUniqueCheck toMsg column =
-    onCheck (flip Column.updateIsUnique column >> toMsg)
+    onCheck (flip Column.updateConstraintsIsUnique column >> toMsg)

@@ -6,11 +6,17 @@ module Data.Column
         , empty
         , encode
         , encodeNew
+        , findAndAddConstraints
         , findConstraints
         , init
         , removeFromList
         , replaceIfMatch
         , updateConstraints
+        , updateConstraintsDefaultValue
+        , updateConstraintsHasDefaultValue
+        , updateConstraintsIsNotNull
+        , updateConstraintsIsPrimaryKey
+        , updateConstraintsIsUnique
         , updateDataType
         , updateDefaultValue
         , updateHasDefaultValue
@@ -104,6 +110,11 @@ findConstraints columnId tableConstraints =
     , isUnique = isUnique columnId tableConstraints
     , references = singleReferences columnId tableConstraints
     }
+
+
+findAndAddConstraints : Constraints -> Column -> Column
+findAndAddConstraints constraints column =
+    { column | constraints = findConstraints column.id constraints }
 
 
 

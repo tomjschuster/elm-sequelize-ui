@@ -1,6 +1,6 @@
 module Views.Column.ConstraintsDisplay exposing (view)
 
-import Data.Column as Column exposing (Column, ColumnConstraints)
+import Data.Column as Column exposing (ColumnConstraints)
 import Html exposing (Html, span, text)
 
 
@@ -35,20 +35,3 @@ constraintDisplays constraints =
 defaultText : Maybe String -> String
 defaultText =
     Maybe.map ((++) "default: ") >> Maybe.withDefault ""
-
-
-
---type alias Column =
---    { id : Int
---    , tableId : Int
---    , name : String
---    , dataType : DataType
---    , constraints : ColumnConstraints
---    }
---type alias ColumnConstraints =
---    { isPrimaryKey : Bool
---    , isNotNull : Bool
---    , defaultValue : Maybe String
---    , isUnique : Bool
---    , references : List Int
---    }
