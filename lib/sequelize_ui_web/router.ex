@@ -21,12 +21,14 @@ defmodule SequelizeUiWeb.Router do
     pipe_through :api
 
     resources "/constraints", ConstraintController
-    get "/schmeas/:schema_id/tables", TableController, :for_schema
+    # get "/schmeas/:schema_id/tables", TableController, :for_schema
     pipe_through :combine_entities
     resources "/schemas", SchemaController do
       get "/tables", TableController, :for_schema
     end
-    resources "/tables", TableController
+    resources "/tables", TableController do
+      get "/columns", ColumnController, :for_table
+    end
     resources "/columns", ColumnController
   end
 

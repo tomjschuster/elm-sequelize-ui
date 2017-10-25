@@ -58,9 +58,11 @@ type alias Model =
     , columns : List Column
     , constraints : Constraints
     , schemaTables : List Table
+    , tableColumns : List Column
     , editingTable : Maybe Table
     , newColumn : Column
-    , newColumnAssociation : NewColumnAssociation
+    , newColumnAssociation : Maybe Int
+    , newColumnAssociationColumn : Maybe Int
     , editingColumn : Maybe Column
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
@@ -75,9 +77,11 @@ initialModel =
         []
         Constraints.empty
         []
+        []
         Nothing
         Column.empty
-        NoAssociation
+        Nothing
+        Nothing
         Nothing
         Nothing
         []
@@ -87,11 +91,6 @@ type alias InitialData =
     { schema : Schema
     , table : Table
     }
-
-
-type NewColumnAssociation
-    = NoAssociation
-    | NewColumnAssociation (Maybe Int)
 
 
 init : Int -> Int -> ( Model, Cmd Msg )
@@ -122,6 +121,7 @@ type Msg
     | Destroy
     | RemoveTable (Result Http.Error ())
     | LoadSchemaTables (Result Http.Error (List Table))
+    | LoadTableColumns (Result Http.Error (List Column))
       -- COLUMNS
       -- CREATE COLUMN
     | UpdateNewColumnConstraints ColumnConstraints
@@ -129,8 +129,10 @@ type Msg
     | SelectNewColumnDataType DataType
     | CreateColumn
     | LoadNewColumnWithConstraints (Result Http.Error ColumnWithConstraints)
-    | SetNewColumnAssociation NewColumnAssociation
+    | SetColumnAssociation (Maybe Int)
+    | SetColumnAssociationColumn (Maybe Int)
     | AddNewColumnForeignKey
+    | CancelColumnAssociation
       -- UPDATE COLUMN
     | EditColumn Int
     | UpdateEditingColumnConstraints ColumnConstraints
@@ -260,6 +262,12 @@ update msg model =
         LoadSchemaTables (Err error) ->
             ( model, Cmd.none, AppUpdate.none )
 
+        LoadTableColumns (Ok columns) ->
+            ( { model | tableColumns = columns }, Cmd.none, AppUpdate.none )
+
+        LoadTableColumns (Err error) ->
+            ( model, Cmd.none, AppUpdate.none )
+
         -- COLUMNS
         -- NEW COLUMN
         UpdateNewColumnConstraints constraints ->
@@ -283,11 +291,44 @@ update msg model =
             , AppUpdate.none
             )
 
-        SetNewColumnAssociation newColumnAssociation ->
-            ( { model | newColumnAssociation = newColumnAssociation }, Cmd.none, AppUpdate.none )
+        SetColumnAssociation maybeTableId ->
+            ( { model
+                | newColumnAssociation = maybeTableId
+                , tableColumns = []
+              }
+            , maybeTableId
+                |> Maybe.map (RC.forTable >> Http.send LoadTableColumns)
+                |> Maybe.withDefault Cmd.none
+            , AppUpdate.none
+            )
+
+        SetColumnAssociationColumn maybeColumnId ->
+            ( { model
+                | newColumnAssociationColumn = maybeColumnId
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         AddNewColumnForeignKey ->
-            ( { model | newColumnAssociation = NoAssociation }, Cmd.none, AppUpdate.none )
+            ( { model
+                | newColumnAssociation = Nothing
+                , newColumnAssociationColumn = Nothing
+                , tableColumns = []
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        CancelColumnAssociation ->
+            ( { model
+                | newColumnAssociation = Nothing
+                , newColumnAssociationColumn = Nothing
+                , tableColumns = []
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         CreateColumn ->
             ( model
@@ -301,6 +342,9 @@ update msg model =
                 | columns = model.columns ++ [ column ]
                 , constraints = constraints
                 , newColumn = Column.init model.table.id
+                , newColumnAssociation = Nothing
+                , newColumnAssociationColumn = Nothing
+                , tableColumns = []
                 , errors = []
               }
             , Dom.focus "create-column" |> Task.attempt FocusResult
@@ -425,7 +469,7 @@ view model =
     main_ []
         [ breadCrumbs model.schema model.table
         , tableView model.editingTable model.table
-        , createColumn model.newColumn model.newColumnAssociation model.schemaTables
+        , createColumn model.newColumn model.newColumnAssociation model.newColumnAssociationColumn model.schemaTables model.tableColumns
         , columnsView model
         ]
 
@@ -528,8 +572,8 @@ saveEditTableButton =
 -- CREATE COLUMN
 
 
-createColumn : Column -> NewColumnAssociation -> List Table -> Html Msg
-createColumn column newColumnAssociation schemaTables =
+createColumn : Column -> Maybe Int -> Maybe Int -> List Table -> List Column -> Html Msg
+createColumn column newColumnAssociation newColumnAssociationColumn schemaTables tableColumns =
     form
         []
         [ fieldset []
@@ -548,7 +592,7 @@ createColumn column newColumnAssociation schemaTables =
                 "create-column-constraints"
                 UpdateNewColumnConstraints
                 column.constraints
-            , createColumnAssociations newColumnAssociation schemaTables
+            , createColumnAssociations newColumnAssociation newColumnAssociationColumn schemaTables tableColumns
             , createColumnButton
             ]
         ]
@@ -573,24 +617,56 @@ createColumnButton =
     button [ type_ "button", onClick CreateColumn ] [ text "Create" ]
 
 
-createColumnAssociations : NewColumnAssociation -> List Table -> Html Msg
-createColumnAssociations newColumnAssociation tables =
-    case newColumnAssociation of
-        NoAssociation ->
-            button [ type_ "button", onClick (SetNewColumnAssociation (NewColumnAssociation Nothing)) ] [ text "Add Association" ]
+createColumnAssociations : Maybe Int -> Maybe Int -> List Table -> List Column -> Html Msg
+createColumnAssociations newColumnAssociation newColumnAssociationColumn tables columns =
+    let
+        buttons =
+            case ( newColumnAssociation, newColumnAssociationColumn ) of
+                ( Nothing, Nothing ) ->
+                    []
 
-        NewColumnAssociation maybeTableId ->
+                ( Just tableId, Nothing ) ->
+                    [ button [ type_ "button", onClick CancelColumnAssociation ] [ text "Cancel" ] ]
+
+                ( _, _ ) ->
+                    [ button [ type_ "button", onClick CancelColumnAssociation ] [ text "Cancel" ]
+                    , button [ type_ "button", onClick AddNewColumnForeignKey ] [ text "Add" ]
+                    ]
+    in
+    case newColumnAssociation of
+        Just tableId ->
             p []
-                [ associationTableDropdown maybeTableId tables
-                , button [ type_ "button", onClick AddNewColumnForeignKey ] [ text "Add" ]
-                , button [ type_ "button", onClick (SetNewColumnAssociation NoAssociation) ] [ text "Cancel" ]
-                ]
+                ([ associationTableDropdown (Just tableId) tables
+                 , newColumnAssociationColumn |> createColumnAssociationsColumns columns
+                 ]
+                    ++ buttons
+                )
+
+        Nothing ->
+            p []
+                ([ associationTableDropdown Nothing tables
+                 ]
+                    ++ buttons
+                )
+
+
+createColumnAssociationsColumns : List Column -> Maybe Int -> Html Msg
+createColumnAssociationsColumns columns currentColumnId =
+    select
+        [ onChangeInt SetColumnAssociationColumn ]
+        (option [ selected (currentColumnId == Nothing) ] [ text "Select a Column" ]
+            :: List.map
+                (\c ->
+                    option [ value (toString c.id), selected (Debug.log "a" (Just c.id == currentColumnId)) ] [ text c.name ]
+                )
+                columns
+        )
 
 
 associationTableDropdown : Maybe Int -> List Table -> Html Msg
 associationTableDropdown currentTableId tables =
     select
-        [ onChangeInt (NewColumnAssociation >> SetNewColumnAssociation) ]
+        [ onChangeInt SetColumnAssociation ]
         (option [ selected (currentTableId == Nothing) ] [ text "Select a Table" ]
             :: List.map
                 (\t ->

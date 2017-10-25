@@ -48,7 +48,6 @@ defmodule SequelizeUi.DbDesign do
     Schema.changeset(schema, %{})
   end
 
-
   def list_tables do
     Repo.all(Table)
   end
@@ -110,6 +109,10 @@ defmodule SequelizeUi.DbDesign do
 
   def list_columns do
     Repo.all(Column)
+  end
+
+  def list_columns_for_table(table_id) do
+    Repo.all(from Column, where: [table_id: ^table_id])
   end
 
   def get_column!(id), do: Repo.get!(Column, id)

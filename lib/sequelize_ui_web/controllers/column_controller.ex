@@ -11,6 +11,11 @@ defmodule SequelizeUiWeb.ColumnController do
     render(conn, "index.json", columns: columns)
   end
 
+  def for_table(conn, %{"table_id" => table_id}) do
+    columns = DbDesign.list_columns_for_table(table_id)
+    render(conn, "index.json", columns: columns)
+  end
+
   def create(conn, params) do
     with {:ok, result} <- DbDesign.create_column_with_constraints(params),
          %{column: column, constraints: constraints} <- result do
