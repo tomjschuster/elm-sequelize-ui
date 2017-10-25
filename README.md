@@ -4,8 +4,14 @@
 ## In Progress
 
 * Constraints
-  * Type ID helper functions
   * Associations
+    * Add new column association to new column
+    * Save FK in database
+    * Display FK
+    * Edit column FK
+  * Table constraints
+* Type ID helper functions
+* Refactor
 
 # Todo
 * Constraints
