@@ -88,7 +88,10 @@ type alias InitialData =
 init : Int -> Int -> ( Model, Cmd Msg )
 init schemaId tableId =
     ( { initialModel | newColumn = Column.init tableId }
-    , RT.oneWithAll tableId |> Http.toTask |> Task.attempt LoadTableWithAll
+    , Cmd.batch
+        [ RT.oneWithAll tableId |> Http.toTask |> Task.attempt LoadTableWithAll
+        , RT.forSchema schemaId |> Http.toTask |> Task.attempt LoadSchemaTables
+        ]
     )
 
 
@@ -109,6 +112,7 @@ type Msg
     | SaveTableName
     | Destroy
     | RemoveTable (Result Http.Error ())
+    | LoadSchemaTables (Result Http.Error (List Table))
       -- COLUMNS
       -- CREATE COLUMN
     | UpdateNewColumnConstraints ColumnConstraints
@@ -238,6 +242,12 @@ update msg model =
             , Cmd.none
             , AppUpdate.none
             )
+
+        LoadSchemaTables (Ok table) ->
+            ( model, Cmd.none, AppUpdate.none )
+
+        LoadSchemaTables (Err error) ->
+            ( model, Cmd.none, AppUpdate.none )
 
         -- COLUMNS
         -- NEW COLUMN

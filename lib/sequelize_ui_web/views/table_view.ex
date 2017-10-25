@@ -2,8 +2,8 @@ defmodule SequelizeUiWeb.TableView do
   use SequelizeUiWeb, :view
   alias SequelizeUiWeb.{TableView, SchemaView, ColumnView, ConstraintView}
 
-  def render("index.json", %{entities: entities}) do
-    %{data: render_many(entities, TableView, "table.json")}
+  def render("index.json", %{tables: tables}) do
+    %{data: render_many(tables, TableView, "table.json")}
   end
 
   def render("show.json", %{table: table}) do

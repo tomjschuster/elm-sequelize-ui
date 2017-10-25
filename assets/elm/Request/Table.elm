@@ -2,6 +2,7 @@ module Request.Table
     exposing
         ( create
         , destroy
+        , forSchema
         , index
         , one
         , oneWithAll
@@ -30,6 +31,11 @@ tablesUrl =
 tableUrl : Int -> String
 tableUrl =
     toString >> (++) tablesUrl
+
+
+schemaTablesUrl : Int -> String
+schemaTablesUrl schemaId =
+    baseUrl ++ "schemas/" ++ toString schemaId ++ "/tables"
 
 
 
@@ -76,6 +82,13 @@ oneWithAll id =
     Http.get
         (tableUrl id |> Combined.withSchema |> Combined.andWithColumns)
         (dataDecoder Combined.tableWithAllDecoder)
+
+
+forSchema : Int -> Http.Request (List Table)
+forSchema schemaId =
+    Http.get
+        (schemaTablesUrl schemaId)
+        (dataDecoder (JD.list Table.decoder))
 
 
 

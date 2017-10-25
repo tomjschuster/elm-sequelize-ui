@@ -11,6 +11,11 @@ defmodule SequelizeUiWeb.TableController do
     render(conn, "index.json", tables: tables)
   end
 
+  def for_schema(conn, %{"schema_id" => schema_id}) do
+    tables = DbDesign.list_tables_for_schema(schema_id)
+    render(conn, "index.json", tables: tables)
+  end
+
   def create(conn, %{"table" => table_params}) do
     with {:ok, %Table{} = table} <- DbDesign.create_table(table_params) do
       conn

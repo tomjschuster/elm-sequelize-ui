@@ -53,6 +53,10 @@ defmodule SequelizeUi.DbDesign do
     Repo.all(Table)
   end
 
+  def list_tables_for_schema(schema_id) do
+    Repo.all(from Table, where: [schema_id: ^schema_id])
+  end
+
   def get_table!(id), do: Repo.get!(Table, id)
 
   def get_table_with_schema!(id) do
