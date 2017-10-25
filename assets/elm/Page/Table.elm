@@ -57,8 +57,10 @@ type alias Model =
     , table : Table
     , columns : List Column
     , constraints : Constraints
+    , schemaTables : List Table
     , editingTable : Maybe Table
     , newColumn : Column
+    , associationTableId : Maybe Int
     , editingColumn : Maybe Column
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
@@ -72,8 +74,10 @@ initialModel =
         Table.empty
         []
         Constraints.empty
+        []
         Nothing
         Column.empty
+        Nothing
         Nothing
         Nothing
         []
@@ -113,6 +117,7 @@ type Msg
     | Destroy
     | RemoveTable (Result Http.Error ())
     | LoadSchemaTables (Result Http.Error (List Table))
+    | SetAssociationTable (Maybe Int)
       -- COLUMNS
       -- CREATE COLUMN
     | UpdateNewColumnConstraints ColumnConstraints
@@ -243,11 +248,14 @@ update msg model =
             , AppUpdate.none
             )
 
-        LoadSchemaTables (Ok table) ->
-            ( model, Cmd.none, AppUpdate.none )
+        LoadSchemaTables (Ok tables) ->
+            ( { model | schemaTables = tables }, Cmd.none, AppUpdate.none )
 
         LoadSchemaTables (Err error) ->
             ( model, Cmd.none, AppUpdate.none )
+
+        SetAssociationTable maybeTableId ->
+            ( { model | associationTableId = maybeTableId }, Cmd.none, AppUpdate.none )
 
         -- COLUMNS
         -- NEW COLUMN
@@ -408,7 +416,7 @@ view model =
     main_ []
         [ breadCrumbs model.schema model.table
         , tableView model.editingTable model.table
-        , createColumn model.newColumn
+        , createColumn model.newColumn model.associationTableId model.schemaTables
         , columnsView model
         ]
 
@@ -511,8 +519,8 @@ saveEditTableButton =
 -- CREATE COLUMN
 
 
-createColumn : Column -> Html Msg
-createColumn column =
+createColumn : Column -> Maybe Int -> List Table -> Html Msg
+createColumn column associationTableId schemaTables =
     form
         []
         [ fieldset []
@@ -531,6 +539,8 @@ createColumn column =
                 "create-column-constraints"
                 UpdateNewColumnConstraints
                 column.constraints
+            , button [] [ text "Add Association" ]
+            , associationTableDropdown associationTableId schemaTables
             , createColumnButton
             ]
         ]
@@ -553,6 +563,18 @@ newColumnInput name =
 createColumnButton : Html Msg
 createColumnButton =
     button [ type_ "button", onClick CreateColumn ] [ text "Create" ]
+
+
+associationTableDropdown : Maybe Int -> List Table -> Html Msg
+associationTableDropdown currentTable tables =
+    select
+        [ onChangeInt SetAssociationTable ]
+        (List.map
+            (\t ->
+                option [ value (toString t.id), selected (Just t.id == currentTable) ] [ text t.name ]
+            )
+            tables
+        )
 
 
 

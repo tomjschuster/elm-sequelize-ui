@@ -27,7 +27,7 @@ dtSelect viewId handleChange dataType =
         [ id viewId
         , onChangeInt (mapDataTypeChange handleChange)
         ]
-        (dtSelectChildren handleChange dataType)
+        (dtSelectChildren dataType)
 
 
 mapDataTypeChange : (DataType -> msg) -> Maybe Int -> msg
@@ -37,32 +37,32 @@ mapDataTypeChange handleChange =
         >> handleChange
 
 
-dtSelectChildren : (DataType -> msg) -> DataType -> List (Html msg)
-dtSelectChildren handleChange dataType =
-    defaultOption :: dtOptGroups handleChange dataType
+dtSelectChildren : DataType -> List (Html msg)
+dtSelectChildren dataType =
+    defaultOption :: dtOptGroups dataType
 
 
-dtOptGroups : (DataType -> msg) -> DataType -> List (Html msg)
-dtOptGroups handleChange dataType =
-    [ dtOptGroup handleChange "Character Types" DataType.characterGroup dataType
-    , dtOptGroup handleChange "Numeric Types" DataType.numericGroup dataType
-    , dtOptGroup handleChange "Boolean Types" DataType.booleanGroup dataType
-    , dtOptGroup handleChange "Bit String Types" DataType.bitStringGroup dataType
-    , dtOptGroup handleChange "Monetary Types" DataType.monetaryGroup dataType
-    , dtOptGroup handleChange "Date/Time Types" DataType.dateTimeGroup dataType
+dtOptGroups : DataType -> List (Html msg)
+dtOptGroups dataType =
+    [ dtOptGroup "Character Types" DataType.characterGroup dataType
+    , dtOptGroup "Numeric Types" DataType.numericGroup dataType
+    , dtOptGroup "Boolean Types" DataType.booleanGroup dataType
+    , dtOptGroup "Bit String Types" DataType.bitStringGroup dataType
+    , dtOptGroup "Monetary Types" DataType.monetaryGroup dataType
+    , dtOptGroup "Date/Time Types" DataType.dateTimeGroup dataType
     ]
 
 
-dtOptGroup : (DataType -> msg) -> String -> List DataType -> DataType -> Html msg
-dtOptGroup handleChange name dataTypes dataType =
+dtOptGroup : String -> List DataType -> DataType -> Html msg
+dtOptGroup name dataTypes dataType =
     optgroup
         [ attribute "label" name ]
-        (List.map (dtOption handleChange dataType) dataTypes)
+        (List.map (dtOption dataType) dataTypes)
 
 
-dtOptions : String -> (DataType -> msg) -> DataType -> List (Html msg)
-dtOptions viewId handleChange dataType =
-    List.map (dtOption handleChange dataType) DataType.all
+dtOptions : String -> DataType -> List (Html msg)
+dtOptions viewId dataType =
+    List.map (dtOption dataType) DataType.all
 
 
 defaultOption : Html msg
@@ -70,8 +70,8 @@ defaultOption =
     option [] [ text "-" ]
 
 
-dtOption : (DataType -> msg) -> DataType -> DataType -> Html msg
-dtOption handleChange currentType dataType =
+dtOption : DataType -> DataType -> Html msg
+dtOption currentType dataType =
     option
         [ selected (DataType.isSame dataType currentType)
         , value (DataType.toId dataType |> toString)
