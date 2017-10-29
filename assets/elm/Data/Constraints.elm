@@ -127,11 +127,14 @@ indexDecoder =
 
 foreignKeyIndexDecoder : Decoder ForeignKeyIndex
 foreignKeyIndexDecoder =
-    JD.map2 (,)
-        (JD.field "columnId" JD.int)
-        (JD.field "referencesId" JD.int)
-        |> JD.list
-        |> JD.map ForeignKeyIndex
+    JD.field "columns"
+        (JD.list
+            (JD.map2 (,)
+                (JD.field "columnId" JD.int)
+                (JD.field "referencesId" JD.int)
+            )
+            |> JD.map ForeignKeyIndex
+        )
 
 
 singleColumnDecoder : Decoder ColumnId

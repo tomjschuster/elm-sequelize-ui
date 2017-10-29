@@ -57,13 +57,9 @@ type alias Model =
     , table : Table
     , columns : List Column
     , constraints : Constraints
-    , schemaTables : List Table
-    , tableColumns : List Column
     , editingTable : Maybe Table
     , newColumn : Column
     , newColumnAssoc : NewColumnAssoc
-    , newColumnAssociation : Maybe Int
-    , newColumnAssociationColumn : Maybe Int
     , editingColumn : Maybe Column
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
@@ -76,13 +72,9 @@ initialModel =
     , table = Table.empty
     , columns = []
     , constraints = Constraints.empty
-    , schemaTables = []
-    , tableColumns = []
     , editingTable = Nothing
     , newColumn = Column.empty
     , newColumnAssoc = DataTypeRequired
-    , newColumnAssociation = Nothing
-    , newColumnAssociationColumn = Nothing
     , editingColumn = Nothing
     , toDeleteId = Nothing
     , errors = []
@@ -102,13 +94,26 @@ type NewColumnAssoc
     | NewColumnAssocReady DataType (List Table) Int (List Column) Int
 
 
+updateNewColumnAssocDataType : DataType -> NewColumnAssoc -> NewColumnAssoc
+updateNewColumnAssocDataType newDataType newColumnAssoc =
+    case newColumnAssoc of
+        DataTypeRequired ->
+            DataTypeRequired
+
+        SelectTable dataType tables ->
+            SelectTable newDataType tables
+
+        SelectColumn dataType tables tableId columns ->
+            SelectColumn newDataType tables tableId columns
+
+        NewColumnAssocReady dataType tables tableId columns columnId ->
+            SelectColumn newDataType tables tableId columns
+
+
 init : Int -> Int -> ( Model, Cmd Msg )
 init schemaId tableId =
     ( { initialModel | newColumn = Column.init tableId }
-    , Cmd.batch
-        [ RT.oneWithAll tableId |> Http.toTask |> Task.attempt LoadTableWithAll
-        , RT.forSchema schemaId |> Http.toTask |> Task.attempt LoadSchemaTables
-        ]
+    , RT.oneWithAll tableId |> Http.toTask |> Task.attempt LoadTableWithAll
     )
 
 
@@ -129,24 +134,18 @@ type Msg
     | SaveTableName
     | Destroy
     | RemoveTable (Result Http.Error ())
-    | LoadSchemaTables (Result Http.Error (List Table))
-    | LoadTableColumns (Result Http.Error (List Column))
       -- COLUMNS
       -- CREATE COLUMN
     | UpdateNewColumnConstraints ColumnConstraints
     | InputNewColumnName String
     | SelectNewColumnDataType DataType
     | LoadNewColumnAssocTables DataType (Result Http.Error (List Table))
-    | SelectNewColumnAssocTable DataType (List Table) Int
+    | SelectNewColumnAssocTable DataType (List Table) (Maybe Int)
     | LoadNewColumnAssocColumns DataType (List Table) Int (Result Http.Error (List Column))
-    | SelectNewColumnAssocColumn DataType (List Table) Int (List Column) Int
+    | SelectNewColumnAssocColumn DataType (List Table) Int (List Column) (Maybe Int)
     | FinishNewColumnAssoc Int
     | CreateColumn
     | LoadNewColumnWithConstraints (Result Http.Error ColumnWithConstraints)
-    | SetColumnAssociation (Maybe Int)
-    | SetColumnAssociationColumn (Maybe Int)
-    | AddNewColumnForeignKey
-    | CancelColumnAssociation
       -- UPDATE COLUMN
     | EditColumn Int
     | UpdateEditingColumnConstraints ColumnConstraints
@@ -272,18 +271,6 @@ update msg model =
         RemoveTable (Err error) ->
             handleHttpError model error
 
-        LoadSchemaTables (Ok tables) ->
-            ( { model | schemaTables = tables }, Cmd.none, AppUpdate.none )
-
-        LoadSchemaTables (Err error) ->
-            handleHttpError model error
-
-        LoadTableColumns (Ok columns) ->
-            ( { model | tableColumns = columns }, Cmd.none, AppUpdate.none )
-
-        LoadTableColumns (Err error) ->
-            handleHttpError model error
-
         -- COLUMNS
         -- NEW COLUMN
         UpdateNewColumnConstraints constraints ->
@@ -299,13 +286,30 @@ update msg model =
             )
 
         SelectNewColumnDataType dataType ->
-            ( { model
-                | newColumn =
-                    Column.updateDataType dataType model.newColumn
-              }
-            , RT.forSchema model.schema.id |> Http.toTask |> Task.attempt (LoadNewColumnAssocTables dataType)
-            , AppUpdate.none
-            )
+            case ( dataType, model.newColumnAssoc ) of
+                ( DataType.NoDataType, _ ) ->
+                    ( { model
+                        | newColumn = Column.updateDataType dataType model.newColumn
+                        , newColumnAssoc = DataTypeRequired
+                      }
+                    , Cmd.none
+                    , AppUpdate.none
+                    )
+
+                ( _, DataTypeRequired ) ->
+                    ( { model | newColumn = Column.updateDataType dataType model.newColumn }
+                    , RT.forSchema model.schema.id |> Http.toTask |> Task.attempt (LoadNewColumnAssocTables dataType)
+                    , AppUpdate.none
+                    )
+
+                ( _, _ ) ->
+                    ( { model
+                        | newColumn = Column.updateDataType dataType model.newColumn
+                        , newColumnAssoc = updateNewColumnAssocDataType dataType model.newColumnAssoc
+                      }
+                    , Cmd.none
+                    , AppUpdate.none
+                    )
 
         LoadNewColumnAssocTables dataType (Ok tables) ->
             ( { model | newColumnAssoc = SelectTable dataType tables }
@@ -316,11 +320,19 @@ update msg model =
         LoadNewColumnAssocTables _ (Err error) ->
             handleHttpError model error
 
-        SelectNewColumnAssocTable dataType tables tableId ->
-            ( model
-            , RC.forTable tableId |> Http.send (LoadNewColumnAssocColumns dataType tables tableId)
-            , AppUpdate.none
-            )
+        SelectNewColumnAssocTable dataType tables maybeTableId ->
+            case maybeTableId of
+                Just tableId ->
+                    ( model
+                    , RC.forTable tableId |> Http.send (LoadNewColumnAssocColumns dataType tables tableId)
+                    , AppUpdate.none
+                    )
+
+                Nothing ->
+                    ( { model | newColumnAssoc = SelectTable dataType tables }
+                    , Cmd.none
+                    , AppUpdate.none
+                    )
 
         LoadNewColumnAssocColumns dataType tables tableId (Ok columns) ->
             ( { model | newColumnAssoc = SelectColumn dataType tables tableId columns }
@@ -331,54 +343,23 @@ update msg model =
         LoadNewColumnAssocColumns dataType tables tableId (Err error) ->
             handleHttpError model error
 
-        SelectNewColumnAssocColumn dataType tables tableId columns columnId ->
-            ( { model | newColumnAssoc = NewColumnAssocReady dataType tables tableId columns columnId }
-            , Cmd.none
-            , AppUpdate.none
-            )
+        SelectNewColumnAssocColumn dataType tables tableId columns maybeColumnId ->
+            case maybeColumnId of
+                Just columnId ->
+                    ( { model | newColumnAssoc = NewColumnAssocReady dataType tables tableId columns columnId }
+                    , Cmd.none
+                    , AppUpdate.none
+                    )
+
+                Nothing ->
+                    ( { model | newColumnAssoc = SelectColumn dataType tables tableId columns }
+                    , Cmd.none
+                    , AppUpdate.none
+                    )
 
         FinishNewColumnAssoc columnId ->
             ( { model | newColumn = Column.addReference columnId model.newColumn }
             , RT.forSchema model.schema.id |> Http.toTask |> Task.attempt (LoadNewColumnAssocTables model.newColumn.dataType)
-            , AppUpdate.none
-            )
-
-        SetColumnAssociation maybeTableId ->
-            ( { model
-                | newColumnAssociation = maybeTableId
-                , tableColumns = []
-              }
-            , maybeTableId
-                |> Maybe.map (RC.forTable >> Http.send LoadTableColumns)
-                |> Maybe.withDefault Cmd.none
-            , AppUpdate.none
-            )
-
-        SetColumnAssociationColumn maybeColumnId ->
-            ( { model
-                | newColumnAssociationColumn = maybeColumnId
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        AddNewColumnForeignKey ->
-            ( { model
-                | newColumnAssociation = Nothing
-                , newColumnAssociationColumn = Nothing
-                , tableColumns = []
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        CancelColumnAssociation ->
-            ( { model
-                | newColumnAssociation = Nothing
-                , newColumnAssociationColumn = Nothing
-                , tableColumns = []
-              }
-            , Cmd.none
             , AppUpdate.none
             )
 
@@ -394,9 +375,7 @@ update msg model =
                 | columns = model.columns ++ [ column ]
                 , constraints = constraints
                 , newColumn = Column.init model.table.id
-                , newColumnAssociation = Nothing
-                , newColumnAssociationColumn = Nothing
-                , tableColumns = []
+                , newColumnAssoc = DataTypeRequired
                 , errors = []
               }
             , Dom.focus "create-column" |> Task.attempt FocusResult
@@ -678,17 +657,17 @@ createColumnAssoc assoc =
         SelectTable dataType tables ->
             div []
                 [ select
-                    [ onChangeId (.id >> SelectNewColumnAssocTable dataType tables) tables ]
+                    [ onChangeInt (SelectNewColumnAssocTable dataType tables) ]
                     (option [ selected True ] [ text "Select a Table" ] :: List.map (tableOption Nothing) tables)
                 ]
 
         SelectColumn dataType tables tableId columns ->
             div []
                 [ select
-                    [ onChangeId (.id >> SelectNewColumnAssocTable dataType tables) tables ]
+                    [ onChangeInt (SelectNewColumnAssocTable dataType tables) ]
                     (option [ selected True ] [ text "Select a Table" ] :: List.map (tableOption (Just tableId)) tables)
                 , select
-                    [ onChangeId (.id >> SelectNewColumnAssocColumn dataType tables tableId columns) columns ]
+                    [ onChangeInt (SelectNewColumnAssocColumn dataType tables tableId columns) ]
                     (option [ selected True ] [ text "Select a Column" ]
                         :: (columns |> List.filter (.dataType >> DataType.isMatch dataType) |> List.map (columnOption Nothing))
                     )
@@ -697,10 +676,10 @@ createColumnAssoc assoc =
         NewColumnAssocReady dataType tables tableId columns columnId ->
             div []
                 [ select
-                    [ onChangeId (.id >> SelectNewColumnAssocTable dataType tables) tables ]
+                    [ onChangeInt (SelectNewColumnAssocTable dataType tables) ]
                     (option [ selected True ] [ text "Select a Table" ] :: List.map (tableOption (Just tableId)) tables)
                 , select
-                    [ onChangeId (.id >> SelectNewColumnAssocColumn dataType tables tableId columns) columns ]
+                    [ onChangeInt (SelectNewColumnAssocColumn dataType tables tableId columns) ]
                     (option [ selected True ] [ text "Select a Column" ]
                         :: (columns |> List.filter (.dataType >> DataType.isMatch dataType) |> List.map (columnOption (Just columnId)))
                     )
@@ -724,65 +703,6 @@ columnOption maybeId { id, name } =
         , selected (maybeId |> Maybe.map ((==) id) |> Maybe.withDefault False)
         ]
         [ text name ]
-
-
-createColumnAssociations : Maybe Int -> Maybe Int -> List Table -> List Column -> Html Msg
-createColumnAssociations newColumnAssociation newColumnAssociationColumn tables columns =
-    let
-        buttons =
-            case ( newColumnAssociation, newColumnAssociationColumn ) of
-                ( Nothing, Nothing ) ->
-                    []
-
-                ( Just tableId, Nothing ) ->
-                    [ button [ type_ "button", onClick CancelColumnAssociation ] [ text "Cancel" ] ]
-
-                ( _, _ ) ->
-                    [ button [ type_ "button", onClick CancelColumnAssociation ] [ text "Cancel" ]
-                    , button [ type_ "button", onClick AddNewColumnForeignKey ] [ text "Add" ]
-                    ]
-    in
-    case newColumnAssociation of
-        Just tableId ->
-            p []
-                ([ associationTableDropdown (Just tableId) tables
-                 , newColumnAssociationColumn |> createColumnAssociationsColumns columns
-                 ]
-                    ++ buttons
-                )
-
-        Nothing ->
-            p []
-                ([ associationTableDropdown Nothing tables
-                 ]
-                    ++ buttons
-                )
-
-
-createColumnAssociationsColumns : List Column -> Maybe Int -> Html Msg
-createColumnAssociationsColumns columns currentColumnId =
-    select
-        [ onChangeInt SetColumnAssociationColumn ]
-        (option [ selected (currentColumnId == Nothing) ] [ text "Select a Column" ]
-            :: List.map
-                (\c ->
-                    option [ value (toString c.id), selected (Debug.log "a" (Just c.id == currentColumnId)) ] [ text c.name ]
-                )
-                columns
-        )
-
-
-associationTableDropdown : Maybe Int -> List Table -> Html Msg
-associationTableDropdown currentTableId tables =
-    select
-        [ onChangeInt SetColumnAssociation ]
-        (option [ selected (currentTableId == Nothing) ] [ text "Select a Table" ]
-            :: List.map
-                (\t ->
-                    option [ value (toString t.id), selected (Just t.id == currentTableId) ] [ text t.name ]
-                )
-                tables
-        )
 
 
 

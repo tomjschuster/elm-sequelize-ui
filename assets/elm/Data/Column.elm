@@ -311,7 +311,7 @@ encodeNew { tableId, name, dataType, constraints } =
 
 
 encodeConstraints : ColumnConstraints -> Value
-encodeConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique } =
+encodeConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique, references } =
     JE.object
         [ ( "is_primary_key", JE.bool isPrimaryKey )
         , ( "is_not_null", JE.bool isNotNull )
@@ -319,4 +319,5 @@ encodeConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique } =
           , defaultValue |> Maybe.map JE.string |> Maybe.withDefault JE.null
           )
         , ( "is_unique", JE.bool isUnique )
+        , ( "references", references |> List.map JE.int |> JE.list )
         ]
