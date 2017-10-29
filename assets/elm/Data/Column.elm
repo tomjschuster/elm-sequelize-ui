@@ -2,6 +2,7 @@ module Data.Column
     exposing
         ( Column
         , ColumnConstraints
+        , addReference
         , decoder
         , empty
         , encode
@@ -181,6 +182,11 @@ updateIsUnique isUnique column =
     }
 
 
+addReference : Int -> Column -> Column
+addReference columnId column =
+    { column | constraints = addConstraintsReference columnId column.constraints }
+
+
 
 -- UPDATE CONSTRAINTS
 
@@ -211,6 +217,11 @@ updateConstraintsDefaultValue defaultValue constraints =
 updateConstraintsIsUnique : Bool -> ColumnConstraints -> ColumnConstraints
 updateConstraintsIsUnique isUnique constraints =
     { constraints | isUnique = isUnique }
+
+
+addConstraintsReference : Int -> ColumnConstraints -> ColumnConstraints
+addConstraintsReference columnId constraints =
+    { constraints | references = constraints.references ++ [ columnId ] }
 
 
 

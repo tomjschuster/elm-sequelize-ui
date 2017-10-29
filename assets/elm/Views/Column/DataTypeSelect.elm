@@ -73,7 +73,7 @@ defaultOption =
 dtOption : DataType -> DataType -> Html msg
 dtOption currentType dataType =
     option
-        [ selected (DataType.isSame dataType currentType)
+        [ selected (DataType.isSameType dataType currentType)
         , value (DataType.toId dataType |> toString)
         ]
         [ text (DataType.toShortName dataType) ]

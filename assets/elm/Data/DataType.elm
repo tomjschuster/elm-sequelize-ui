@@ -12,7 +12,8 @@ module Data.DataType
         , defaultSize
         , encode
         , fromId
-        , isSame
+        , isMatch
+        , isSameType
         , monetaryGroup
         , none
         , numericGroup
@@ -233,9 +234,19 @@ defaultSize =
     255
 
 
+sizeMatch : Maybe Int -> Maybe Int -> Bool
+sizeMatch size1 size2 =
+    Maybe.withDefault defaultSize size1 == Maybe.withDefault defaultSize size2
+
+
 defaultPrecision : Int
 defaultPrecision =
     18
+
+
+precisionMatch : Maybe Int -> Maybe Int -> Bool
+precisionMatch precision1 precision2 =
+    Maybe.withDefault defaultPrecision precision1 == Maybe.withDefault defaultPrecision precision2
 
 
 defaultScale : Int
@@ -243,8 +254,177 @@ defaultScale =
     0
 
 
-isSame : DataType -> DataType -> Bool
-isSame dataType1 dataType2 =
+scaleMatch : Maybe Int -> Maybe Int -> Bool
+scaleMatch scale1 scale2 =
+    Maybe.withDefault defaultScale scale1 == Maybe.withDefault defaultScale scale2
+
+
+isMatch : DataType -> DataType -> Bool
+isMatch dataType1 dataType2 =
+    case dataType1 of
+        NoDataType ->
+            case dataType2 of
+                NoDataType ->
+                    True
+
+                _ ->
+                    False
+
+        Char size1 ->
+            case dataType2 of
+                Char size2 ->
+                    sizeMatch size1 size2
+
+                _ ->
+                    False
+
+        VarChar size1 ->
+            case dataType2 of
+                VarChar size2 ->
+                    sizeMatch size1 size2
+
+                _ ->
+                    False
+
+        Text ->
+            case dataType2 of
+                Text ->
+                    True
+
+                _ ->
+                    False
+
+        Bit size1 ->
+            case dataType2 of
+                Bit size2 ->
+                    sizeMatch size1 size2
+
+                _ ->
+                    False
+
+        VarBit size1 ->
+            case dataType2 of
+                VarBit size2 ->
+                    sizeMatch size1 size2
+
+                _ ->
+                    False
+
+        SmallInt ->
+            case dataType2 of
+                SmallInt ->
+                    True
+
+                _ ->
+                    False
+
+        Integer ->
+            case dataType2 of
+                Integer ->
+                    True
+
+                _ ->
+                    False
+
+        BigInt ->
+            case dataType2 of
+                BigInt ->
+                    True
+
+                _ ->
+                    False
+
+        SmallSerial ->
+            case dataType2 of
+                SmallSerial ->
+                    True
+
+                _ ->
+                    False
+
+        Serial ->
+            case dataType2 of
+                Serial ->
+                    True
+
+                _ ->
+                    False
+
+        BigSerial ->
+            case dataType2 of
+                BigSerial ->
+                    True
+
+                _ ->
+                    False
+
+        Decimal precision1 scale1 ->
+            case dataType2 of
+                Decimal precision2 scale2 ->
+                    precisionMatch precision1 precision2 && scaleMatch scale1 scale2
+
+                _ ->
+                    False
+
+        Double ->
+            case dataType2 of
+                Double ->
+                    True
+
+                _ ->
+                    False
+
+        Real ->
+            case dataType2 of
+                Real ->
+                    True
+
+                _ ->
+                    False
+
+        Money ->
+            case dataType2 of
+                Money ->
+                    True
+
+                _ ->
+                    False
+
+        Boolean ->
+            case dataType2 of
+                Boolean ->
+                    True
+
+                _ ->
+                    False
+
+        Date ->
+            case dataType2 of
+                Date ->
+                    True
+
+                _ ->
+                    False
+
+        TimeStamp withTimezone1 ->
+            case dataType2 of
+                TimeStamp withTimezone2 ->
+                    withTimezone1 == withTimezone2
+
+                _ ->
+                    False
+
+        Time withTimezone1 ->
+            case dataType2 of
+                Time withTimezone2 ->
+                    withTimezone1 == withTimezone2
+
+                _ ->
+                    False
+
+
+isSameType : DataType -> DataType -> Bool
+isSameType dataType1 dataType2 =
     case dataType1 of
         NoDataType ->
             case dataType2 of

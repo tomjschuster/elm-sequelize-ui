@@ -2,6 +2,7 @@ module Utils.Handlers
     exposing
         ( customOnKeyDown
         , onChangeBool
+        , onChangeId
         , onChangeInt
         , onEnter
         , onEscape
@@ -62,6 +63,16 @@ onPreventDefaultClick message =
 
 
 -- CHANGE
+
+
+onChangeId : ({ a | id : Int } -> msg) -> List { a | id : Int } -> Attribute msg
+onChangeId toMsg data =
+    on "change" (JD.andThen (Maybe.andThen (flip findInList data >> Maybe.map toMsg) >> failOnNothingDecoder) targetValueIntDecoder)
+
+
+findInList : Int -> List { a | id : Int } -> Maybe { a | id : Int }
+findInList id =
+    List.filter (.id >> (==) id) >> List.head
 
 
 onChangeInt : (Maybe Int -> msg) -> Attribute msg
@@ -138,6 +149,14 @@ failOnNothingDecoder =
 failOnErrorDecoder : Result a b -> Decoder b
 failOnErrorDecoder =
     Result.map JD.succeed >> Result.withDefault (JD.fail "Error")
+
+
+failOnFalse : a -> Bool -> Decoder a
+failOnFalse value success =
+    if success then
+        JD.succeed value
+    else
+        JD.fail "false"
 
 
 

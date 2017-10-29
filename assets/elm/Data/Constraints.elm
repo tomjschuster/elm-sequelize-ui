@@ -26,7 +26,7 @@ import Json.Decode.Pipeline exposing (custom, decode, optional, required)
 import Utils.Serialization exposing (listSingletonDecoder)
 
 
--- CONSTRAINTS
+-- TYPES
 
 
 type alias Constraints =
@@ -48,14 +48,32 @@ empty =
     }
 
 
-decoder : Decoder Constraints
-decoder =
-    decode Constraints
-        |> required "primaryKey" (JD.maybe primaryKeyDecoder)
-        |> required "notNulls" (JD.list notNullDecoder)
-        |> required "defaultValues" (JD.list defaultValueDecoder)
-        |> required "uniqueKeys" (JD.list uniqueKeyDecoder)
-        |> required "foreignKeys" (JD.list foreignKeyDecoder)
+type alias ConstraintId =
+    Int
+
+
+type alias ColumnId =
+    Int
+
+
+type alias ConstraintName =
+    Maybe String
+
+
+
+-- INDICES
+
+
+type Index
+    = Index (List ColumnId)
+
+
+type ForeignKeyIndex
+    = ForeignKeyIndex (List ( ColumnId, ColumnId ))
+
+
+
+-- CONSTRAINTS
 
 
 type PrimaryKey
@@ -76,6 +94,54 @@ type UniqueKey
 
 type ForeignKey
     = ForeignKey ConstraintId ConstraintName ForeignKeyIndex
+
+
+
+-- DECODERS
+
+
+decoder : Decoder Constraints
+decoder =
+    decode Constraints
+        |> required "primaryKey" (JD.maybe primaryKeyDecoder)
+        |> required "notNulls" (JD.list notNullDecoder)
+        |> required "defaultValues" (JD.list defaultValueDecoder)
+        |> required "uniqueKeys" (JD.list uniqueKeyDecoder)
+        |> required "foreignKeys" (JD.list foreignKeyDecoder)
+
+
+constraintIdDecoder : Decoder ConstraintId
+constraintIdDecoder =
+    JD.field "id" JD.int
+
+
+constraintNameDecoder : Decoder ConstraintName
+constraintNameDecoder =
+    JD.field "name" (JD.maybe JD.string)
+
+
+indexDecoder : Decoder Index
+indexDecoder =
+    JD.field "columns" (JD.list (JD.field "columnId" JD.int) |> JD.map Index)
+
+
+foreignKeyIndexDecoder : Decoder ForeignKeyIndex
+foreignKeyIndexDecoder =
+    JD.map2 (,)
+        (JD.field "columnId" JD.int)
+        (JD.field "referencesId" JD.int)
+        |> JD.list
+        |> JD.map ForeignKeyIndex
+
+
+singleColumnDecoder : Decoder ColumnId
+singleColumnDecoder =
+    JD.field "columns" (JD.list columnIdDecoder) |> JD.andThen listSingletonDecoder
+
+
+columnIdDecoder : Decoder ColumnId
+columnIdDecoder =
+    JD.field "columnId" JD.int
 
 
 primaryKeyDecoder : Decoder PrimaryKey
@@ -120,69 +186,7 @@ foreignKeyDecoder =
 
 
 
--- Helper Types
-
-
-type alias ConstraintId =
-    Int
-
-
-type alias ConstraintName =
-    Maybe String
-
-
-type alias ColumnId =
-    Int
-
-
-constraintIdDecoder : Decoder ConstraintId
-constraintIdDecoder =
-    JD.field "id" JD.int
-
-
-constraintNameDecoder : Decoder ConstraintName
-constraintNameDecoder =
-    JD.field "name" (JD.maybe JD.string)
-
-
-singleColumnDecoder : Decoder ColumnId
-singleColumnDecoder =
-    JD.field "columns" (JD.list columnIdDecoder) |> JD.andThen listSingletonDecoder
-
-
-columnIdDecoder : Decoder ColumnId
-columnIdDecoder =
-    JD.field "columnId" JD.int
-
-
-
--- INDEXES
-
-
-type Index
-    = Index (List ColumnId)
-
-
-type ForeignKeyIndex
-    = ForeignKeyIndex (List ( ColumnId, ColumnId ))
-
-
-indexDecoder : Decoder Index
-indexDecoder =
-    JD.field "columns" (JD.list (JD.field "columnId" JD.int) |> JD.map Index)
-
-
-foreignKeyIndexDecoder : Decoder ForeignKeyIndex
-foreignKeyIndexDecoder =
-    JD.map2 (,)
-        (JD.field "columnId" JD.int)
-        (JD.field "referencesId" JD.int)
-        |> JD.list
-        |> JD.map ForeignKeyIndex
-
-
-
--- EXPOSED FUNCTIONS
+-- EXPOSED  FUNCTIONS
 
 
 inPrimaryKey : ColumnId -> PrimaryKey -> Bool
