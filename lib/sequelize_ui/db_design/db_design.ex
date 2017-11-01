@@ -201,7 +201,6 @@ defmodule SequelizeUi.DbDesign do
     |> Multi.update(:column, Column.changeset(column, col_attrs))
     |> Multi.run(:deleted_constraints, fn _ -> delete_column_constraints(id) end)
     |> Multi.run(:col_constraints, &(create_column_constraints(&1, con_attrs)))
-    |> Multi.run(:constraints, &({:ok, get_table_constraints(&1.table.id)}))
     |> Repo.transaction
   end
 

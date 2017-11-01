@@ -3,7 +3,7 @@ module Page.Table exposing (Model, Msg, init, initialModel, update, view)
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Column as Column exposing (Column, ColumnConstraints)
-import Data.Combined as Combined exposing (ColumnWithConstraints, TableWithAll)
+import Data.Combined as Combined exposing (DbEntity(..))
 import Data.Constraints as Constraints exposing (Constraints)
 import Data.DataType as DataType exposing (DataType)
 import Data.Schema as Schema exposing (Schema)
@@ -39,7 +39,7 @@ import Request.Constraint as ConstraintReq
 import Request.Schema as SchemaReq
 import Request.Table as TableReq
 import Router exposing (Route)
-import Task
+import Task exposing (Task)
 import Utils.Handlers exposing (customOnKeyDown, onChangeInt, onEnter)
 import Utils.Http exposing (isUnprocessableEntity)
 import Utils.Keys exposing (Key(..))
@@ -98,13 +98,19 @@ type alias InitialData =
 init : Int -> Int -> ( Model, Cmd Msg )
 init schemaId tableId =
     ( { initialModel | newColumn = Column.init tableId }
-    , Cmd.batch
-        [ TableReq.one tableId |> Http.toTask |> Task.attempt LoadTable
-        , SchemaReq.one schemaId |> Http.toTask |> Task.attempt LoadSchema
-        , ColumnReq.indexForTable tableId |> Http.toTask |> Task.attempt LoadColumns
-        , ConstraintReq.indexForTable tableId |> Http.toTask |> Task.attempt LoadConstraints
+    , Task.sequence
+        [ TableReq.one tableId |> sendDbEntity DbTable
+        , SchemaReq.one schemaId |> sendDbEntity DbSchema
+        , ColumnReq.indexForTable tableId |> sendDbEntity DbColumns
+        , ConstraintReq.indexForTable tableId |> sendDbEntity DbConstraints
         ]
+        |> Task.attempt LoadDbEntities
     )
+
+
+sendDbEntity : (a -> DbEntity) -> Http.Request a -> Task Http.Error DbEntity
+sendDbEntity toEntity =
+    Http.toTask >> Task.map toEntity
 
 
 
@@ -115,7 +121,7 @@ type Msg
     = NoOp
     | FocusResult (Result Dom.Error ())
     | Goto Route
-    | LoadTableWithAll (Result Http.Error TableWithAll)
+    | LoadDbEntities (Result Http.Error (List DbEntity))
       -- SCHEMA
     | LoadSchema (Result Http.Error Schema)
       -- TABLE
@@ -135,7 +141,6 @@ type Msg
     | InputNewColumnName String
     | SelectNewColumnDataType DataType
     | CreateColumn
-    | LoadNewColumn (Result Http.Error Column)
     | SetColumnAssociation (Maybe Int)
     | SetColumnAssociationColumn (Maybe Int)
     | AddNewColumnForeignKey
@@ -147,7 +152,7 @@ type Msg
     | SelectEditingColumnDataType DataType
     | CancelEditColumn
     | SaveEditingColumn
-    | LoadEditingColumnWithConstraints (Result Http.Error ColumnWithConstraints)
+    | LoadEditingColumn (Result Http.Error Column)
       -- DELETE COLUMN
     | DestroyColumn Int
     | RemoveColumn (Result Http.Error ())
@@ -173,19 +178,22 @@ update msg model =
             , AppUpdate.none
             )
 
-        LoadTableWithAll (Ok { schema, table, columns, constraints }) ->
-            ( { model
-                | table = table
-                , schema = schema
-                , columns = columns
-                , constraints = constraints
-                , errors = []
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
+        LoadDbEntities (Ok entities) ->
+            let
+                newModel =
+                    { model
+                        | editingTable = Nothing
+                        , editingColumn = Nothing
+                        , newColumn = Column.init model.table.id
+                        , newColumnAssociation = Nothing
+                        , newColumnAssociationColumn = Nothing
+                        , tableColumns = []
+                        , errors = []
+                    }
+            in
+            ( updateWithDbEntities entities newModel, Cmd.none, AppUpdate.none )
 
-        LoadTableWithAll (Err error) ->
+        LoadDbEntities (Err error) ->
             if isUnprocessableEntity error then
                 ( { model | errors = ChangesetError.parseHttpError error }
                 , Cmd.none
@@ -378,34 +386,13 @@ update msg model =
 
         CreateColumn ->
             ( model
-            , ColumnReq.create model.newColumn |> Http.send LoadNewColumn
-            , AppUpdate.none
-            )
-
-        LoadNewColumn (Ok column) ->
-            ( { model
-                | columns = model.columns ++ [ column ]
-                , newColumn = Column.init model.table.id
-                , newColumnAssociation = Nothing
-                , newColumnAssociationColumn = Nothing
-                , tableColumns = []
-                , errors = []
-              }
-            , Cmd.batch
-                [ Dom.focus "create-column" |> Task.attempt FocusResult
-                , ConstraintReq.indexForTable model.table.id |> Http.send LoadConstraints
+            , Task.sequence
+                [ ColumnReq.create model.newColumn |> sendDbEntity DbColumn
+                , ConstraintReq.indexForTable model.table.id |> sendDbEntity DbConstraints
                 ]
+                |> Task.attempt LoadDbEntities
             , AppUpdate.none
             )
-
-        LoadNewColumn (Err error) ->
-            if isUnprocessableEntity error then
-                ( { model | errors = ChangesetError.parseHttpError error }
-                , Dom.focus "create-column" |> Task.attempt FocusResult
-                , AppUpdate.none
-                )
-            else
-                ( model, Cmd.none, AppUpdate.httpError error )
 
         -- EDIT COLUMN
         EditColumn id ->
@@ -458,23 +445,26 @@ update msg model =
         SaveEditingColumn ->
             ( model
             , model.editingColumn
-                |> Maybe.map (ColumnReq.updateWithConstraints >> Http.send LoadEditingColumnWithConstraints)
+                |> Maybe.map (ColumnReq.updateWithConstraints >> Http.send LoadEditingColumn)
                 |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
 
-        LoadEditingColumnWithConstraints (Ok { column, constraints }) ->
+        LoadEditingColumn (Ok column) ->
             ( { model
-                | constraints = constraints
+                | columns = replaceOrAppendColumn column model.columns
                 , editingColumn = Nothing
                 , errors = []
               }
-            , Dom.focus "create-column" |> Task.attempt FocusResult
+            , Cmd.batch
+                [ Dom.focus "create-column" |> Task.attempt FocusResult
+                , ConstraintReq.indexForTable model.table.id |> Http.send LoadConstraints
+                ]
             , AppUpdate.none
             )
 
-        LoadEditingColumnWithConstraints (Err error) ->
-            ( { model | errors = ChangesetError.parseHttpError (Debug.log "" error) }
+        LoadEditingColumn (Err error) ->
+            ( { model | errors = ChangesetError.parseHttpError error }
             , Dom.focus "edit-column-name" |> Task.attempt FocusResult
             , AppUpdate.none
             )
@@ -524,6 +514,53 @@ update msg model =
                 )
             else
                 ( model, Cmd.none, AppUpdate.httpError error )
+
+
+updateWithDbEntities : List DbEntity -> Model -> Model
+updateWithDbEntities entities model =
+    List.foldl updateWithDbEntity model entities
+
+
+updateWithDbEntity : DbEntity -> Model -> Model
+updateWithDbEntity entity model =
+    case entity of
+        DbSchema schema ->
+            { model | schema = schema }
+
+        DbTable table ->
+            { model | table = table }
+
+        DbColumn column ->
+            { model | columns = replaceOrAppendColumn column model.columns }
+
+        DbColumns columns ->
+            { model | columns = columns }
+
+        DbConstraints constraints ->
+            { model | constraints = constraints }
+
+        _ ->
+            model
+
+
+replaceOrAppendColumn : Column -> List Column -> List Column
+replaceOrAppendColumn column columns =
+    let
+        ( replaced, newColumns ) =
+            List.foldr
+                (\x ( replaced, xs ) ->
+                    if x.id == column.id then
+                        ( True, column :: xs )
+                    else
+                        ( replaced, x :: xs )
+                )
+                ( False, [] )
+                columns
+    in
+    if replaced then
+        newColumns
+    else
+        newColumns ++ [ column ]
 
 
 
@@ -794,7 +831,7 @@ columnItemChildren maybeEditingColumn schemaId column constraints =
     case maybeEditingColumn of
         Just editingColumn ->
             if column.id == editingColumn.id then
-                [ editColumnNameInput column.name
+                [ editColumnNameInput editingColumn.name
                 , DTSelect.view "edit-column-data-type" SelectEditingColumnDataType column.dataType
                 , CFields.view "create-column-constraints" UpdateEditingColumnConstraints editingColumn.constraints
                 , cancelEditColumnButton

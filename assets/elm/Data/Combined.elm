@@ -3,6 +3,7 @@ module Data.Combined
         ( ColumnWithAll
         , ColumnWithConstraints
         , ColumnWithTable
+        , DbEntity(..)
         , SchemaWithTables
         , TableWithAll
         , TableWithColumns
@@ -31,6 +32,20 @@ import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
 import Json.Decode as JD exposing (Decoder)
 import Json.Decode.Pipeline exposing (decode, required)
+
+
+-- DB ENTITY
+
+
+type DbEntity
+    = DbSchema Schema
+    | DbSchemas (List Schema)
+    | DbTable Table
+    | DbTables (List Table)
+    | DbColumn Column
+    | DbColumns (List Column)
+    | DbConstraints Constraints
+
 
 
 -- COMBINE REQUESTS

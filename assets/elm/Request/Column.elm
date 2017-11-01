@@ -58,11 +58,11 @@ update column =
         (dataDecoder Column.decoder)
 
 
-updateWithConstraints : Column -> Request ColumnWithConstraints
+updateWithConstraints : Column -> Request Column
 updateWithConstraints column =
     put (columnUrl column.id)
         (Column.encode column |> Http.jsonBody)
-        (dataDecoder Combined.columnWithConstraintsDecoder)
+        (dataDecoder Column.decoder)
 
 
 destroy : Int -> Request ()
