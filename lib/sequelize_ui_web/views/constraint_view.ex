@@ -6,6 +6,10 @@ defmodule SequelizeUiWeb.ConstraintView do
     %{data: render_many(constraints, ConstraintView, "constraint.json")}
   end
 
+  def render("index-for-table.json", %{constraints: constraints}) do
+    %{data: render(ConstraintView, "table-constraints.json", constraints: constraints)}
+  end
+
   def render("show.json", %{constraint: constraint}) do
     %{data: render_one(constraint, ConstraintView, "constraint.json")}
   end

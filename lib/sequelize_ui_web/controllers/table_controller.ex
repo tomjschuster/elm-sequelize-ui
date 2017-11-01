@@ -11,7 +11,7 @@ defmodule SequelizeUiWeb.TableController do
     render(conn, "index.json", tables: tables)
   end
 
-  def for_schema(conn, %{"schema_id" => schema_id}) do
+  def index_for_schema(conn, %{"schema_id" => schema_id}) do
     tables = DbDesign.list_tables_for_schema(schema_id)
     render(conn, "index.json", tables: tables)
   end
@@ -25,22 +25,9 @@ defmodule SequelizeUiWeb.TableController do
     end
   end
 
-  def show(conn, %{"id" => id} = params) do
-    %{schema: with_schema, columns: with_columns} = conn.assigns.combined_with
-    case {with_schema, with_columns} do
-      {true, true} ->
-        table = DbDesign.get_table_with_all!(id)
-        render(conn, "show-with-all.json", table: table)
-      {true, false} ->
-        table = DbDesign.get_table_with_schema!(id)
-        render(conn, "show-with-schema.json", table: table)
-      {false, true} ->
-        table = DbDesign.get_table_with_columns!(id)
-        render(conn, "show-with-columns.json", table: table)
-      {false, false} ->
-        table = DbDesign.get_table!(id)
-        render(conn, "show.json", table: table)
-    end
+  def show(conn, %{"id" => id}) do
+    table = DbDesign.get_table!(id)
+    render(conn, "show.json", table: table)
   end
 
   def update(conn, %{"id" => id, "table" => table_params}) do

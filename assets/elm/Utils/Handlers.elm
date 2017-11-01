@@ -11,7 +11,7 @@ module Utils.Handlers
         )
 
 import Html exposing (Attribute)
-import Html.Events exposing (defaultOptions, on, onWithOptions)
+import Html.Events exposing (Options, defaultOptions, on, onWithOptions)
 import Json.Decode as JD exposing (Decoder)
 import Utils.Keys as Keys exposing (Key(..))
 
@@ -26,7 +26,8 @@ onKeyDown keys msg =
 
 customOnKeyDown : (Key -> Maybe msg) -> Attribute msg
 customOnKeyDown toMsg =
-    on "keydown"
+    onWithOptions "keydown"
+        (Options True True)
         (JD.field "keyCode" JD.int
             |> JD.andThen
                 (Keys.fromKeyCode

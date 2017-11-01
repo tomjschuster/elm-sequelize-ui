@@ -2,23 +2,17 @@ module Request.Column
     exposing
         ( create
         , destroy
-        , forTable
+        , indexForTable
         , one
-        , oneWithAll
-        , oneWithTable
         , update
         , updateWithConstraints
         )
 
 import Data.Column as Column exposing (Column)
-import Data.Combined as Combined
-    exposing
-        ( ColumnWithAll
-        , ColumnWithConstraints
-        , ColumnWithTable
-        )
+import Data.Combined as Combined exposing (ColumnWithConstraints)
 import Http exposing (Request)
 import Json.Decode as JD
+import Request.Table exposing (tableUrl)
 import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
 
@@ -33,8 +27,8 @@ columnUrl =
 
 
 tableColumnsUrl : Int -> String
-tableColumnsUrl tableId =
-    baseUrl ++ "tables/" ++ toString tableId ++ "/columns"
+tableColumnsUrl =
+    tableUrl >> flip (++) "/columns"
 
 
 create : Column -> Request ColumnWithConstraints
@@ -50,22 +44,8 @@ one id =
     Http.get (columnUrl id) (dataDecoder Column.decoder)
 
 
-oneWithTable : Int -> Request ColumnWithTable
-oneWithTable id =
-    Http.get
-        (columnUrl id |> Combined.withTable)
-        (dataDecoder Combined.columnWithTableDecoder)
-
-
-oneWithAll : Int -> Request ColumnWithAll
-oneWithAll id =
-    Http.get
-        (columnUrl id |> Combined.withTable |> Combined.andWithSchema)
-        (dataDecoder Combined.columnWithAllDecoder)
-
-
-forTable : Int -> Request (List Column)
-forTable tableId =
+indexForTable : Int -> Request (List Column)
+indexForTable tableId =
     Http.get
         (tableColumnsUrl tableId)
         (dataDecoder (JD.list Column.decoder))

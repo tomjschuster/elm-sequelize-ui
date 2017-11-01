@@ -4,11 +4,10 @@ module Request.Schema
         , destroy
         , index
         , one
-        , oneWithTables
+        , schemaUrl
         , update
         )
 
-import Data.Combined as Combined exposing (SchemaWithTables, withTables)
 import Data.Schema as Schema exposing (Schema)
 import Http
 import Json.Decode as JD
@@ -30,13 +29,6 @@ index =
     Http.get
         schemasUrl
         (dataDecoder (JD.list Schema.decoder))
-
-
-oneWithTables : Int -> Http.Request SchemaWithTables
-oneWithTables id =
-    Http.get
-        (schemaUrl id |> Combined.withTables)
-        (dataDecoder Combined.schemaWithTablesDecoder)
 
 
 one : Int -> Http.Request Schema

@@ -34,8 +34,10 @@ import Html
 import Html.Attributes as Attributes exposing (checked, for, id, name, selected, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput)
 import Http
-import Request.Column as RC
-import Request.Table as RT
+import Request.Column as ColumnReq
+import Request.Constraint as ConstraintReq
+import Request.Schema as SchemaReq
+import Request.Table as TableReq
 import Router exposing (Route)
 import Task
 import Utils.Handlers exposing (customOnKeyDown, onChangeInt, onEnter)
@@ -97,8 +99,10 @@ init : Int -> Int -> ( Model, Cmd Msg )
 init schemaId tableId =
     ( { initialModel | newColumn = Column.init tableId }
     , Cmd.batch
-        [ RT.oneWithAll tableId |> Http.toTask |> Task.attempt LoadTableWithAll
-        , RT.forSchema schemaId |> Http.toTask |> Task.attempt LoadSchemaTables
+        [ TableReq.one tableId |> Http.toTask |> Task.attempt LoadTable
+        , SchemaReq.one schemaId |> Http.toTask |> Task.attempt LoadSchema
+        , ColumnReq.indexForTable tableId |> Http.toTask |> Task.attempt LoadColumns
+        , ConstraintReq.indexForTable tableId |> Http.toTask |> Task.attempt LoadConstraints
         ]
     )
 
@@ -112,6 +116,8 @@ type Msg
     | FocusResult (Result Dom.Error ())
     | Goto Route
     | LoadTableWithAll (Result Http.Error TableWithAll)
+      -- SCHEMA
+    | LoadSchema (Result Http.Error Schema)
       -- TABLE
     | LoadTable (Result Http.Error Table)
     | EditTable
@@ -123,6 +129,7 @@ type Msg
     | LoadSchemaTables (Result Http.Error (List Table))
     | LoadTableColumns (Result Http.Error (List Column))
       -- COLUMNS
+    | LoadColumns (Result Http.Error (List Column))
       -- CREATE COLUMN
     | UpdateNewColumnConstraints ColumnConstraints
     | InputNewColumnName String
@@ -144,6 +151,8 @@ type Msg
       -- DELETE COLUMN
     | DestroyColumn Int
     | RemoveColumn (Result Http.Error ())
+      -- CONSTRAINTS
+    | LoadConstraints (Result Http.Error Constraints)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg, AppUpdate )
@@ -177,6 +186,25 @@ update msg model =
             )
 
         LoadTableWithAll (Err error) ->
+            if isUnprocessableEntity error then
+                ( { model | errors = ChangesetError.parseHttpError error }
+                , Cmd.none
+                , AppUpdate.none
+                )
+            else
+                ( model, Cmd.none, AppUpdate.httpError error )
+
+        -- SCHEMA
+        LoadSchema (Ok schema) ->
+            ( { model
+                | schema = schema
+                , errors = []
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        LoadSchema (Err error) ->
             if isUnprocessableEntity error then
                 ( { model | errors = ChangesetError.parseHttpError error }
                 , Cmd.none
@@ -233,14 +261,14 @@ update msg model =
         SaveTableName ->
             ( model
             , model.editingTable
-                |> Maybe.map (RT.update >> Http.send LoadTable)
+                |> Maybe.map (TableReq.update >> Http.send LoadTable)
                 |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
 
         Destroy ->
             ( model
-            , RT.destroy model.table.id |> Http.send RemoveTable
+            , TableReq.destroy model.table.id |> Http.send RemoveTable
             , AppUpdate.none
             )
 
@@ -269,6 +297,24 @@ update msg model =
             ( model, Cmd.none, AppUpdate.none )
 
         -- COLUMNS
+        LoadColumns (Ok columns) ->
+            ( { model
+                | columns = columns
+                , errors = []
+              }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        LoadColumns (Err error) ->
+            if isUnprocessableEntity error then
+                ( { model | errors = ChangesetError.parseHttpError error }
+                , Cmd.none
+                , AppUpdate.none
+                )
+            else
+                ( model, Cmd.none, AppUpdate.httpError error )
+
         -- NEW COLUMN
         UpdateNewColumnConstraints constraints ->
             ( { model | newColumn = Column.updateConstraints constraints model.newColumn }
@@ -297,7 +343,7 @@ update msg model =
                 , tableColumns = []
               }
             , maybeTableId
-                |> Maybe.map (RC.forTable >> Http.send LoadTableColumns)
+                |> Maybe.map (ColumnReq.indexForTable >> Http.send LoadTableColumns)
                 |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
@@ -332,7 +378,7 @@ update msg model =
 
         CreateColumn ->
             ( model
-            , RC.create model.newColumn
+            , ColumnReq.create model.newColumn
                 |> Http.send LoadNewColumnWithConstraints
             , AppUpdate.none
             )
@@ -411,7 +457,7 @@ update msg model =
         SaveEditingColumn ->
             ( model
             , model.editingColumn
-                |> Maybe.map (RC.updateWithConstraints >> Http.send LoadEditingColumnWithConstraints)
+                |> Maybe.map (ColumnReq.updateWithConstraints >> Http.send LoadEditingColumnWithConstraints)
                 |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
@@ -434,7 +480,7 @@ update msg model =
 
         DestroyColumn id ->
             ( { model | toDeleteId = Just id }
-            , RC.destroy id |> Http.send RemoveColumn
+            , ColumnReq.destroy id |> Http.send RemoveColumn
             , AppUpdate.none
             )
 
@@ -451,13 +497,32 @@ update msg model =
             )
 
         RemoveColumn (Err error) ->
+            if isUnprocessableEntity error then
+                ( { model | errors = ChangesetError.parseHttpError error }
+                , Dom.focus "create-column" |> Task.attempt FocusResult
+                , AppUpdate.none
+                )
+            else
+                ( model, Cmd.none, AppUpdate.httpError error )
+
+        -- CONSTRAINTS
+        LoadConstraints (Ok constraints) ->
             ( { model
-                | errors = ChangesetError.parseHttpError error
-                , toDeleteId = Nothing
+                | constraints = constraints
+                , errors = []
               }
             , Cmd.none
             , AppUpdate.none
             )
+
+        LoadConstraints (Err error) ->
+            if isUnprocessableEntity error then
+                ( { model | errors = ChangesetError.parseHttpError error }
+                , Dom.focus "create-column" |> Task.attempt FocusResult
+                , AppUpdate.none
+                )
+            else
+                ( model, Cmd.none, AppUpdate.httpError error )
 
 
 
@@ -607,9 +672,20 @@ newColumnInput name =
             , value name
             , onInput InputNewColumnName
             , onEnter CreateColumn
+            , customOnKeyDown onColumnNameKeyDown
             ]
             []
         ]
+
+
+onColumnNameKeyDown : Key -> Maybe Msg
+onColumnNameKeyDown key =
+    case key of
+        Enter ->
+            Just CreateColumn
+
+        _ ->
+            Nothing
 
 
 createColumnButton : Html Msg
@@ -756,13 +832,13 @@ editColumnNameInput name =
         [ id "edit-column-name"
         , value name
         , onInput InputEditingColumnName
-        , customOnKeyDown onColumnNameKeyDown
+        , customOnKeyDown onEditingColumnNameKeyDown
         ]
         []
 
 
-onColumnNameKeyDown : Key -> Maybe Msg
-onColumnNameKeyDown key =
+onEditingColumnNameKeyDown : Key -> Maybe Msg
+onEditingColumnNameKeyDown key =
     case key of
         Enter ->
             Just SaveEditingColumn

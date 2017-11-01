@@ -2,7 +2,6 @@ defmodule SequelizeUiWeb.ColumnController do
   use SequelizeUiWeb, :controller
 
   alias SequelizeUi.DbDesign
-  alias SequelizeUi.DbDesign.{Column, Table, Constraint}
 
   action_fallback SequelizeUiWeb.FallbackController
 
@@ -11,7 +10,7 @@ defmodule SequelizeUiWeb.ColumnController do
     render(conn, "index.json", columns: columns)
   end
 
-  def for_table(conn, %{"table_id" => table_id}) do
+  def index_for_table(conn, %{"table_id" => table_id}) do
     columns = DbDesign.list_columns_for_table(table_id)
     render(conn, "index.json", columns: columns)
   end
@@ -26,19 +25,9 @@ defmodule SequelizeUiWeb.ColumnController do
     end
   end
 
-  def show(conn, %{"id" => id} = params) do
-    %{schema: with_schema, table: with_table} = conn.assigns.combined_with
-    case {with_schema, with_table} do
-      {true, true} ->
-        column = DbDesign.get_column_with_all!(id)
-        render(conn, "show-with-all.json", column: column)
-      {false, true} ->
-        column = DbDesign.get_column_with_table!(id)
-        render(conn, "show-with-table.json", column: column)
-      {false, false} ->
-        column = DbDesign.get_column!(id)
-        render(conn, "show.json", column: column)
-    end
+  def show(conn, %{"id" => id}) do
+    column = DbDesign.get_column!(id)
+    render(conn, "show.json", column: column)
   end
 
   def update(conn, params) do
@@ -52,7 +41,7 @@ defmodule SequelizeUiWeb.ColumnController do
   end
 
   def delete(conn, params) do
-    with {:ok, result} <- DbDesign.delete_column_with_constraints(params) do
+    with {:ok, _result} <- DbDesign.delete_column_with_constraints(params) do
       send_resp(conn, :no_content, "")
     end
   end

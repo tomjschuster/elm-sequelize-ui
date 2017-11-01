@@ -2,24 +2,17 @@ module Request.Table
     exposing
         ( create
         , destroy
-        , forSchema
         , index
+        , indexForSchema
         , one
-        , oneWithAll
-        , oneWithColumns
-        , oneWithSchema
+        , tableUrl
         , update
         )
 
-import Data.Combined as Combined
-    exposing
-        ( TableWithAll
-        , TableWithColumns
-        , TableWithSchema
-        )
 import Data.Table as Table exposing (Table)
 import Http exposing (Request)
 import Json.Decode as JD
+import Request.Schema exposing (schemaUrl)
 import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
 
@@ -34,8 +27,8 @@ tableUrl =
 
 
 schemaTablesUrl : Int -> String
-schemaTablesUrl schemaId =
-    baseUrl ++ "schemas/" ++ toString schemaId ++ "/tables"
+schemaTablesUrl =
+    schemaUrl >> flip (++) "/tables"
 
 
 
@@ -63,29 +56,8 @@ one id =
     Http.get (tableUrl id) (dataDecoder Table.decoder)
 
 
-oneWithSchema : Int -> Http.Request TableWithSchema
-oneWithSchema id =
-    Http.get
-        (tableUrl id |> Combined.withSchema)
-        (dataDecoder Combined.tableWithSchemaDecoder)
-
-
-oneWithColumns : Int -> Http.Request TableWithColumns
-oneWithColumns id =
-    Http.get
-        (tableUrl id |> Combined.withColumns)
-        (dataDecoder Combined.tableWithColumnsDecoder)
-
-
-oneWithAll : Int -> Http.Request TableWithAll
-oneWithAll id =
-    Http.get
-        (tableUrl id |> Combined.withSchema |> Combined.andWithColumns)
-        (dataDecoder Combined.tableWithAllDecoder)
-
-
-forSchema : Int -> Http.Request (List Table)
-forSchema schemaId =
+indexForSchema : Int -> Http.Request (List Table)
+indexForSchema schemaId =
     Http.get
         (schemaTablesUrl schemaId)
         (dataDecoder (JD.list Table.decoder))

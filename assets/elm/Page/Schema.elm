@@ -11,7 +11,6 @@ module Page.Schema
 
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
-import Data.Combined exposing (SchemaWithTables)
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
 import Dom
@@ -33,8 +32,8 @@ import Html
 import Html.Attributes exposing (disabled, id, value)
 import Html.Events exposing (onClick, onInput)
 import Http
-import Request.Schema as RS
-import Request.Table as RE
+import Request.Schema as SchemaReq
+import Request.Table as TableReq
 import Router exposing (Route)
 import Task
 import Utils.Handlers exposing (customOnKeyDown, onEnter)
@@ -66,7 +65,10 @@ initialModel =
 init : Int -> ( Model, Cmd Msg )
 init schemaId =
     ( { initialModel | newTable = Table.init schemaId }
-    , RS.oneWithTables schemaId |> Http.send LoadSchemaWithTables
+    , Cmd.batch
+        [ SchemaReq.one schemaId |> Http.send LoadSchema
+        , TableReq.indexForSchema schemaId |> Http.send LoadTables
+        ]
     )
 
 
@@ -79,7 +81,6 @@ type Msg
     | FocusResult (Result Dom.Error ())
     | Goto Route
       -- SCHEMA
-    | LoadSchemaWithTables (Result Http.Error SchemaWithTables)
     | LoadSchema (Result Http.Error Schema)
     | EditSchema
     | InputSchemaName String
@@ -87,7 +88,8 @@ type Msg
     | SaveSchema
     | Destroy
     | RemoveSchema (Result Http.Error ())
-      -- ENTITIES
+      -- TABLES
+    | LoadTables (Result Http.Error (List Table))
     | InputNewTableName String
     | CreateTable
     | LoadTable (Result Http.Error Table)
@@ -119,18 +121,6 @@ update msg model =
             )
 
         -- SCHEMA
-        LoadSchemaWithTables (Ok { schema, tables }) ->
-            ( { model | schema = schema, tables = tables, errors = [] }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        LoadSchemaWithTables (Err error) ->
-            ( { model | errors = ChangesetError.parseHttpError error }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
         LoadSchema (Ok schema) ->
             ( { model | schema = schema, editingSchema = Nothing, errors = [] }
             , Cmd.none
@@ -170,14 +160,14 @@ update msg model =
         SaveSchema ->
             ( model
             , model.editingSchema
-                |> Maybe.map (RS.update >> Http.send LoadSchema)
+                |> Maybe.map (SchemaReq.update >> Http.send LoadSchema)
                 |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
 
         Destroy ->
             ( model
-            , RS.destroy model.schema.id |> Http.send RemoveSchema
+            , SchemaReq.destroy model.schema.id |> Http.send RemoveSchema
             , AppUpdate.none
             )
 
@@ -193,7 +183,16 @@ update msg model =
             , AppUpdate.none
             )
 
-        -- ENTITIES
+        -- TABLES
+        LoadTables (Ok tables) ->
+            ( { model | tables = tables }, Cmd.none, AppUpdate.none )
+
+        LoadTables (Err error) ->
+            ( { model | errors = ChangesetError.parseHttpError error }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
         InputNewTableName name ->
             ( { model | newTable = Table.updateName name model.newTable }
             , Cmd.none
@@ -202,7 +201,7 @@ update msg model =
 
         CreateTable ->
             ( model
-            , RE.create model.newTable
+            , TableReq.create model.newTable
                 |> Http.send LoadTable
             , AppUpdate.none
             )
@@ -251,7 +250,7 @@ update msg model =
         SaveTableName ->
             ( model
             , model.editingTable
-                |> Maybe.map (RE.update >> Http.send UpdateTable)
+                |> Maybe.map (TableReq.update >> Http.send UpdateTable)
                 |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
@@ -275,7 +274,7 @@ update msg model =
 
         DestroyTable id ->
             ( { model | toDeleteId = Just id }
-            , RE.destroy id
+            , TableReq.destroy id
                 |> Http.send RemoveTable
             , AppUpdate.none
             )
@@ -417,7 +416,7 @@ onSchemaNameKeyDown key =
 
 
 
--- ENTITIES VIEW
+-- TABLES VIEW
 
 
 tablesView : Model -> Html Msg

@@ -62,7 +62,8 @@ initialModel =
 init : Int -> Int -> Int -> ( Model, Cmd Msg )
 init schemaId tableId id =
     ( initialModel
-    , (RF.oneWithAll id |> Http.toTask) |> Task.attempt LoadColumnWithAll
+    , Cmd.none
+      --, (RF.oneWithAll id |> Http.toTask) |> Task.attempt LoadColumnWithAll
     )
 
 

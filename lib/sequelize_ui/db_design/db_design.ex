@@ -214,7 +214,7 @@ defmodule SequelizeUi.DbDesign do
     |> Repo.transaction
   end
 
-  defp create_column_constraints(%{table: table, column: column}, params \\ %{}) do
+  defp create_column_constraints(%{table: table, column: column}, params) do
     with {:ok, pk_constraint} <- create_column_pk(table, column, params),
          {:ok, nn_constraint} <- create_column_nn(table, column, params),
          {:ok, dv_constraint} <- create_column_dv(table, column, params),
@@ -232,7 +232,7 @@ defmodule SequelizeUi.DbDesign do
         add_primary_key(column, pk)
       [] ->
         attrs = constraint_attrs(table, "primary_key")
-        build_constraint(table, column, attrs)
+        build_constraint(column, attrs)
     end
   end
 
@@ -244,26 +244,26 @@ defmodule SequelizeUi.DbDesign do
 
   defp add_primary_key(%Column{} = column, %Constraint{} = constraint) do
     with col_con_attrs <- con_coll_attrs(column.id, constraint.id),
-     {:ok, column_constraint} <- create_column_constraint(col_con_attrs),
+     {:ok, _column_constraint} <- create_column_constraint(col_con_attrs),
      do: {:ok, constraint}
   end
 
   defp create_column_nn(_table, _column, %{"is_not_null" => false}), do: {:ok, nil}
   defp create_column_nn(%Table{} = table, %Column{} = column, _params) do
     attrs = constraint_attrs(table, "not_null")
-    build_constraint(table, column, attrs)
+    build_constraint(column, attrs)
   end
 
   defp create_column_dv(_table, _column, %{"default_value" => nil}), do: {:ok, nil}
   defp create_column_dv(%Table{} = table, %Column{} = column, params) do
     attrs = constraint_attrs(table, "default_value", params["default_value"])
-    build_constraint(table, column, attrs)
+    build_constraint(column, attrs)
   end
 
   defp create_column_uq(_table, _column, %{"is_unique" => false}), do: {:ok, nil}
   defp create_column_uq(%Table{} = table, %Column{} = column, _params) do
     attrs = constraint_attrs(table, "unique_key")
-    build_constraint(table, column, attrs)
+    build_constraint(column, attrs)
   end
 
  defp constraint_attrs(%Table{} = table, enum, value \\ nil) do
@@ -275,10 +275,10 @@ defmodule SequelizeUi.DbDesign do
     }
   end
 
-  defp build_constraint(%Table{} = table, %Column{} = column, attrs) do
+  defp build_constraint(%Column{} = column, attrs) do
     with {:ok, constraint} <- create_constraint(attrs),
          col_con_attrs <- con_coll_attrs(column.id, constraint.id),
-         {:ok, column_constraint} <- create_column_constraint(col_con_attrs),
+         {:ok, _column_constraint} <- create_column_constraint(col_con_attrs),
          do: {:ok, constraint}
   end
 
@@ -300,10 +300,24 @@ defmodule SequelizeUi.DbDesign do
     ) |> Enum.filter(fn %Constraint{columns: columns} -> length(columns) <= 1 end)
   end
 
-  defp create_column_constraint(attrs \\ %{}) do
+  defp create_column_constraint(attrs) do
     %ColumnConstraint{}
     |> ColumnConstraint.changeset(attrs)
     |> Repo.insert()
+  end
+
+  def list_constraints_for_table(table_id) do
+    Repo.all from con in Constraint,
+      join: col_con in assoc(con, :column_constraints),
+      join: type in assoc(con, :constraint_type),
+      where: [table_id: ^table_id],
+      preload: [column_constraints: col_con, constraint_type: type]
+  end
+
+  def get_constraint!(id), do: Repo.get!(Constraint, id)
+
+  def delete_constraint(%Constraint{} = constraint) do
+    Repo.delete(constraint)
   end
 end
 
