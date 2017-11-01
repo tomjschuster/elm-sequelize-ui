@@ -17,11 +17,11 @@ defmodule SequelizeUiWeb.ColumnController do
 
   def create(conn, params) do
     with {:ok, result} <- DbDesign.create_column_with_constraints(params),
-         %{column: column, constraints: constraints} <- result do
+         %{column: column} <- result do
       conn
       |> put_status(:created)
       |> put_resp_header("location", column_path(conn, :show, column))
-      |> render("show-with-constraints.json", column: column, constraints: constraints)
+      |> render("show.json", column: column)
     end
   end
 

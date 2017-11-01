@@ -31,12 +31,12 @@ tableColumnsUrl =
     tableUrl >> flip (++) "/columns"
 
 
-create : Column -> Request ColumnWithConstraints
+create : Column -> Request Column
 create column =
     Http.post
         columnsUrl
         (Column.encodeNew column |> Http.jsonBody)
-        (dataDecoder <| Combined.columnWithConstraintsDecoder)
+        (dataDecoder <| Column.decoder)
 
 
 one : Int -> Request Column

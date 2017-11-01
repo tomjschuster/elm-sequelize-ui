@@ -135,7 +135,7 @@ type Msg
     | InputNewColumnName String
     | SelectNewColumnDataType DataType
     | CreateColumn
-    | LoadNewColumnWithConstraints (Result Http.Error ColumnWithConstraints)
+    | LoadNewColumn (Result Http.Error Column)
     | SetColumnAssociation (Maybe Int)
     | SetColumnAssociationColumn (Maybe Int)
     | AddNewColumnForeignKey
@@ -378,26 +378,27 @@ update msg model =
 
         CreateColumn ->
             ( model
-            , ColumnReq.create model.newColumn
-                |> Http.send LoadNewColumnWithConstraints
+            , ColumnReq.create model.newColumn |> Http.send LoadNewColumn
             , AppUpdate.none
             )
 
-        LoadNewColumnWithConstraints (Ok { column, constraints }) ->
+        LoadNewColumn (Ok column) ->
             ( { model
                 | columns = model.columns ++ [ column ]
-                , constraints = constraints
                 , newColumn = Column.init model.table.id
                 , newColumnAssociation = Nothing
                 , newColumnAssociationColumn = Nothing
                 , tableColumns = []
                 , errors = []
               }
-            , Dom.focus "create-column" |> Task.attempt FocusResult
+            , Cmd.batch
+                [ Dom.focus "create-column" |> Task.attempt FocusResult
+                , ConstraintReq.indexForTable model.table.id |> Http.send LoadConstraints
+                ]
             , AppUpdate.none
             )
 
-        LoadNewColumnWithConstraints (Err error) ->
+        LoadNewColumn (Err error) ->
             if isUnprocessableEntity error then
                 ( { model | errors = ChangesetError.parseHttpError error }
                 , Dom.focus "create-column" |> Task.attempt FocusResult
