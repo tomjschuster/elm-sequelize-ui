@@ -770,7 +770,7 @@ createColumnAssociationsColumns columns currentColumnId =
         (option [ selected (currentColumnId == Nothing) ] [ text "Select a Column" ]
             :: List.map
                 (\c ->
-                    option [ value (toString c.id), selected (Debug.log "a" (Just c.id == currentColumnId)) ] [ text c.name ]
+                    option [ value (toString c.id), selected (Just c.id == currentColumnId) ] [ text c.name ]
                 )
                 columns
         )
