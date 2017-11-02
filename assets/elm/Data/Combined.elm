@@ -39,10 +39,16 @@ import Json.Decode.Pipeline exposing (decode, required)
 
 type DbEntity
     = DbSchema Schema
+    | DbNewSchema Schema
+    | DbUpdatedSchema Schema
     | DbSchemas (List Schema)
     | DbTable Table
+    | DbNewTable Table
+    | DbUpdatedTable Table
     | DbTables (List Table)
     | DbColumn Column
+    | DbNewColumn Column
+    | DbUpdatedColumn Column
     | DbColumns (List Column)
     | DbConstraints Constraints
 

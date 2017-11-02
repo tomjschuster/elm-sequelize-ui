@@ -179,19 +179,7 @@ update msg model =
             )
 
         LoadDbEntities (Ok entities) ->
-            let
-                newModel =
-                    { model
-                        | editingTable = Nothing
-                        , editingColumn = Nothing
-                        , newColumn = Column.init model.table.id
-                        , newColumnAssociation = Nothing
-                        , newColumnAssociationColumn = Nothing
-                        , tableColumns = []
-                        , errors = []
-                    }
-            in
-            ( updateWithDbEntities entities newModel, Cmd.none, AppUpdate.none )
+            ( updateWithDbEntities entities { model | errors = [] }, Cmd.none, AppUpdate.none )
 
         LoadDbEntities (Err error) ->
             if isUnprocessableEntity error then
@@ -528,10 +516,21 @@ updateWithDbEntity entity model =
             { model | schema = schema }
 
         DbTable table ->
-            { model | table = table }
+            { model | table = table, editingTable = Nothing }
 
-        DbColumn column ->
-            { model | columns = replaceOrAppendColumn column model.columns }
+        DbNewColumn column ->
+            { model
+                | columns = model.columns ++ [ column ]
+                , newColumn = Column.init model.table.id
+                , newColumnAssociation = Nothing
+                , newColumnAssociationColumn = Nothing
+            }
+
+        DbUpdatedColumn column ->
+            { model
+                | columns = List.map (Column.replaceIfMatch column) model.columns
+                , editingColumn = Nothing
+            }
 
         DbColumns columns ->
             { model | columns = columns }
