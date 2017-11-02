@@ -2,6 +2,7 @@ module Data.Column
     exposing
         ( Column
         , ColumnConstraints
+        , addReference
         , decoder
         , empty
         , encode
@@ -181,6 +182,11 @@ updateIsUnique isUnique column =
     }
 
 
+addReference : Int -> Column -> Column
+addReference columnId column =
+    { column | constraints = addConstraintsReference columnId column.constraints }
+
+
 
 -- UPDATE CONSTRAINTS
 
@@ -211,6 +217,11 @@ updateConstraintsDefaultValue defaultValue constraints =
 updateConstraintsIsUnique : Bool -> ColumnConstraints -> ColumnConstraints
 updateConstraintsIsUnique isUnique constraints =
     { constraints | isUnique = isUnique }
+
+
+addConstraintsReference : Int -> ColumnConstraints -> ColumnConstraints
+addConstraintsReference columnId constraints =
+    { constraints | references = constraints.references ++ [ columnId ] }
 
 
 
@@ -300,7 +311,7 @@ encodeNew { tableId, name, dataType, constraints } =
 
 
 encodeConstraints : ColumnConstraints -> Value
-encodeConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique } =
+encodeConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique, references } =
     JE.object
         [ ( "is_primary_key", JE.bool isPrimaryKey )
         , ( "is_not_null", JE.bool isNotNull )
@@ -308,4 +319,5 @@ encodeConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique } =
           , defaultValue |> Maybe.map JE.string |> Maybe.withDefault JE.null
           )
         , ( "is_unique", JE.bool isUnique )
+        , ( "references", references |> List.map JE.int |> JE.list )
         ]

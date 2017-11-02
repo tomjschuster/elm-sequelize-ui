@@ -27,7 +27,7 @@ import Json.Decode.Pipeline exposing (custom, decode, optional, required)
 import Utils.Serialization exposing (listSingletonDecoder)
 
 
--- CONSTRAINTS
+-- TYPES
 
 
 type Constraint
@@ -78,7 +78,7 @@ emptyTableConstraints =
 
 
 
--- Decoders
+-- DECODERS
 
 
 decoder : Decoder Constraint
@@ -111,30 +111,6 @@ constraintTypeDecoder constraintTypeId =
 tableConstraintsDecoder : Decoder TableConstraints
 tableConstraintsDecoder =
     JD.list decoder |> JD.map toTableConstraints
-
-
-toTableConstraints : List Constraint -> TableConstraints
-toTableConstraints constraints =
-    List.foldr updateTableConstraints emptyTableConstraints constraints
-
-
-updateTableConstraints : Constraint -> TableConstraints -> TableConstraints
-updateTableConstraints constraint tableConstraints =
-    case constraint of
-        PK primaryKey ->
-            { tableConstraints | primaryKey = Just primaryKey }
-
-        NN notNull ->
-            { tableConstraints | notNulls = notNull :: tableConstraints.notNulls }
-
-        DV defaultValue ->
-            { tableConstraints | defaultValues = defaultValue :: tableConstraints.defaultValues }
-
-        UQ uniqueKey ->
-            { tableConstraints | uniqueKeys = uniqueKey :: tableConstraints.uniqueKeys }
-
-        FK foreignKey ->
-            { tableConstraints | foreignKeys = foreignKey :: tableConstraints.foreignKeys }
 
 
 primaryKeyDecoder : Decoder PrimaryKey
@@ -178,6 +154,35 @@ foreignKeyDecoder =
         |> custom foreignKeyIndexDecoder
 
 
+singleColumnDecoder : Decoder ColumnId
+singleColumnDecoder =
+    JD.field "columns" (JD.list columnIdDecoder) |> JD.andThen listSingletonDecoder
+
+
+toTableConstraints : List Constraint -> TableConstraints
+toTableConstraints constraints =
+    List.foldr updateTableConstraints emptyTableConstraints constraints
+
+
+updateTableConstraints : Constraint -> TableConstraints -> TableConstraints
+updateTableConstraints constraint tableConstraints =
+    case constraint of
+        PK primaryKey ->
+            { tableConstraints | primaryKey = Just primaryKey }
+
+        NN notNull ->
+            { tableConstraints | notNulls = notNull :: tableConstraints.notNulls }
+
+        DV defaultValue ->
+            { tableConstraints | defaultValues = defaultValue :: tableConstraints.defaultValues }
+
+        UQ uniqueKey ->
+            { tableConstraints | uniqueKeys = uniqueKey :: tableConstraints.uniqueKeys }
+
+        FK foreignKey ->
+            { tableConstraints | foreignKeys = foreignKey :: tableConstraints.foreignKeys }
+
+
 
 -- Helper Types
 
@@ -202,11 +207,6 @@ constraintIdDecoder =
 constraintNameDecoder : Decoder ConstraintName
 constraintNameDecoder =
     JD.field "name" (JD.maybe JD.string)
-
-
-singleColumnDecoder : Decoder ColumnId
-singleColumnDecoder =
-    JD.field "columns" (JD.list columnIdDecoder) |> JD.andThen listSingletonDecoder
 
 
 columnIdDecoder : Decoder ColumnId
