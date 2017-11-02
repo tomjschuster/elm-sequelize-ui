@@ -13,7 +13,7 @@ defmodule SequelizeUiWeb.ConstraintController do
 
   def index_for_table(conn, %{"table_id" => table_id}) do
     constraints = DbDesign.list_constraints_for_table(table_id)
-    render(conn, "index-for-table.json", constraints: constraints)
+    render(conn, "index.json", constraints: constraints)
   end
 
   def create(conn, %{"constraint" => constraint_params}) do

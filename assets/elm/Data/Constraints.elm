@@ -1,15 +1,15 @@
 module Data.Constraints
     exposing
-        ( Constraints
-        , DefaultValue
+        ( DefaultValue
         , ForeignKey
         , NotNull
         , PrimaryKey
+        , TableConstraints
         , UniqueKey
         , decoder
         , defaultValue
         , defaultValueDecoder
-        , empty
+        , emptyTableConstraints
         , foreignKeyDecoder
         , inPrimaryKey
         , inSingleForeignKey
@@ -18,6 +18,7 @@ module Data.Constraints
         , notNullDecoder
         , primaryKeyDecoder
         , singleReference
+        , tableConstraintsDecoder
         , uniqueKeyDecoder
         )
 
@@ -29,33 +30,12 @@ import Utils.Serialization exposing (listSingletonDecoder)
 -- CONSTRAINTS
 
 
-type alias Constraints =
-    { primaryKey : Maybe PrimaryKey
-    , notNulls : List NotNull
-    , defaultValues : List DefaultValue
-    , uniqueKeys : List UniqueKey
-    , foreignKeys : List ForeignKey
-    }
-
-
-empty : Constraints
-empty =
-    { primaryKey = Nothing
-    , notNulls = []
-    , defaultValues = []
-    , uniqueKeys = []
-    , foreignKeys = []
-    }
-
-
-decoder : Decoder Constraints
-decoder =
-    decode Constraints
-        |> required "primaryKey" (JD.maybe primaryKeyDecoder)
-        |> required "notNulls" (JD.list notNullDecoder)
-        |> required "defaultValues" (JD.list defaultValueDecoder)
-        |> required "uniqueKeys" (JD.list uniqueKeyDecoder)
-        |> required "foreignKeys" (JD.list foreignKeyDecoder)
+type Constraint
+    = PK PrimaryKey
+    | NN NotNull
+    | DV DefaultValue
+    | UQ UniqueKey
+    | FK ForeignKey
 
 
 type PrimaryKey
@@ -76,6 +56,85 @@ type UniqueKey
 
 type ForeignKey
     = ForeignKey ConstraintId ConstraintName ForeignKeyIndex
+
+
+type alias TableConstraints =
+    { primaryKey : Maybe PrimaryKey
+    , notNulls : List NotNull
+    , defaultValues : List DefaultValue
+    , uniqueKeys : List UniqueKey
+    , foreignKeys : List ForeignKey
+    }
+
+
+emptyTableConstraints : TableConstraints
+emptyTableConstraints =
+    { primaryKey = Nothing
+    , notNulls = []
+    , defaultValues = []
+    , uniqueKeys = []
+    , foreignKeys = []
+    }
+
+
+
+-- Decoders
+
+
+decoder : Decoder Constraint
+decoder =
+    JD.field "constraintTypeId" JD.int |> JD.andThen constraintTypeDecoder
+
+
+constraintTypeDecoder : Int -> Decoder Constraint
+constraintTypeDecoder constraintTypeId =
+    case constraintTypeId of
+        1 ->
+            primaryKeyDecoder |> JD.map PK
+
+        2 ->
+            notNullDecoder |> JD.map NN
+
+        3 ->
+            defaultValueDecoder |> JD.map DV
+
+        4 ->
+            uniqueKeyDecoder |> JD.map UQ
+
+        5 ->
+            foreignKeyDecoder |> JD.map FK
+
+        _ ->
+            JD.fail "invalid constraint type id"
+
+
+tableConstraintsDecoder : Decoder TableConstraints
+tableConstraintsDecoder =
+    JD.list decoder |> JD.map toTableConstraints
+
+
+toTableConstraints : List Constraint -> TableConstraints
+toTableConstraints constraints =
+    List.foldr updateTableConstraints emptyTableConstraints constraints
+
+
+updateTableConstraints : Constraint -> TableConstraints -> TableConstraints
+updateTableConstraints constraint tableConstraints =
+    case constraint of
+        PK primaryKey ->
+            { tableConstraints | primaryKey = Just primaryKey }
+
+        NN notNull ->
+            { tableConstraints | notNulls = notNull :: tableConstraints.notNulls }
+
+        DV defaultValue ->
+            { tableConstraints | defaultValues = defaultValue :: tableConstraints.defaultValues }
+
+        UQ uniqueKey ->
+            { tableConstraints | uniqueKeys = uniqueKey :: tableConstraints.uniqueKeys }
+
+        FK foreignKey ->
+            { tableConstraints | foreignKeys = foreignKey :: tableConstraints.foreignKeys }
 
 
 primaryKeyDecoder : Decoder PrimaryKey
@@ -185,11 +244,6 @@ foreignKeyIndexDecoder =
 
 
 
---JD.map2 (,)
---    (JD.field "columnId" JD.int)
---    (JD.field "referencesId" JD.int)
---    |> JD.list
---    |> JD.map ForeignKeyIndex
 -- EXPOSED FUNCTIONS
 
 

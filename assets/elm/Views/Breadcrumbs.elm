@@ -1,6 +1,5 @@
-module Views.Breadcrumbs exposing (column, home, schema, table, view)
+module Views.Breadcrumbs exposing (home, schema, table, view)
 
-import Data.Column as Column exposing (Column)
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
 import Html exposing (Html, p, text)
@@ -42,8 +41,3 @@ schema { id, name } =
 table : Table -> ( Route, String )
 table { id, name, schemaId } =
     ( Router.Table schemaId id, name )
-
-
-column : Int -> Column -> ( Route, String )
-column schemaId { id, name, tableId } =
-    ( Router.Column schemaId tableId id, name )

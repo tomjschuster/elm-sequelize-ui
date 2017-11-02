@@ -9,7 +9,6 @@ module Request.Column
         )
 
 import Data.Column as Column exposing (Column)
-import Data.Combined as Combined exposing (ColumnWithConstraints)
 import Http exposing (Request)
 import Json.Decode as JD
 import Request.Table exposing (tableUrl)

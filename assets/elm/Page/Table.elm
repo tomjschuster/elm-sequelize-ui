@@ -3,9 +3,9 @@ module Page.Table exposing (Model, Msg, init, initialModel, update, view)
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Column as Column exposing (Column, ColumnConstraints)
-import Data.Combined as Combined exposing (DbEntity(..))
-import Data.Constraints as Constraints exposing (Constraints)
+import Data.Constraints as Constraints exposing (TableConstraints)
 import Data.DataType as DataType exposing (DataType)
+import Data.DbEntity as DbEntity exposing (DbEntity(..))
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
 import Dom
@@ -58,7 +58,7 @@ type alias Model =
     { schema : Schema
     , table : Table
     , columns : List Column
-    , constraints : Constraints
+    , constraints : TableConstraints
     , schemaTables : List Table
     , tableColumns : List Column
     , editingTable : Maybe Table
@@ -77,7 +77,7 @@ initialModel =
         Schema.empty
         Table.empty
         []
-        Constraints.empty
+        Constraints.emptyTableConstraints
         []
         []
         Nothing
@@ -102,7 +102,7 @@ init schemaId tableId =
         [ TableReq.one tableId |> sendDbEntity DbTable
         , SchemaReq.one schemaId |> sendDbEntity DbSchema
         , ColumnReq.indexForTable tableId |> sendDbEntity DbColumns
-        , ConstraintReq.indexForTable tableId |> sendDbEntity DbConstraints
+        , ConstraintReq.indexForTable tableId |> sendDbEntity DbTableConstraints
         ]
         |> Task.attempt LoadDbEntities
     )
@@ -157,7 +157,7 @@ type Msg
     | DestroyColumn Int
     | RemoveColumn (Result Http.Error ())
       -- CONSTRAINTS
-    | LoadConstraints (Result Http.Error Constraints)
+    | LoadConstraints (Result Http.Error TableConstraints)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg, AppUpdate )
@@ -376,7 +376,7 @@ update msg model =
             ( model
             , Task.sequence
                 [ ColumnReq.create model.newColumn |> sendDbEntity DbColumn
-                , ConstraintReq.indexForTable model.table.id |> sendDbEntity DbConstraints
+                , ConstraintReq.indexForTable model.table.id |> sendDbEntity DbTableConstraints
                 ]
                 |> Task.attempt LoadDbEntities
             , AppUpdate.none
@@ -535,7 +535,7 @@ updateWithDbEntity entity model =
         DbColumns columns ->
             { model | columns = columns }
 
-        DbConstraints constraints ->
+        DbTableConstraints constraints ->
             { model | constraints = constraints }
 
         _ ->
@@ -811,7 +811,7 @@ columnsTitle =
     h3 [] [ text "Columns" ]
 
 
-columnList : Maybe Column -> Int -> List Column -> Constraints -> Html Msg
+columnList : Maybe Column -> Int -> List Column -> TableConstraints -> Html Msg
 columnList editingColumn schemaId columns constraints =
     ul [] (List.map (columnItem editingColumn schemaId constraints) columns)
 
@@ -820,7 +820,7 @@ columnList editingColumn schemaId columns constraints =
 -- COLUMN ITEM
 
 
-columnItem : Maybe Column -> Int -> Constraints -> Column -> Html Msg
+columnItem : Maybe Column -> Int -> TableConstraints -> Column -> Html Msg
 columnItem editingColumn schemaId constraints column =
     li [] (columnItemChildren editingColumn schemaId column (Column.findConstraints column.id constraints))
 
@@ -840,17 +840,12 @@ columnItemChildren maybeEditingColumn schemaId column constraints =
                 [ text column.name, ConDisplay.view constraints ]
 
         Nothing ->
-            [ columnLink schemaId column
+            [ p [] [ text column.name ]
             , DTDisplay.view column.dataType
             , editColumnButton column.id
             , deleteColumnButton column.id
             , ConDisplay.view constraints
             ]
-
-
-columnLink : Int -> Column -> Html Msg
-columnLink schemaId { tableId, id, name } =
-    Router.link Goto (Router.Column schemaId tableId id) [] [ text name ]
 
 
 editColumnButton : Int -> Html Msg

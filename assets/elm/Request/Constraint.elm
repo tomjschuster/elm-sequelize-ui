@@ -2,11 +2,9 @@ module Request.Constraint
     exposing
         ( destroy
         , indexForTable
-          --, one
-          --, update
         )
 
-import Data.Constraints as Constraints exposing (Constraints)
+import Data.Constraints as Constraints exposing (TableConstraints)
 import Http exposing (Request)
 import Request.Table exposing (tableUrl)
 import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
@@ -27,25 +25,11 @@ tableConstraintsUrl =
     tableUrl >> flip (++) "/constraints"
 
 
-
---one : Int -> Request Constraints
---one id =
---    Http.get (columnUrl id) (dataDecoder Constraints.decoder)
-
-
-indexForTable : Int -> Request Constraints
+indexForTable : Int -> Request TableConstraints
 indexForTable tableId =
     Http.get
         (tableConstraintsUrl tableId)
-        (dataDecoder Constraints.decoder)
-
-
-
---update : Constraints -> Request Constraints
---update column =
---    put (columnUrl column.id)
---        (Constraints.encode column |> Http.jsonBody)
---        (dataDecoder Constraints.decoder)
+        (dataDecoder Constraints.tableConstraintsDecoder)
 
 
 destroy : Int -> Request ()

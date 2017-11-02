@@ -20,7 +20,6 @@ type Route
     = Home
     | Schema Int
     | Table Int Int
-    | Column Int Int Int
     | NotFound
 
 
@@ -60,19 +59,6 @@ getConfig route =
             , parent = Just (Schema schemaId)
             }
 
-        Column schemaId tableId id ->
-            { route = Column schemaId tableId id
-            , title = "Column"
-            , url =
-                "/schemas/"
-                    ++ toString schemaId
-                    ++ "/tables/"
-                    ++ toString tableId
-                    ++ "/columns/"
-                    ++ toString id
-            , parent = Just (Table schemaId tableId)
-            }
-
         NotFound ->
             { route = NotFound
             , title = "Not Found"
@@ -98,7 +84,6 @@ routeParser =
         , Url.map Home (s "schemas")
         , Url.map Schema (s "schemas" </> int)
         , Url.map Table (s "schemas" </> int </> s "tables" </> int)
-        , Url.map Column (s "schemas" </> int </> s "tables" </> int </> s "columns" </> int)
         ]
 
 

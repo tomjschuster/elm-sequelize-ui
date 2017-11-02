@@ -6,26 +6,8 @@ defmodule SequelizeUiWeb.ConstraintView do
     %{data: render_many(constraints, ConstraintView, "constraint.json")}
   end
 
-  def render("index-for-table.json", %{constraints: constraints}) do
-    %{data: render(ConstraintView, "table-constraints.json", constraints: constraints)}
-  end
-
   def render("show.json", %{constraint: constraint}) do
     %{data: render_one(constraint, ConstraintView, "constraint.json")}
-  end
-
-  def render("table-constraints.json", %{constraints: constraints}) do
-    table_constraints =
-      Enum.group_by(
-        constraints,
-        &(&1.constraint_type.enum_name),
-        &render_one(&1, ConstraintView, "constraint.json")
-      )
-    %{primaryKey: table_constraints |> Map.get("primary_key", []) |> List.first,
-      notNulls: table_constraints |> Map.get("not_null", []),
-      defaultValues: table_constraints |> Map.get("default_value", []),
-      uniqueKeys: table_constraints |> Map.get("unique_key", []),
-      foreignKeys: table_constraints |> Map.get("foreign_key", [])}
   end
 
   def render("constraint.json", %{constraint: constraint}) do
