@@ -66,6 +66,7 @@ defmodule SequelizeUiWeb.Router do
 
       get "/:table_id/columns", ColumnController, :index_for_table
       get "/:table_id/constraints", ConstraintController, :index_for_table
+      get "/:table_id/references", ColumnController, :index_references
     end
 
     scope "/columns" do

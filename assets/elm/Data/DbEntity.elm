@@ -19,4 +19,5 @@ type DbEntity
     | DbNewColumn Column
     | DbUpdatedColumn Column
     | DbColumns (List Column)
+    | DbReferenceColumns (List Column)
     | DbTableConstraints TableConstraints

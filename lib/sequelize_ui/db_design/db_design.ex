@@ -115,6 +115,15 @@ defmodule SequelizeUi.DbDesign do
     Repo.all(from Column, where: [table_id: ^table_id])
   end
 
+  def list_reference_columns_for_table(table_id) do
+    Repo.all from col in Column,
+      join: con in assoc(col, :reference_constraints),
+      join: con_table in assoc(con, :table),
+      join: col_table in assoc(col, :table),
+      where: con_table.id == ^table_id,
+      preload: [table: col_table]
+  end
+
   def get_column!(id), do: Repo.get!(Column, id)
 
   def get_column_with_table!(id) do

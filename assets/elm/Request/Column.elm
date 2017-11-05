@@ -3,6 +3,7 @@ module Request.Column
         ( create
         , destroy
         , indexForTable
+        , indexReferences
         , one
         , update
         , updateWithConstraints
@@ -30,6 +31,11 @@ tableColumnsUrl =
     tableUrl >> flip (++) "/columns"
 
 
+referencesUrl : Int -> String
+referencesUrl =
+    tableUrl >> flip (++) "/foreign-columns"
+
+
 create : Column -> Request Column
 create column =
     Http.post
@@ -47,6 +53,13 @@ indexForTable : Int -> Request (List Column)
 indexForTable tableId =
     Http.get
         (tableColumnsUrl tableId)
+        (dataDecoder (JD.list Column.decoder))
+
+
+indexReferences : Int -> Request (List Column)
+indexReferences tableId =
+    Http.get
+        (referencesUrl tableId)
         (dataDecoder (JD.list Column.decoder))
 
 

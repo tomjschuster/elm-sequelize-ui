@@ -8,6 +8,7 @@ import Data.DataType as DataType exposing (DataType)
 import Data.DbEntity as DbEntity exposing (DbEntity(..))
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
+import Dict exposing (Dict)
 import Dom
 import Html
     exposing
@@ -59,6 +60,7 @@ type alias Model =
     , table : Table
     , columns : List Column
     , constraints : TableConstraints
+    , foreignColumns : Dict Int Column
     , editingTable : Maybe Table
     , newColumn : Column
     , newColumnAssoc : NewColumnAssoc
@@ -74,6 +76,7 @@ initialModel =
     , table = Table.empty
     , columns = []
     , constraints = Constraints.emptyTableConstraints
+    , foreignColumns = Dict.empty
     , editingTable = Nothing
     , newColumn = Column.empty
     , newColumnAssoc = DataTypeRequired
@@ -119,6 +122,7 @@ init schemaId tableId =
         [ TableReq.one tableId |> sendDbEntity DbTable
         , SchemaReq.one schemaId |> sendDbEntity DbSchema
         , ColumnReq.indexForTable tableId |> sendDbEntity DbColumns
+        , ColumnReq.indexReferences tableId |> sendDbEntity DbReferenceColumns
         , ConstraintReq.indexForTable tableId |> sendDbEntity DbTableConstraints
         ]
         |> Task.attempt LoadDbEntities
@@ -206,7 +210,10 @@ update msg model =
             )
 
         LoadDbEntities (Ok entities) ->
-            ( updateWithDbEntities entities { model | errors = [] }, Cmd.none, AppUpdate.none )
+            ( updateWithDbEntities entities { model | errors = [] }
+            , Cmd.none
+            , AppUpdate.none
+            )
 
         LoadDbEntities (Err error) ->
             if isUnprocessableEntity error then
@@ -419,6 +426,7 @@ update msg model =
             , Task.sequence
                 [ ColumnReq.create model.newColumn |> sendDbEntity DbNewColumn
                 , ConstraintReq.indexForTable model.table.id |> sendDbEntity DbTableConstraints
+                , ColumnReq.indexReferences model.table.id |> sendDbEntity DbReferenceColumns
                 ]
                 |> Task.attempt LoadDbEntities
             , AppUpdate.none
@@ -575,6 +583,12 @@ updateWithDbEntity entity model =
 
         DbColumns columns ->
             { model | columns = columns }
+
+        DbReferenceColumns columns ->
+            { model
+                | foreignColumns =
+                    List.foldl (\c -> Dict.insert c.id c) model.foreignColumns columns
+            }
 
         DbTableConstraints constraints ->
             { model | constraints = constraints }

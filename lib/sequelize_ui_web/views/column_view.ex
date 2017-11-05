@@ -6,6 +6,10 @@ defmodule SequelizeUiWeb.ColumnView do
     %{data: render_many(columns, ColumnView, "column.json")}
   end
 
+  def render("index-with-table.json", %{columns: columns}) do
+    %{data: render_many(columns, ColumnView, "column-with-table.json")}
+  end
+
   def render("show.json", %{column: column}) do
     %{data: render_one(column, ColumnView, "column.json")}
   end
@@ -31,6 +35,18 @@ defmodule SequelizeUiWeb.ColumnView do
     %{id: column.id,
       name: column.name,
       tableId: column.table_id,
+      dataTypeId: column.data_type_id,
+      size: column.size,
+      precision: column.precision,
+      scale: column.scale,
+      withTimezone: column.with_timezone}
+  end
+
+  def render("column-with-table.json", %{column: column}) do
+    %{id: column.id,
+      name: column.name,
+      tableId: column.table_id,
+      table: render_one(column.table, TableView, "table.json"),
       dataTypeId: column.data_type_id,
       size: column.size,
       precision: column.precision,
