@@ -15,6 +15,8 @@ defmodule SequelizeUi.DbDesign do
     ColumnConstraint
   }
 
+  ## Schema
+
   def list_schemas do
     Repo.all(Schema)
   end
@@ -47,6 +49,8 @@ defmodule SequelizeUi.DbDesign do
   def change_schema(%Schema{} = schema) do
     Schema.changeset(schema, %{})
   end
+
+  ## Table
 
   def list_tables do
     Repo.all(Table)
@@ -129,6 +133,7 @@ defmodule SequelizeUi.DbDesign do
     Repo.all(Constraint)
   end
 
+  ## Constraint
 
   def create_constraint(attrs \\ %{}) do
     %Constraint{}
