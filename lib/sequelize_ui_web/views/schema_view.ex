@@ -10,11 +10,6 @@ defmodule SequelizeUiWeb.SchemaView do
     %{data: render_one(schema, SchemaView, "schema.json")}
   end
 
-  def render("show-with-tables.json", %{schema: schema}) do
-    %{data: %{schema: render_one(schema, SchemaView, "schema.json"),
-              tables: render_many(schema.tables, TableView, "table.json")}}
-  end
-
   def render("schema.json", %{schema: schema}) do
     %{id: schema.id,
       name: schema.name}

@@ -33,7 +33,7 @@ tableColumnsUrl =
 
 referencesUrl : Int -> String
 referencesUrl =
-    tableUrl >> flip (++) "/foreign-columns"
+    tableUrl >> flip (++) "/column-references"
 
 
 create : Column -> Request Column

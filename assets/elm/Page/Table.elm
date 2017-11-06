@@ -60,7 +60,8 @@ type alias Model =
     , table : Table
     , columns : List Column
     , constraints : TableConstraints
-    , foreignColumns : Dict Int Column
+    , referenceTables : Dict Int Table
+    , referenceColumns : Dict Int Column
     , editingTable : Maybe Table
     , newColumn : Column
     , newColumnAssoc : NewColumnAssoc
@@ -76,7 +77,8 @@ initialModel =
     , table = Table.empty
     , columns = []
     , constraints = Constraints.emptyTableConstraints
-    , foreignColumns = Dict.empty
+    , referenceTables = Dict.empty
+    , referenceColumns = Dict.empty
     , editingTable = Nothing
     , newColumn = Column.empty
     , newColumnAssoc = DataTypeRequired
@@ -122,6 +124,7 @@ init schemaId tableId =
         [ TableReq.one tableId |> sendDbEntity DbTable
         , SchemaReq.one schemaId |> sendDbEntity DbSchema
         , ColumnReq.indexForTable tableId |> sendDbEntity DbColumns
+        , TableReq.indexReferences tableId |> sendDbEntity DbReferenceTables
         , ColumnReq.indexReferences tableId |> sendDbEntity DbReferenceColumns
         , ConstraintReq.indexForTable tableId |> sendDbEntity DbTableConstraints
         ]
@@ -426,6 +429,7 @@ update msg model =
             , Task.sequence
                 [ ColumnReq.create model.newColumn |> sendDbEntity DbNewColumn
                 , ConstraintReq.indexForTable model.table.id |> sendDbEntity DbTableConstraints
+                , TableReq.indexReferences model.table.id |> sendDbEntity DbReferenceTables
                 , ColumnReq.indexReferences model.table.id |> sendDbEntity DbReferenceColumns
                 ]
                 |> Task.attempt LoadDbEntities
@@ -568,6 +572,12 @@ updateWithDbEntity entity model =
         DbTable table ->
             { model | table = table, editingTable = Nothing }
 
+        DbReferenceTables tables ->
+            { model
+                | referenceTables =
+                    List.foldl (\c -> Dict.insert c.id c) model.referenceTables tables
+            }
+
         DbNewColumn column ->
             { model
                 | columns = model.columns ++ [ column ]
@@ -586,8 +596,8 @@ updateWithDbEntity entity model =
 
         DbReferenceColumns columns ->
             { model
-                | foreignColumns =
-                    List.foldl (\c -> Dict.insert c.id c) model.foreignColumns columns
+                | referenceColumns =
+                    List.foldl (\c -> Dict.insert c.id c) model.referenceColumns columns
             }
 
         DbTableConstraints constraints ->

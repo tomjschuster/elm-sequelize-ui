@@ -56,36 +56,15 @@ defmodule SequelizeUi.DbDesign do
     Repo.all(from Table, where: [schema_id: ^schema_id])
   end
 
+  def list_reference_tables_for_table(table_id) do
+    Repo.all from reference_table in Table,
+      join: col in assoc(reference_table, :columns),
+      join: con in assoc(col, :reference_constraints),
+      join: source_table in assoc(con, :table),
+      where: source_table.id == ^table_id
+  end
+
   def get_table!(id), do: Repo.get!(Table, id)
-
-  def get_table_with_schema!(id) do
-    Repo.one! from e in Table,
-      join: s in assoc(e, :schema),
-      where: e.id == ^id,
-      preload: [schema: s]
-  end
-
-  def get_table_with_columns!(id) do
-    Repo.one! from e in Table,
-      left_join: f in assoc(e, :columns),
-      where: e.id == ^id,
-      preload: [columns: f]
-  end
-
-  def get_table_with_all!(id) do
-    Repo.one! from t in Table,
-      join: s in assoc(t, :schema),
-      left_join: col in assoc(t, :columns),
-      left_join: con in assoc(t, :constraints),
-      left_join: col_con in assoc(con, :column_constraints),
-      left_join: con_type in assoc(con, :constraint_type),
-      where: t.id == ^id,
-      preload: [
-        schema: s,
-        columns: col,
-        constraints: {con, [column_constraints: col_con, constraint_type: con_type]}
-      ]
-  end
 
   def create_table(attrs \\ %{}) do
     %Table{}
@@ -116,30 +95,14 @@ defmodule SequelizeUi.DbDesign do
   end
 
   def list_reference_columns_for_table(table_id) do
-    Repo.all from col in Column,
-      join: con in assoc(col, :reference_constraints),
-      join: con_table in assoc(con, :table),
-      join: col_table in assoc(col, :table),
-      where: con_table.id == ^table_id,
-      preload: [table: col_table]
+    Repo.all from reference_column in Column,
+      join: constraint in assoc(reference_column, :reference_constraints),
+      join: reference_table in assoc(reference_column, :table),
+      join: source_table in assoc(constraint, :table),
+      where: source_table.id == ^table_id
   end
 
   def get_column!(id), do: Repo.get!(Column, id)
-
-  def get_column_with_table!(id) do
-    Repo.one from f in Column,
-      join: e in assoc(f, :table),
-      where: f.id == ^id,
-      preload: [table: e]
-  end
-
-  def get_column_with_all!(id) do
-    Repo.one from f in Column,
-      join: e in assoc(f, :table),
-      join: s in assoc(e, :schema),
-      where: f.id == ^id,
-      preload: [table: {e, schema: s}]
-  end
 
   def create_column(attrs \\ %{}) do
     %Column{}

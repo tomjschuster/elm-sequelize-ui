@@ -17,32 +17,6 @@ defmodule SequelizeUiWeb.Router do
   pipeline :combine_entities do
     plug :combined_with
   end
-  # scope "/api", SequelizeUiWeb do
-  #   pipe_through :api
-
-
-  #   resources "/constraints", ConstraintController
-  #   # get "/schmeas/:schema_id/tables", TableController, :for_schema
-  #   pipe_through :combine_entities
-  #   resources "/schemas", SchemaController do
-  #     get "/tables", TableController, :for_schema
-  #   end
-  #   resources "/tables", TableController do
-  #     get "/columns", ColumnController, :for_table
-  #   end
-  #   resources "/columns", ColumnController
-  # end
-
-  # scope "/api", SequelizeUiWeb do
-  #   pipe_through :api
-
-  #   resources "/schemas", SchemaController do
-  #     resources "/tables", TableController do
-  #       resources "/columns", ColumnController
-  #       resources "/constraints", ConstraintController
-  #     end
-  #   end
-  # end
 
   scope "/api", SequelizeUiWeb do
     pipe_through :api
@@ -66,7 +40,8 @@ defmodule SequelizeUiWeb.Router do
 
       get "/:table_id/columns", ColumnController, :index_for_table
       get "/:table_id/constraints", ConstraintController, :index_for_table
-      get "/:table_id/references", ColumnController, :index_references
+      get "/:table_id/table-references", TableController, :index_references
+      get "/:table_id/column-references", ColumnController, :index_references
     end
 
     scope "/columns" do
@@ -92,9 +67,4 @@ defmodule SequelizeUiWeb.Router do
 
     get "/*path", PageController, :index
   end
-
-  # Other scopes may use custom stacks.
-  # scope "/api", SequelizeUiWeb do
-  #   pipe_through :api
-  # end
 end

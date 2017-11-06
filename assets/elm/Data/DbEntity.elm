@@ -15,6 +15,7 @@ type DbEntity
     | DbNewTable Table
     | DbUpdatedTable Table
     | DbTables (List Table)
+    | DbReferenceTables (List Table)
     | DbColumn Column
     | DbNewColumn Column
     | DbUpdatedColumn Column
