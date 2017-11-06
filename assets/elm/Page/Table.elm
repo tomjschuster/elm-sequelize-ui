@@ -3,11 +3,11 @@ module Page.Table exposing (Model, Msg, init, initialModel, update, view)
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Column as Column exposing (Column, ColumnConstraints)
-import Data.Constraints as Constraints exposing (TableConstraints)
+import Data.Constraint as Constraint exposing (Constraint)
 import Data.DataType as DataType exposing (DataType)
 import Data.DbEntity as DbEntity exposing (DbEntity(..))
 import Data.Schema as Schema exposing (Schema)
-import Data.Table as Table exposing (Table)
+import Data.Table as Table exposing (Table, TableConstraints)
 import Dict exposing (Dict)
 import Dom
 import Html
@@ -59,7 +59,7 @@ type alias Model =
     { schema : Schema
     , table : Table
     , columns : List Column
-    , constraints : TableConstraints
+    , constraints : List Constraint
     , referenceTables : Dict Int Table
     , referenceColumns : Dict Int Column
     , editingTable : Maybe Table
@@ -76,7 +76,7 @@ initialModel =
     { schema = Schema.empty
     , table = Table.empty
     , columns = []
-    , constraints = Constraints.emptyTableConstraints
+    , constraints = []
     , referenceTables = Dict.empty
     , referenceColumns = Dict.empty
     , editingTable = Nothing
@@ -126,7 +126,7 @@ init schemaId tableId =
         , ColumnReq.indexForTable tableId |> sendDbEntity DbColumns
         , TableReq.indexReferences tableId |> sendDbEntity DbReferenceTables
         , ColumnReq.indexReferences tableId |> sendDbEntity DbReferenceColumns
-        , ConstraintReq.indexForTable tableId |> sendDbEntity DbTableConstraints
+        , ConstraintReq.indexForTable tableId |> sendDbEntity DbConstraints
         ]
         |> Task.attempt LoadDbEntities
     )
@@ -180,7 +180,7 @@ type Msg
     | DestroyColumn Int
     | RemoveColumn (Result Http.Error ())
       -- CONSTRAINTS
-    | LoadConstraints (Result Http.Error TableConstraints)
+    | LoadConstraints (Result Http.Error (List Constraint))
 
 
 handleHttpError : Model -> Http.Error -> ( Model, Cmd Msg, AppUpdate )
@@ -428,7 +428,7 @@ update msg model =
             ( model
             , Task.sequence
                 [ ColumnReq.create model.newColumn |> sendDbEntity DbNewColumn
-                , ConstraintReq.indexForTable model.table.id |> sendDbEntity DbTableConstraints
+                , ConstraintReq.indexForTable model.table.id |> sendDbEntity DbConstraints
                 , TableReq.indexReferences model.table.id |> sendDbEntity DbReferenceTables
                 , ColumnReq.indexReferences model.table.id |> sendDbEntity DbReferenceColumns
                 ]
@@ -444,7 +444,10 @@ update msg model =
                     model.columns
                         |> List.filter (.id >> (==) id)
                         |> List.head
-                        |> Maybe.map (Column.findAndAddConstraints model.constraints)
+                        |> Maybe.map
+                            (Column.findAndAddConstraints
+                                (Table.buildConstraints model.constraints)
+                            )
                 , errors = []
               }
             , Dom.focus "edit-column-name" |> Task.attempt FocusResult
@@ -600,7 +603,7 @@ updateWithDbEntity entity model =
                     List.foldl (\c -> Dict.insert c.id c) model.referenceColumns columns
             }
 
-        DbTableConstraints constraints ->
+        DbConstraints constraints ->
             { model | constraints = constraints }
 
         _ ->
@@ -863,9 +866,13 @@ columnsView model =
 
 columnsChildren : Model -> List (Html Msg)
 columnsChildren model =
+    let
+        tableConstraints =
+            Table.buildConstraints model.constraints
+    in
     CE.prependIfErrors model.errors
         [ columnsTitle
-        , columnList model.editingColumn model.schema.id model.columns model.constraints
+        , columnList model.editingColumn tableConstraints model.columns
         ]
 
 
@@ -874,23 +881,27 @@ columnsTitle =
     h3 [] [ text "Columns" ]
 
 
-columnList : Maybe Column -> Int -> List Column -> TableConstraints -> Html Msg
-columnList editingColumn schemaId columns constraints =
-    ul [] (List.map (columnItem editingColumn schemaId constraints) columns)
+columnList : Maybe Column -> TableConstraints -> List Column -> Html Msg
+columnList editingColumn constraints columns =
+    ul [] (List.map (columnItem editingColumn constraints) columns)
 
 
 
 -- COLUMN ITEM
 
 
-columnItem : Maybe Column -> Int -> TableConstraints -> Column -> Html Msg
-columnItem editingColumn schemaId constraints column =
-    li [] (columnItemChildren editingColumn schemaId column (Column.findConstraints column.id constraints))
+columnItem : Maybe Column -> TableConstraints -> Column -> Html Msg
+columnItem editingColumn constraints column =
+    li [] (columnItemChildren editingColumn constraints column)
 
 
-columnItemChildren : Maybe Column -> Int -> Column -> ColumnConstraints -> List (Html Msg)
-columnItemChildren maybeEditingColumn schemaId column constraints =
-    case maybeEditingColumn of
+columnItemChildren : Maybe Column -> TableConstraints -> Column -> List (Html Msg)
+columnItemChildren editingColumn tableConstraints column =
+    let
+        constraints =
+            Column.buildConstraints column.id tableConstraints
+    in
+    case editingColumn of
         Just editingColumn ->
             if column.id == editingColumn.id then
                 [ editColumnNameInput editingColumn.name
@@ -900,7 +911,9 @@ columnItemChildren maybeEditingColumn schemaId column constraints =
                 , saveEditColumnButton
                 ]
             else
-                [ text column.name, ConDisplay.view constraints ]
+                [ text column.name
+                , ConDisplay.view constraints
+                ]
 
         Nothing ->
             [ p [] [ text column.name ]

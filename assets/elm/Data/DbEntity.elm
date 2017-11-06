@@ -1,7 +1,7 @@
 module Data.DbEntity exposing (DbEntity(..))
 
 import Data.Column exposing (Column)
-import Data.Constraints exposing (TableConstraints)
+import Data.Constraint exposing (Constraint)
 import Data.Schema exposing (Schema)
 import Data.Table exposing (Table)
 
@@ -21,4 +21,4 @@ type DbEntity
     | DbUpdatedColumn Column
     | DbColumns (List Column)
     | DbReferenceColumns (List Column)
-    | DbTableConstraints TableConstraints
+    | DbConstraints (List Constraint)

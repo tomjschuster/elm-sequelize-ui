@@ -3,12 +3,12 @@ module Data.Column
         ( Column
         , ColumnConstraints
         , addReference
+        , buildConstraints
         , decoder
         , empty
         , encode
         , encodeNew
         , findAndAddConstraints
-        , findConstraints
         , init
         , removeFromList
         , replaceIfMatch
@@ -27,16 +27,16 @@ module Data.Column
         , updateName
         )
 
-import Data.Constraints as Constraints
+import Data.Constraint as Constraint
     exposing
         ( DefaultValue
         , ForeignKey
         , NotNull
         , PrimaryKey
-        , TableConstraints
         , UniqueKey
         )
 import Data.DataType as DataType exposing (DataType)
+import Data.Table as Table exposing (TableConstraints)
 import Json.Decode as JD exposing (Decoder, int, maybe, string)
 import Json.Decode.Pipeline exposing (custom, decode, hardcoded, optional, required)
 import Json.Encode as JE exposing (Value)
@@ -103,8 +103,8 @@ replaceIfMatch newColumn column =
         column
 
 
-findConstraints : Int -> TableConstraints -> ColumnConstraints
-findConstraints columnId tableConstraints =
+buildConstraints : Int -> TableConstraints -> ColumnConstraints
+buildConstraints columnId tableConstraints =
     { isPrimaryKey = isPrimaryKey columnId tableConstraints
     , isNotNull = isNotNull columnId tableConstraints
     , defaultValue = defaultValue columnId tableConstraints
@@ -115,7 +115,7 @@ findConstraints columnId tableConstraints =
 
 findAndAddConstraints : TableConstraints -> Column -> Column
 findAndAddConstraints constraints column =
-    { column | constraints = findConstraints column.id constraints }
+    { column | constraints = buildConstraints column.id constraints }
 
 
 
@@ -231,14 +231,14 @@ addConstraintsReference columnId constraints =
 isPrimaryKey : Int -> TableConstraints -> Bool
 isPrimaryKey columnId =
     .primaryKey
-        >> Maybe.map (Constraints.inPrimaryKey columnId)
+        >> Maybe.map (Constraint.inPrimaryKey columnId)
         >> Maybe.withDefault False
 
 
 isNotNull : Int -> TableConstraints -> Bool
 isNotNull columnId =
     .notNulls
-        >> List.filter (Constraints.isNotNull columnId)
+        >> List.filter (Constraint.isNotNull columnId)
         >> List.isEmpty
         >> not
 
@@ -246,14 +246,14 @@ isNotNull columnId =
 defaultValue : Int -> TableConstraints -> Maybe String
 defaultValue columnId =
     .defaultValues
-        >> List.filterMap (Constraints.defaultValue columnId)
+        >> List.filterMap (Constraint.defaultValue columnId)
         >> List.head
 
 
 isUnique : Int -> TableConstraints -> Bool
 isUnique columnId =
     .uniqueKeys
-        >> List.filter (Constraints.isUnique columnId)
+        >> List.filter (Constraint.isUnique columnId)
         >> List.isEmpty
         >> not
 
@@ -261,8 +261,8 @@ isUnique columnId =
 singleReferences : Int -> TableConstraints -> List Int
 singleReferences columnId =
     .foreignKeys
-        >> List.filter (Constraints.inSingleForeignKey columnId)
-        >> List.filterMap Constraints.singleReference
+        >> List.filter (Constraint.inSingleForeignKey columnId)
+        >> List.filterMap Constraint.singleReference
 
 
 

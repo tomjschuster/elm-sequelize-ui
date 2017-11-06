@@ -1,6 +1,6 @@
 module Views.Column.ConstraintsDisplay exposing (view)
 
-import Data.Column as Column exposing (ColumnConstraints)
+import Data.Column as Column exposing (Column, ColumnConstraints)
 import Html exposing (Html, span, text)
 
 

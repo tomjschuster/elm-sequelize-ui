@@ -4,8 +4,9 @@ module Request.Constraint
         , indexForTable
         )
 
-import Data.Constraints as Constraints exposing (TableConstraints)
+import Data.Constraint as Constraint exposing (Constraint)
 import Http exposing (Request)
+import Json.Decode as JD
 import Request.Table exposing (tableUrl)
 import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
@@ -25,11 +26,11 @@ tableConstraintsUrl =
     tableUrl >> flip (++) "/constraints"
 
 
-indexForTable : Int -> Request TableConstraints
+indexForTable : Int -> Request (List Constraint)
 indexForTable tableId =
     Http.get
         (tableConstraintsUrl tableId)
-        (dataDecoder Constraints.tableConstraintsDecoder)
+        (dataDecoder (JD.list Constraint.decoder))
 
 
 destroy : Int -> Request ()

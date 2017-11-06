@@ -1,15 +1,14 @@
-module Data.Constraints
+module Data.Constraint
     exposing
-        ( DefaultValue
+        ( Constraint(..)
+        , DefaultValue
         , ForeignKey
         , NotNull
         , PrimaryKey
-        , TableConstraints
         , UniqueKey
         , decoder
         , defaultValue
         , defaultValueDecoder
-        , emptyTableConstraints
         , foreignKeyDecoder
         , inPrimaryKey
         , inSingleForeignKey
@@ -18,7 +17,6 @@ module Data.Constraints
         , notNullDecoder
         , primaryKeyDecoder
         , singleReference
-        , tableConstraintsDecoder
         , uniqueKeyDecoder
         )
 
@@ -58,23 +56,86 @@ type ForeignKey
     = ForeignKey ConstraintId ConstraintName ForeignKeyIndex
 
 
-type alias TableConstraints =
-    { primaryKey : Maybe PrimaryKey
-    , notNulls : List NotNull
-    , defaultValues : List DefaultValue
-    , uniqueKeys : List UniqueKey
-    , foreignKeys : List ForeignKey
+
+-- CONFIG
+
+
+type alias Config =
+    { constraintType : ConstraintType
+    , id : Int
+    , decoder : Decoder Constraint
     }
 
 
-emptyTableConstraints : TableConstraints
-emptyTableConstraints =
-    { primaryKey = Nothing
-    , notNulls = []
-    , defaultValues = []
-    , uniqueKeys = []
-    , foreignKeys = []
-    }
+type ConstraintType
+    = PKType
+    | NNType
+    | DVType
+    | UQType
+    | FKType
+    | NoConstraintType
+
+
+toConfig : ConstraintType -> Config
+toConfig constraintType =
+    case constraintType of
+        PKType ->
+            { constraintType = PKType
+            , id = 1
+            , decoder = JD.map PK primaryKeyDecoder
+            }
+
+        NNType ->
+            { constraintType = NNType
+            , id = 1
+            , decoder = JD.map NN notNullDecoder
+            }
+
+        DVType ->
+            { constraintType = DVType
+            , id = 1
+            , decoder = JD.map DV defaultValueDecoder
+            }
+
+        UQType ->
+            { constraintType = UQType
+            , id = 1
+            , decoder = JD.map UQ uniqueKeyDecoder
+            }
+
+        FKType ->
+            { constraintType = FKType
+            , id = 1
+            , decoder = JD.map FK foreignKeyDecoder
+            }
+
+        NoConstraintType ->
+            { constraintType = NoConstraintType
+            , id = 0
+            , decoder = JD.fail "constraint fail"
+            }
+
+
+typeFromId : Int -> ConstraintType
+typeFromId id =
+    case id of
+        1 ->
+            PKType
+
+        2 ->
+            NNType
+
+        3 ->
+            DVType
+
+        4 ->
+            UQType
+
+        5 ->
+            FKType
+
+        _ ->
+            NoConstraintType
 
 
 
@@ -83,34 +144,8 @@ emptyTableConstraints =
 
 decoder : Decoder Constraint
 decoder =
-    JD.field "constraintTypeId" JD.int |> JD.andThen constraintTypeDecoder
-
-
-constraintTypeDecoder : Int -> Decoder Constraint
-constraintTypeDecoder constraintTypeId =
-    case constraintTypeId of
-        1 ->
-            primaryKeyDecoder |> JD.map PK
-
-        2 ->
-            notNullDecoder |> JD.map NN
-
-        3 ->
-            defaultValueDecoder |> JD.map DV
-
-        4 ->
-            uniqueKeyDecoder |> JD.map UQ
-
-        5 ->
-            foreignKeyDecoder |> JD.map FK
-
-        _ ->
-            JD.fail "invalid constraint type id"
-
-
-tableConstraintsDecoder : Decoder TableConstraints
-tableConstraintsDecoder =
-    JD.list decoder |> JD.map toTableConstraints
+    JD.field "constraintTypeId" JD.int
+        |> JD.andThen (typeFromId >> toConfig >> .decoder)
 
 
 primaryKeyDecoder : Decoder PrimaryKey
@@ -157,30 +192,6 @@ foreignKeyDecoder =
 singleColumnDecoder : Decoder ColumnId
 singleColumnDecoder =
     JD.field "columns" (JD.list columnIdDecoder) |> JD.andThen listSingletonDecoder
-
-
-toTableConstraints : List Constraint -> TableConstraints
-toTableConstraints constraints =
-    List.foldr updateTableConstraints emptyTableConstraints constraints
-
-
-updateTableConstraints : Constraint -> TableConstraints -> TableConstraints
-updateTableConstraints constraint tableConstraints =
-    case constraint of
-        PK primaryKey ->
-            { tableConstraints | primaryKey = Just primaryKey }
-
-        NN notNull ->
-            { tableConstraints | notNulls = notNull :: tableConstraints.notNulls }
-
-        DV defaultValue ->
-            { tableConstraints | defaultValues = defaultValue :: tableConstraints.defaultValues }
-
-        UQ uniqueKey ->
-            { tableConstraints | uniqueKeys = uniqueKey :: tableConstraints.uniqueKeys }
-
-        FK foreignKey ->
-            { tableConstraints | foreignKeys = foreignKey :: tableConstraints.foreignKeys }
 
 
 
