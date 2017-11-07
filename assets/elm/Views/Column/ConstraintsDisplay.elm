@@ -1,6 +1,6 @@
 module Views.Column.ConstraintsDisplay exposing (view)
 
-import Data.Column as Column exposing (Column, ColumnConstraints)
+import Data.Column as Column exposing (Column, ColumnConstraints, Reference)
 import Html exposing (Html, span, text)
 
 
@@ -29,9 +29,20 @@ constraintDisplays constraints =
     , ( "not null", constraints.isNotNull )
     , ( defaultText constraints.defaultValue, constraints.defaultValue /= Nothing )
     , ( "unique", constraints.isUnique )
+    , ( referencesText constraints.references, not (List.isEmpty constraints.references) )
     ]
 
 
 defaultText : Maybe String -> String
 defaultText =
     Maybe.map ((++) "default: ") >> Maybe.withDefault ""
+
+
+referencesText : List Reference -> String
+referencesText references =
+    "references: " ++ (List.map referenceText references |> String.join ", ")
+
+
+referenceText : Reference -> String
+referenceText { columnName, tableName } =
+    tableName ++ "(" ++ columnName ++ ")"

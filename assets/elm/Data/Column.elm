@@ -2,6 +2,7 @@ module Data.Column
     exposing
         ( Column
         , ColumnConstraints
+        , Reference
         , addReference
         , buildConstraints
         , decoder
@@ -9,6 +10,7 @@ module Data.Column
         , encode
         , encodeNew
         , findAndAddConstraints
+        , findReferences
         , init
         , removeFromList
         , replaceIfMatch
@@ -36,7 +38,8 @@ import Data.Constraint as Constraint
         , UniqueKey
         )
 import Data.DataType as DataType exposing (DataType)
-import Data.Table as Table exposing (TableConstraints)
+import Data.Table as Table exposing (Table, TableConstraints)
+import Dict exposing (Dict)
 import Json.Decode as JD exposing (Decoder, int, maybe, string)
 import Json.Decode.Pipeline exposing (custom, decode, hardcoded, optional, required)
 import Json.Encode as JE exposing (Value)
@@ -72,7 +75,15 @@ type alias ColumnConstraints =
     , isNotNull : Bool
     , defaultValue : Maybe String
     , isUnique : Bool
-    , references : List Int
+    , references : List Reference
+    }
+
+
+type alias Reference =
+    { columnId : Int
+    , columnName : String
+    , tableId : Int
+    , tableName : String
     }
 
 
@@ -103,19 +114,21 @@ replaceIfMatch newColumn column =
         column
 
 
-buildConstraints : Int -> TableConstraints -> ColumnConstraints
-buildConstraints columnId tableConstraints =
+buildConstraints : Dict Int Table -> Dict Int Column -> Int -> TableConstraints -> ColumnConstraints
+buildConstraints tableLookup columnLookup columnId tableConstraints =
     { isPrimaryKey = isPrimaryKey columnId tableConstraints
     , isNotNull = isNotNull columnId tableConstraints
     , defaultValue = defaultValue columnId tableConstraints
     , isUnique = isUnique columnId tableConstraints
-    , references = singleReferences columnId tableConstraints
+    , references =
+        Debug.log "x" (singleReferences columnId tableConstraints)
+            |> List.filterMap (lookupReferences tableLookup columnLookup)
     }
 
 
-findAndAddConstraints : TableConstraints -> Column -> Column
-findAndAddConstraints constraints column =
-    { column | constraints = buildConstraints column.id constraints }
+findAndAddConstraints : Dict Int Table -> Dict Int Column -> TableConstraints -> Column -> Column
+findAndAddConstraints tableLookup columnLookup constraints column =
+    { column | constraints = buildConstraints tableLookup columnLookup column.id constraints }
 
 
 
@@ -182,9 +195,9 @@ updateIsUnique isUnique column =
     }
 
 
-addReference : Int -> Column -> Column
-addReference columnId column =
-    { column | constraints = addConstraintsReference columnId column.constraints }
+addReference : Reference -> Column -> Column
+addReference reference column =
+    { column | constraints = addConstraintsReference reference column.constraints }
 
 
 
@@ -219,9 +232,9 @@ updateConstraintsIsUnique isUnique constraints =
     { constraints | isUnique = isUnique }
 
 
-addConstraintsReference : Int -> ColumnConstraints -> ColumnConstraints
-addConstraintsReference columnId constraints =
-    { constraints | references = constraints.references ++ [ columnId ] }
+addConstraintsReference : Reference -> ColumnConstraints -> ColumnConstraints
+addConstraintsReference reference constraints =
+    { constraints | references = constraints.references ++ [ reference ] }
 
 
 
@@ -263,6 +276,30 @@ singleReferences columnId =
     .foreignKeys
         >> List.filter (Constraint.inSingleForeignKey columnId)
         >> List.filterMap Constraint.singleReference
+
+
+lookupReferences : Dict Int Table -> Dict Int Column -> Int -> Maybe Reference
+lookupReferences tableLookup columnLookup columnId =
+    let
+        maybeColumn =
+            Debug.log "maybeColumn" (Dict.get columnId columnLookup)
+
+        maybeTable =
+            Debug.log "maybeTable" (Maybe.andThen (.tableId >> flip Dict.get tableLookup) maybeColumn)
+    in
+    Debug.log "reference" (Maybe.map2 (\c t -> Reference c.id c.name t.id t.name) maybeTable maybeColumn)
+
+
+findReferences : Int -> Int -> List Table -> List Column -> Maybe Reference
+findReferences tableId columnId tables columns =
+    let
+        maybeColumn =
+            List.filter (.id >> (==) columnId) columns |> List.head
+
+        maybeTable =
+            List.filter (.id >> (==) tableId) tables |> List.head
+    in
+    Maybe.map2 (\t c -> Reference c.id c.name t.id t.name) maybeTable maybeColumn
 
 
 
@@ -319,5 +356,5 @@ encodeConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique, references 
           , defaultValue |> Maybe.map JE.string |> Maybe.withDefault JE.null
           )
         , ( "is_unique", JE.bool isUnique )
-        , ( "references", references |> List.map JE.int |> JE.list )
+        , ( "references", references |> List.map (.columnId >> JE.int) |> JE.list )
         ]

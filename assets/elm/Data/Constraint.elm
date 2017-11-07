@@ -294,7 +294,7 @@ inSingleForeignKey id (ForeignKey _ _ index) =
 singleReference : ForeignKey -> Maybe ColumnId
 singleReference (ForeignKey _ _ index) =
     case index of
-        ForeignKeyIndex [ ( singleId, _ ) ] ->
+        ForeignKeyIndex [ ( _, singleId ) ] ->
             Just singleId
 
         _ ->

@@ -2,7 +2,7 @@ module Page.Table exposing (Model, Msg, init, initialModel, update, view)
 
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
-import Data.Column as Column exposing (Column, ColumnConstraints)
+import Data.Column as Column exposing (Column, ColumnConstraints, Reference)
 import Data.Constraint as Constraint exposing (Constraint)
 import Data.DataType as DataType exposing (DataType)
 import Data.DbEntity as DbEntity exposing (DbEntity(..))
@@ -60,8 +60,8 @@ type alias Model =
     , table : Table
     , columns : List Column
     , constraints : List Constraint
-    , referenceTables : Dict Int Table
-    , referenceColumns : Dict Int Column
+    , tableReferences : Dict Int Table
+    , columnReferences : Dict Int Column
     , editingTable : Maybe Table
     , newColumn : Column
     , newColumnAssoc : NewColumnAssoc
@@ -77,8 +77,8 @@ initialModel =
     , table = Table.empty
     , columns = []
     , constraints = []
-    , referenceTables = Dict.empty
-    , referenceColumns = Dict.empty
+    , tableReferences = Dict.empty
+    , columnReferences = Dict.empty
     , editingTable = Nothing
     , newColumn = Column.empty
     , newColumnAssoc = DataTypeRequired
@@ -166,7 +166,7 @@ type Msg
     | SelectNewColumnAssocTable DataType (List Table) (Maybe Int)
     | LoadNewColumnAssocColumns DataType (List Table) Int (Result Http.Error (List Column))
     | SelectNewColumnAssocColumn DataType (List Table) Int (List Column) (Maybe Int)
-    | FinishNewColumnAssoc Int
+    | FinishNewColumnAssoc (Maybe Reference)
     | CreateColumn
       -- UPDATE COLUMN
     | EditColumn Int
@@ -418,9 +418,18 @@ update msg model =
                     , AppUpdate.none
                     )
 
-        FinishNewColumnAssoc columnId ->
-            ( { model | newColumn = Column.addReference columnId model.newColumn }
-            , TableReq.indexForSchema model.schema.id |> Http.toTask |> Task.attempt (LoadNewColumnAssocTables model.newColumn.dataType)
+        FinishNewColumnAssoc maybeReference ->
+            ( { model
+                | newColumn =
+                    Maybe.map
+                        (flip Column.addReference model.newColumn)
+                        maybeReference
+                        |> Maybe.withDefault model.newColumn
+              }
+            , TableReq.indexForSchema
+                model.schema.id
+                |> Http.toTask
+                |> Task.attempt (LoadNewColumnAssocTables model.newColumn.dataType)
             , AppUpdate.none
             )
 
@@ -446,6 +455,8 @@ update msg model =
                         |> List.head
                         |> Maybe.map
                             (Column.findAndAddConstraints
+                                model.tableReferences
+                                model.columnReferences
                                 (Table.buildConstraints model.constraints)
                             )
                 , errors = []
@@ -577,8 +588,8 @@ updateWithDbEntity entity model =
 
         DbReferenceTables tables ->
             { model
-                | referenceTables =
-                    List.foldl (\c -> Dict.insert c.id c) model.referenceTables tables
+                | tableReferences =
+                    List.foldl (\c -> Dict.insert c.id c) model.tableReferences tables
             }
 
         DbNewColumn column ->
@@ -599,8 +610,8 @@ updateWithDbEntity entity model =
 
         DbReferenceColumns columns ->
             { model
-                | referenceColumns =
-                    List.foldl (\c -> Dict.insert c.id c) model.referenceColumns columns
+                | columnReferences =
+                    List.foldl (\c -> Dict.insert c.id c) model.columnReferences columns
             }
 
         DbConstraints constraints ->
@@ -833,7 +844,7 @@ createColumnAssoc assoc =
                     (option [ selected True ] [ text "Select a Column" ]
                         :: (columns |> List.filter (.dataType >> DataType.isMatch dataType) |> List.map (columnOption (Just columnId)))
                     )
-                , button [ onClick (FinishNewColumnAssoc columnId), type_ "button" ] [ text "Finish" ]
+                , button [ onClick (FinishNewColumnAssoc (Column.findReferences tableId columnId tables columns)), type_ "button" ] [ text "Finish" ]
                 ]
 
 
@@ -872,7 +883,7 @@ columnsChildren model =
     in
     CE.prependIfErrors model.errors
         [ columnsTitle
-        , columnList model.editingColumn tableConstraints model.columns
+        , columnList model tableConstraints
         ]
 
 
@@ -881,27 +892,33 @@ columnsTitle =
     h3 [] [ text "Columns" ]
 
 
-columnList : Maybe Column -> TableConstraints -> List Column -> Html Msg
-columnList editingColumn constraints columns =
-    ul [] (List.map (columnItem editingColumn constraints) columns)
+columnList : Model -> TableConstraints -> Html Msg
+columnList model tableConstraints =
+    ul [] (List.map (columnItem model tableConstraints) model.columns)
 
 
 
 -- COLUMN ITEM
 
 
-columnItem : Maybe Column -> TableConstraints -> Column -> Html Msg
-columnItem editingColumn constraints column =
-    li [] (columnItemChildren editingColumn constraints column)
+columnItem : Model -> TableConstraints -> Column -> Html Msg
+columnItem model tableConstraints column =
+    li [] (columnItemChildren model tableConstraints column)
 
 
-columnItemChildren : Maybe Column -> TableConstraints -> Column -> List (Html Msg)
-columnItemChildren editingColumn tableConstraints column =
+columnItemChildren : Model -> TableConstraints -> Column -> List (Html Msg)
+columnItemChildren model tableConstraints column =
     let
-        constraints =
-            Column.buildConstraints column.id tableConstraints
+        columnConstraints =
+            Debug.log "a"
+                (Column.buildConstraints
+                    (Debug.log "b" model.tableReferences)
+                    (Debug.log "c" model.columnReferences)
+                    (Debug.log "d" column.id)
+                    (Debug.log "e" tableConstraints)
+                )
     in
-    case editingColumn of
+    case model.editingColumn of
         Just editingColumn ->
             if column.id == editingColumn.id then
                 [ editColumnNameInput editingColumn.name
@@ -912,7 +929,7 @@ columnItemChildren editingColumn tableConstraints column =
                 ]
             else
                 [ text column.name
-                , ConDisplay.view constraints
+                , ConDisplay.view columnConstraints
                 ]
 
         Nothing ->
@@ -920,7 +937,7 @@ columnItemChildren editingColumn tableConstraints column =
             , DTDisplay.view column.dataType
             , editColumnButton column.id
             , deleteColumnButton column.id
-            , ConDisplay.view constraints
+            , ConDisplay.view columnConstraints
             ]
 
 
