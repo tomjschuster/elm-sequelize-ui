@@ -59,6 +59,12 @@ defmodule SequelizeUi.DbDesign do
   def list_tables_for_schema(schema_id) do
     Repo.all(from Table, where: [schema_id: ^schema_id])
   end
+  def list_tables_for_schema(schema_id, nil), do: list_tables_for_schema(schema_id)
+  def list_tables_for_schema(schema_id, data_type_id) do
+    Repo.all from t in Table,
+      join: c in assoc(t, :columns),
+      where: t.schema_id == ^schema_id and c.data_type_id == ^data_type_id
+  end
 
   def list_reference_tables_for_table(table_id) do
     Repo.all from reference_table in Table,

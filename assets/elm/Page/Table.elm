@@ -66,6 +66,7 @@ type alias Model =
     , editingTable : Maybe Table
     , newColumn : Column
     , newColumnAssocs : Array NewColumnAssoc
+    , newColumnAssocTables : List Table
     , editingColumn : Maybe Column
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
@@ -83,6 +84,7 @@ initialModel =
     , editingTable = Nothing
     , newColumn = Column.empty
     , newColumnAssocs = Array.fromList [ DataTypeRequired ]
+    , newColumnAssocTables = []
     , editingColumn = Nothing
     , toDeleteId = Nothing
     , errors = []

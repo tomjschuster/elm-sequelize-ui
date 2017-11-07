@@ -4,6 +4,7 @@ module Request.Table
         , destroy
         , index
         , indexForSchema
+        , indexForSchemaForDataType
         , indexReferences
         , one
         , tableUrl
@@ -30,6 +31,11 @@ tableUrl =
 schemaTablesUrl : Int -> String
 schemaTablesUrl =
     schemaUrl >> flip (++) "/tables"
+
+
+schemaTablesForDataTypeUrl : Int -> Int -> String
+schemaTablesForDataTypeUrl schemaId dataTypeId =
+    schemaTablesUrl schemaId ++ "?data_type_id=" ++ toString dataTypeId
 
 
 referencesUrl : Int -> String
@@ -73,6 +79,13 @@ indexReferences : Int -> Http.Request (List Table)
 indexReferences tableId =
     Http.get
         (referencesUrl tableId)
+        (dataDecoder (JD.list Table.decoder))
+
+
+indexForSchemaForDataType : Int -> Int -> Http.Request (List Table)
+indexForSchemaForDataType schemaId dataTypeId =
+    Http.get
+        (schemaTablesForDataTypeUrl schemaId dataTypeId)
         (dataDecoder (JD.list Table.decoder))
 
 
