@@ -1,6 +1,7 @@
 module Page.Table exposing (Model, Msg, init, initialModel, update, view)
 
 import AppUpdate exposing (AppUpdate)
+import Array exposing (Array)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Column as Column exposing (Column, ColumnConstraints, Reference)
 import Data.Constraint as Constraint exposing (Constraint)
@@ -64,7 +65,7 @@ type alias Model =
     , columnReferences : Dict Int Column
     , editingTable : Maybe Table
     , newColumn : Column
-    , newColumnAssoc : NewColumnAssoc
+    , newColumnAssocs : Array NewColumnAssoc
     , editingColumn : Maybe Column
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
@@ -81,7 +82,7 @@ initialModel =
     , columnReferences = Dict.empty
     , editingTable = Nothing
     , newColumn = Column.empty
-    , newColumnAssoc = DataTypeRequired
+    , newColumnAssocs = Array.fromList [ DataTypeRequired ]
     , editingColumn = Nothing
     , toDeleteId = Nothing
     , errors = []
@@ -96,25 +97,9 @@ type alias InitialData =
 
 type NewColumnAssoc
     = DataTypeRequired
-    | SelectTable DataType (List Table)
-    | SelectColumn DataType (List Table) Int (List Column)
-    | NewColumnAssocReady DataType (List Table) Int (List Column) Int
-
-
-updateNewColumnAssocDataType : DataType -> NewColumnAssoc -> NewColumnAssoc
-updateNewColumnAssocDataType newDataType newColumnAssoc =
-    case newColumnAssoc of
-        DataTypeRequired ->
-            DataTypeRequired
-
-        SelectTable dataType tables ->
-            SelectTable newDataType tables
-
-        SelectColumn dataType tables tableId columns ->
-            SelectColumn newDataType tables tableId columns
-
-        NewColumnAssocReady dataType tables tableId columns columnId ->
-            SelectColumn newDataType tables tableId columns
+    | SelectTable (List Table)
+    | SelectColumn (List Table) Int (List Column)
+    | NewColumnAssocReady (List Table) Int (List Column) Int
 
 
 init : Int -> Int -> ( Model, Cmd Msg )
@@ -162,11 +147,11 @@ type Msg
     | UpdateNewColumnConstraints ColumnConstraints
     | InputNewColumnName String
     | SelectNewColumnDataType DataType
-    | LoadNewColumnAssocTables DataType (Result Http.Error (List Table))
-    | SelectNewColumnAssocTable DataType (List Table) (Maybe Int)
-    | LoadNewColumnAssocColumns DataType (List Table) Int (Result Http.Error (List Column))
-    | SelectNewColumnAssocColumn DataType (List Table) Int (List Column) (Maybe Int)
-    | FinishNewColumnAssoc (Maybe Reference)
+    | LoadNewColumnAssocTables Int (Result Http.Error (List Table))
+    | SelectNewColumnAssocTable Int (List Table) (Maybe Int)
+    | LoadNewColumnAssocColumns Int (List Table) Int (Result Http.Error (List Column))
+    | SelectNewColumnAssocColumn Int (List Table) Int (List Column) (Maybe Int)
+    | FinishNewColumnAssoc Int (Maybe Reference)
     | CreateColumn
       -- UPDATE COLUMN
     | EditColumn Int
@@ -347,33 +332,29 @@ update msg model =
             )
 
         SelectNewColumnDataType dataType ->
-            case ( dataType, model.newColumnAssoc ) of
-                ( DataType.NoDataType, _ ) ->
-                    ( { model
-                        | newColumn = Column.updateDataType dataType model.newColumn
-                        , newColumnAssoc = DataTypeRequired
-                      }
-                    , Cmd.none
-                    , AppUpdate.none
-                    )
+            if dataType == DataType.none then
+                ( { model
+                    | newColumn = Column.updateDataType dataType model.newColumn
+                    , newColumnAssocs = Array.fromList [ DataTypeRequired ]
+                  }
+                , Cmd.none
+                , AppUpdate.none
+                )
+            else
+                let
+                    cmds =
+                        model.newColumnAssocs
+                            |> Array.indexedMap (setNewColumnAssocDataType model.schema.id dataType)
+                            |> Array.toList
+                            |> List.filterMap identity
+                in
+                ( { model | newColumn = Column.updateDataType dataType model.newColumn }
+                , Cmd.batch cmds
+                , AppUpdate.none
+                )
 
-                ( _, DataTypeRequired ) ->
-                    ( { model | newColumn = Column.updateDataType dataType model.newColumn }
-                    , TableReq.indexForSchema model.schema.id |> Http.toTask |> Task.attempt (LoadNewColumnAssocTables dataType)
-                    , AppUpdate.none
-                    )
-
-                ( _, _ ) ->
-                    ( { model
-                        | newColumn = Column.updateDataType dataType model.newColumn
-                        , newColumnAssoc = updateNewColumnAssocDataType dataType model.newColumnAssoc
-                      }
-                    , Cmd.none
-                    , AppUpdate.none
-                    )
-
-        LoadNewColumnAssocTables dataType (Ok tables) ->
-            ( { model | newColumnAssoc = SelectTable dataType tables }
+        LoadNewColumnAssocTables idx (Ok tables) ->
+            ( { model | newColumnAssocs = Array.set idx (SelectTable tables) model.newColumnAssocs }
             , Cmd.none
             , AppUpdate.none
             )
@@ -381,44 +362,44 @@ update msg model =
         LoadNewColumnAssocTables _ (Err error) ->
             handleHttpError model error
 
-        SelectNewColumnAssocTable dataType tables maybeTableId ->
+        SelectNewColumnAssocTable idx tables maybeTableId ->
             case maybeTableId of
                 Just tableId ->
                     ( model
-                    , ColumnReq.indexForTable tableId |> Http.send (LoadNewColumnAssocColumns dataType tables tableId)
+                    , ColumnReq.indexForTable tableId |> Http.send (LoadNewColumnAssocColumns idx tables tableId)
                     , AppUpdate.none
                     )
 
                 Nothing ->
-                    ( { model | newColumnAssoc = SelectTable dataType tables }
+                    ( { model | newColumnAssocs = Array.set idx (SelectTable tables) model.newColumnAssocs }
                     , Cmd.none
                     , AppUpdate.none
                     )
 
-        LoadNewColumnAssocColumns dataType tables tableId (Ok columns) ->
-            ( { model | newColumnAssoc = SelectColumn dataType tables tableId columns }
+        LoadNewColumnAssocColumns idx tables tableId (Ok columns) ->
+            ( { model | newColumnAssocs = Array.set idx (SelectColumn tables tableId columns) model.newColumnAssocs }
             , Cmd.none
             , AppUpdate.none
             )
 
-        LoadNewColumnAssocColumns dataType tables tableId (Err error) ->
+        LoadNewColumnAssocColumns idx tables tableId (Err error) ->
             handleHttpError model error
 
-        SelectNewColumnAssocColumn dataType tables tableId columns maybeColumnId ->
+        SelectNewColumnAssocColumn idx tables tableId columns maybeColumnId ->
             case maybeColumnId of
                 Just columnId ->
-                    ( { model | newColumnAssoc = NewColumnAssocReady dataType tables tableId columns columnId }
+                    ( { model | newColumnAssocs = Array.set idx (NewColumnAssocReady tables tableId columns columnId) model.newColumnAssocs }
                     , Cmd.none
                     , AppUpdate.none
                     )
 
                 Nothing ->
-                    ( { model | newColumnAssoc = SelectColumn dataType tables tableId columns }
+                    ( { model | newColumnAssocs = Array.set idx (SelectColumn tables tableId columns) model.newColumnAssocs }
                     , Cmd.none
                     , AppUpdate.none
                     )
 
-        FinishNewColumnAssoc maybeReference ->
+        FinishNewColumnAssoc idx maybeReference ->
             ( { model
                 | newColumn =
                     Maybe.map
@@ -429,7 +410,7 @@ update msg model =
             , TableReq.indexForSchema
                 model.schema.id
                 |> Http.toTask
-                |> Task.attempt (LoadNewColumnAssocTables model.newColumn.dataType)
+                |> Task.attempt (LoadNewColumnAssocTables idx)
             , AppUpdate.none
             )
 
@@ -596,7 +577,7 @@ updateWithDbEntity entity model =
             { model
                 | columns = model.columns ++ [ column ]
                 , newColumn = Column.init model.table.id
-                , newColumnAssoc = DataTypeRequired
+                , newColumnAssocs = Array.fromList [ DataTypeRequired ]
             }
 
         DbUpdatedColumn column ->
@@ -641,6 +622,19 @@ replaceOrAppendColumn column columns =
         newColumns ++ [ column ]
 
 
+setNewColumnAssocDataType : Int -> DataType -> Int -> NewColumnAssoc -> Maybe (Cmd Msg)
+setNewColumnAssocDataType schemaId dataType idx assoc =
+    case assoc of
+        DataTypeRequired ->
+            TableReq.indexForSchema schemaId
+                |> Http.toTask
+                |> Task.attempt (LoadNewColumnAssocTables idx)
+                |> Just
+
+        _ ->
+            Nothing
+
+
 
 -- VIEW
 
@@ -650,7 +644,7 @@ view model =
     main_ []
         [ breadCrumbs model.schema model.table
         , tableView model.editingTable model.table
-        , createColumn model.newColumn model.newColumnAssoc
+        , createColumn model.newColumn model.newColumnAssocs
         , columnsView model
         ]
 
@@ -753,8 +747,8 @@ saveEditTableButton =
 -- CREATE COLUMN
 
 
-createColumn : Column -> NewColumnAssoc -> Html Msg
-createColumn column newColumnAssoc =
+createColumn : Column -> Array NewColumnAssoc -> Html Msg
+createColumn column newColumnAssocs =
     form
         []
         [ fieldset []
@@ -773,7 +767,7 @@ createColumn column newColumnAssoc =
                 "create-column-constraints"
                 UpdateNewColumnConstraints
                 column.constraints
-            , createColumnAssoc newColumnAssoc
+            , createColumnAssocs column.dataType newColumnAssocs
             , createColumnButton
             ]
         ]
@@ -809,42 +803,47 @@ createColumnButton =
     button [ type_ "button", onClick CreateColumn ] [ text "Create" ]
 
 
-createColumnAssoc : NewColumnAssoc -> Html Msg
-createColumnAssoc assoc =
+createColumnAssocs : DataType -> Array NewColumnAssoc -> Html Msg
+createColumnAssocs dataType assocs =
+    div [] (assocs |> Array.toIndexedList |> List.map (uncurry (createColumnAssoc dataType)))
+
+
+createColumnAssoc : DataType -> Int -> NewColumnAssoc -> Html Msg
+createColumnAssoc dataType idx assoc =
     case assoc of
         DataTypeRequired ->
             div [] []
 
-        SelectTable dataType tables ->
+        SelectTable tables ->
             div []
                 [ select
-                    [ onChangeInt (SelectNewColumnAssocTable dataType tables) ]
+                    [ onChangeInt (SelectNewColumnAssocTable idx tables) ]
                     (option [ selected True ] [ text "Select a Table" ] :: List.map (tableOption Nothing) tables)
                 ]
 
-        SelectColumn dataType tables tableId columns ->
+        SelectColumn tables tableId columns ->
             div []
                 [ select
-                    [ onChangeInt (SelectNewColumnAssocTable dataType tables) ]
+                    [ onChangeInt (SelectNewColumnAssocTable idx tables) ]
                     (option [ selected True ] [ text "Select a Table" ] :: List.map (tableOption (Just tableId)) tables)
                 , select
-                    [ onChangeInt (SelectNewColumnAssocColumn dataType tables tableId columns) ]
+                    [ onChangeInt (SelectNewColumnAssocColumn idx tables tableId columns) ]
                     (option [ selected True ] [ text "Select a Column" ]
                         :: (columns |> List.filter (.dataType >> DataType.isMatch dataType) |> List.map (columnOption Nothing))
                     )
                 ]
 
-        NewColumnAssocReady dataType tables tableId columns columnId ->
+        NewColumnAssocReady tables tableId columns columnId ->
             div []
                 [ select
-                    [ onChangeInt (SelectNewColumnAssocTable dataType tables) ]
+                    [ onChangeInt (SelectNewColumnAssocTable idx tables) ]
                     (option [ selected True ] [ text "Select a Table" ] :: List.map (tableOption (Just tableId)) tables)
                 , select
-                    [ onChangeInt (SelectNewColumnAssocColumn dataType tables tableId columns) ]
+                    [ onChangeInt (SelectNewColumnAssocColumn idx tables tableId columns) ]
                     (option [ selected True ] [ text "Select a Column" ]
                         :: (columns |> List.filter (.dataType >> DataType.isMatch dataType) |> List.map (columnOption (Just columnId)))
                     )
-                , button [ onClick (FinishNewColumnAssoc (Column.findReferences tableId columnId tables columns)), type_ "button" ] [ text "Finish" ]
+                , button [ onClick (FinishNewColumnAssoc idx (Column.findReferences tableId columnId tables columns)), type_ "button" ] [ text "Finish" ]
                 ]
 
 
