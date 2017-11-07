@@ -7,6 +7,7 @@
   * Associations
     * Display FK
     * Edit column FK
+    * View model
   * Table constraints
 * Type ID helper functions
 * Refactor
