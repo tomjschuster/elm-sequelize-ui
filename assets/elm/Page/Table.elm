@@ -163,7 +163,8 @@ type Msg
     | SelectNewColumnAssocTable Int (Maybe Int)
     | LoadNewColumnAssocColumns Int Int (Result Http.Error (List Column))
     | SelectNewColumnAssocColumn Int Int (List Column) (Maybe Int)
-    | FinishNewColumnAssoc Int (Maybe Reference)
+    | RemoveNewColumnAssoc Int
+    | AddNewColumnAssoc
     | CreateColumn
       -- UPDATE COLUMN
     | EditColumn Int
@@ -423,14 +424,28 @@ update msg model =
                     , AppUpdate.none
                     )
 
-        FinishNewColumnAssoc idx maybeReference ->
+        RemoveNewColumnAssoc idx ->
+            let
+                firstHalf =
+                    Array.slice
+                        0
+                        idx
+                        model.newColumnAssocs
+
+                secondHalf =
+                    Array.slice
+                        (idx + 1)
+                        (Array.length model.newColumnAssocs)
+                        model.newColumnAssocs
+            in
+            ( { model | newColumnAssocs = Array.append firstHalf secondHalf }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        AddNewColumnAssoc ->
             ( { model
-                | newColumn =
-                    Maybe.map
-                        (flip Column.addReference model.newColumn)
-                        maybeReference
-                        |> Maybe.withDefault model.newColumn
-                , newColumnAssocs =
+                | newColumnAssocs =
                     Array.push
                         SelectTable
                         model.newColumnAssocs
@@ -782,7 +797,7 @@ createColumn column newColumnAssocs tables =
                 "create-column-constraints"
                 UpdateNewColumnConstraints
                 column.constraints
-            , createColumnAssocs column.dataType newColumnAssocs tables
+            , createColumnAssocs newColumnAssocs tables
             , createColumnButton
             ]
         ]
@@ -818,34 +833,43 @@ createColumnButton =
     button [ type_ "button", onClick CreateColumn ] [ text "Create" ]
 
 
-createColumnAssocs : DataType -> Array NewColumnAssoc -> List Table -> Html Msg
-createColumnAssocs dataType assocs tables =
-    div [] (assocs |> Array.toIndexedList |> List.map (uncurry (createColumnAssoc dataType tables)))
+createColumnAssocs : Array NewColumnAssoc -> List Table -> Html Msg
+createColumnAssocs assocs tables =
+    if List.isEmpty tables then
+        div [] [ p [] [ text "No columns with the current data type exist in schema." ] ]
+    else
+        div []
+            [ ul [] (createColumnAssocListItems tables assocs)
+            , button [ onClick AddNewColumnAssoc, type_ "button" ] [ text "Add Association" ]
+            ]
 
 
-createColumnAssoc : DataType -> List Table -> Int -> NewColumnAssoc -> Html Msg
-createColumnAssoc dataType tables idx assoc =
+createColumnAssocListItems : List Table -> Array NewColumnAssoc -> List (Html Msg)
+createColumnAssocListItems tables =
+    Array.toIndexedList >> List.map (uncurry (createColumnAssoc tables))
+
+
+createColumnAssoc : List Table -> Int -> NewColumnAssoc -> Html Msg
+createColumnAssoc tables idx assoc =
     case assoc of
         SelectTable ->
-            div [] [ tableSelect (SelectNewColumnAssocTable idx) Nothing tables ]
+            li []
+                [ tableSelect (SelectNewColumnAssocTable idx) Nothing tables
+                , deleteNewAssocButton idx
+                ]
 
         SelectColumn tableId columns ->
-            div []
+            li []
                 [ tableSelect (SelectNewColumnAssocTable idx) (Just tableId) tables
                 , columnSelect (SelectNewColumnAssocColumn idx tableId columns) Nothing columns
+                , deleteNewAssocButton idx
                 ]
 
         NewColumnAssocReady tableId columns columnId ->
-            let
-                maybeReference =
-                    Column.findReferences tableId columnId tables columns
-            in
-            div []
+            li []
                 [ tableSelect (SelectNewColumnAssocTable idx) (Just tableId) tables
                 , columnSelect (SelectNewColumnAssocColumn idx tableId columns) (Just columnId) columns
-                , button
-                    [ onClick (FinishNewColumnAssoc idx maybeReference), type_ "button" ]
-                    [ text "Add another association" ]
+                , deleteNewAssocButton idx
                 ]
 
 
@@ -889,6 +913,13 @@ columnOption maybeId { id, name } =
         , selected (maybeId |> Maybe.map ((==) id) |> Maybe.withDefault False)
         ]
         [ text name ]
+
+
+deleteNewAssocButton : Int -> Html Msg
+deleteNewAssocButton idx =
+    button
+        [ onClick (RemoveNewColumnAssoc idx), type_ "button" ]
+        [ text "Delete" ]
 
 
 
@@ -935,13 +966,11 @@ columnItemChildren : Model -> TableConstraints -> Column -> List (Html Msg)
 columnItemChildren model tableConstraints column =
     let
         columnConstraints =
-            Debug.log "a"
-                (Column.buildConstraints
-                    (Debug.log "b" model.tableReferences)
-                    (Debug.log "c" model.columnReferences)
-                    (Debug.log "d" column.id)
-                    (Debug.log "e" tableConstraints)
-                )
+            Column.buildConstraints
+                model.tableReferences
+                model.columnReferences
+                column.id
+                tableConstraints
     in
     case model.editingColumn of
         Just editingColumn ->

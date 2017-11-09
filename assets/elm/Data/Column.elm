@@ -121,7 +121,7 @@ buildConstraints tableLookup columnLookup columnId tableConstraints =
     , defaultValue = defaultValue columnId tableConstraints
     , isUnique = isUnique columnId tableConstraints
     , references =
-        Debug.log "x" (singleReferences columnId tableConstraints)
+        singleReferences columnId tableConstraints
             |> List.filterMap (lookupReferences tableLookup columnLookup)
     }
 
@@ -282,12 +282,12 @@ lookupReferences : Dict Int Table -> Dict Int Column -> Int -> Maybe Reference
 lookupReferences tableLookup columnLookup columnId =
     let
         maybeColumn =
-            Debug.log "maybeColumn" (Dict.get columnId columnLookup)
+            Dict.get columnId columnLookup
 
         maybeTable =
-            Debug.log "maybeTable" (Maybe.andThen (.tableId >> flip Dict.get tableLookup) maybeColumn)
+            Maybe.andThen (.tableId >> flip Dict.get tableLookup) maybeColumn
     in
-    Debug.log "reference" (Maybe.map2 (\c t -> Reference c.id c.name t.id t.name) maybeTable maybeColumn)
+    Maybe.map2 (\c t -> Reference c.id c.name t.id t.name) maybeTable maybeColumn
 
 
 findReferences : Int -> Int -> List Table -> List Column -> Maybe Reference
