@@ -113,6 +113,21 @@ type NewColumnAssoc
     | NewColumnAssocReady Int (List Column) Int
 
 
+newColumnAssocsToIds : Array NewColumnAssoc -> List Int
+newColumnAssocsToIds =
+    Array.toList >> List.filterMap newColumnAssocToId
+
+
+newColumnAssocToId : NewColumnAssoc -> Maybe Int
+newColumnAssocToId assoc =
+    case assoc of
+        NewColumnAssocReady _ _ columnId ->
+            Just columnId
+
+        _ ->
+            Nothing
+
+
 init : Int -> Int -> ( Model, Cmd Msg )
 init schemaId tableId =
     ( { initialModel | newColumn = Column.init tableId }
@@ -226,7 +241,7 @@ update msg model =
                 ( model, Cmd.none, AppUpdate.httpError error )
 
         LoadDbEntities (Ok entities) ->
-            ( updateWithDbEntities entities { model | errors = [] }
+            ( updateWithDbEntities entities { model | errors = [], newColumnAssocTables = [] }
             , Cmd.none
             , AppUpdate.none
             )
@@ -457,7 +472,7 @@ update msg model =
         CreateColumn ->
             ( model
             , Task.sequence
-                [ ColumnReq.create model.newColumn |> sendDbEntity DbNewColumn
+                [ ColumnReq.create model.newColumn (newColumnAssocsToIds model.newColumnAssocs) |> sendDbEntity DbNewColumn
                 , ConstraintReq.indexForTable model.table.id |> sendDbEntity DbConstraints
                 , TableReq.indexReferences model.table.id |> sendDbEntity DbReferenceTables
                 , ColumnReq.indexReferences model.table.id |> sendDbEntity DbReferenceColumns

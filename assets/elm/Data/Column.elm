@@ -328,12 +328,12 @@ encode { id, tableId, name, dataType, constraints } =
                     ++ DataType.encode dataType
                 )
           )
-        , ( "constraints", encodeConstraints constraints )
+        , ( "constraints", encodeConstraints constraints [] )
         ]
 
 
-encodeNew : Column -> Value
-encodeNew { tableId, name, dataType, constraints } =
+encodeNew : Column -> List Int -> Value
+encodeNew { tableId, name, dataType, constraints } referenceIds =
     JE.object
         [ ( "column"
           , JE.object
@@ -343,12 +343,12 @@ encodeNew { tableId, name, dataType, constraints } =
                     ++ DataType.encode dataType
                 )
           )
-        , ( "constraints", encodeConstraints constraints )
+        , ( "constraints", encodeConstraints constraints referenceIds )
         ]
 
 
-encodeConstraints : ColumnConstraints -> Value
-encodeConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique, references } =
+encodeConstraints : ColumnConstraints -> List Int -> Value
+encodeConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique, references } referenceIds =
     JE.object
         [ ( "is_primary_key", JE.bool isPrimaryKey )
         , ( "is_not_null", JE.bool isNotNull )
@@ -356,5 +356,5 @@ encodeConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique, references 
           , defaultValue |> Maybe.map JE.string |> Maybe.withDefault JE.null
           )
         , ( "is_unique", JE.bool isUnique )
-        , ( "references", references |> List.map (.columnId >> JE.int) |> JE.list )
+        , ( "references", referenceIds |> List.map JE.int |> JE.list )
         ]

@@ -36,11 +36,11 @@ referencesUrl =
     tableUrl >> flip (++) "/column-references"
 
 
-create : Column -> Request Column
-create column =
+create : Column -> List Int -> Request Column
+create column referenceIds =
     Http.post
         columnsUrl
-        (Column.encodeNew column |> Http.jsonBody)
+        (Column.encodeNew column referenceIds |> Http.jsonBody)
         (dataDecoder <| Column.decoder)
 
 
