@@ -132,6 +132,7 @@ type Msg
     = NoOp
     | FocusResult (Result Dom.Error ())
     | Goto Route
+    | LoadDbEntity (Result Http.Error DbEntity)
     | LoadDbEntities (Result Http.Error (List DbEntity))
       -- SCHEMA
     | LoadSchema (Result Http.Error Schema)
@@ -198,6 +199,21 @@ update msg model =
             , Router.goto route
             , AppUpdate.none
             )
+
+        LoadDbEntity (Ok entity) ->
+            ( updateWithDbEntity entity { model | errors = [] }
+            , Cmd.none
+            , AppUpdate.none
+            )
+
+        LoadDbEntity (Err error) ->
+            if isUnprocessableEntity error then
+                ( { model | errors = ChangesetError.parseHttpError error }
+                , Cmd.none
+                , AppUpdate.none
+                )
+            else
+                ( model, Cmd.none, AppUpdate.httpError error )
 
         LoadDbEntities (Ok entities) ->
             ( updateWithDbEntities entities { model | errors = [] }
@@ -343,15 +359,10 @@ update msg model =
                 , AppUpdate.none
                 )
             else
-                let
-                    cmds =
-                        model.newColumnAssocs
-                            |> Array.indexedMap (setNewColumnAssocDataType model.schema.id dataType)
-                            |> Array.toList
-                            |> List.filterMap identity
-                in
                 ( { model | newColumn = Column.updateDataType dataType model.newColumn }
-                , Cmd.batch cmds
+                , TableReq.indexForSchemaForDataType model.schema.id dataType
+                    |> sendDbEntity DbDataTypeTables
+                    |> Task.attempt LoadDbEntity
                 , AppUpdate.none
                 )
 
@@ -575,6 +586,9 @@ updateWithDbEntity entity model =
                     List.foldl (\c -> Dict.insert c.id c) model.tableReferences tables
             }
 
+        DbDataTypeTables tables ->
+            { model | newColumnAssocTables = tables }
+
         DbNewColumn column ->
             { model
                 | columns = model.columns ++ [ column ]
@@ -622,19 +636,6 @@ replaceOrAppendColumn column columns =
         newColumns
     else
         newColumns ++ [ column ]
-
-
-setNewColumnAssocDataType : Int -> DataType -> Int -> NewColumnAssoc -> Maybe (Cmd Msg)
-setNewColumnAssocDataType schemaId dataType idx assoc =
-    case assoc of
-        DataTypeRequired ->
-            TableReq.indexForSchema schemaId
-                |> Http.toTask
-                |> Task.attempt (LoadNewColumnAssocTables idx)
-                |> Just
-
-        _ ->
-            Nothing
 
 
 

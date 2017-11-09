@@ -10,10 +10,18 @@ defmodule SequelizeUiWeb.ColumnController do
     render(conn, "index.json", columns: columns)
   end
 
-  def index_for_table(conn, %{"table_id" => table_id}) do
-    columns = DbDesign.list_columns_for_table(table_id)
+  def index_for_table(conn, %{"table_id" => table_id} = params) do
+    data_type_id =
+      case params |> Map.get("data_type_id", "") |> Integer.parse() do
+        {data_type_id, ""} ->
+          data_type_id
+        otherwise ->
+          nil
+      end
+    columns = DbDesign.list_columns_for_table(table_id, data_type_id)
     render(conn, "index.json", columns: columns)
   end
+
 
   def index_references(conn, %{"table_id" => table_id}) do
     columns = DbDesign.list_reference_columns_for_table(table_id)

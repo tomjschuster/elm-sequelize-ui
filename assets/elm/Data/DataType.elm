@@ -20,11 +20,14 @@ module Data.DataType
         , toId
         , toLongName
         , toShortName
+        , toUrlParams
         )
 
 import Json.Decode as JD exposing (Decoder)
 import Json.Decode.Pipeline as JDP
 import Json.Encode as JE exposing (Value)
+import Utils.Bool as BoolUtils
+import Utils.Http as HttpUtils
 
 
 type DataType
@@ -1025,6 +1028,11 @@ encode =
     toConfig >> encodeConfig
 
 
+toUrlParams : DataType -> String
+toUrlParams =
+    toConfig >> configToParams >> HttpUtils.paramsToString
+
+
 encodeConfig : DataTypeConfig -> List ( String, Value )
 encodeConfig { dataType, id, size, precision, scale, withTimezone } =
     [ ( "data_type_id", encodeDataTypeId dataType )
@@ -1032,6 +1040,16 @@ encodeConfig { dataType, id, size, precision, scale, withTimezone } =
     , ( "precision", encodeNullableInt precision )
     , ( "scale", encodeNullableInt scale )
     , ( "with_timezone", JE.bool withTimezone )
+    ]
+
+
+configToParams : DataTypeConfig -> List ( String, Maybe String )
+configToParams { dataType, id, size, precision, scale, withTimezone } =
+    [ ( "data_type_id", Just (toString id) )
+    , ( "size", Maybe.map toString size )
+    , ( "precision", Maybe.map toString precision )
+    , ( "scale", Maybe.map toString scale )
+    , ( "with_timezone", Just (BoolUtils.toString withTimezone) )
     ]
 
 

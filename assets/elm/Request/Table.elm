@@ -11,6 +11,7 @@ module Request.Table
         , update
         )
 
+import Data.DataType as DataType exposing (DataType)
 import Data.Table as Table exposing (Table)
 import Http exposing (Request)
 import Json.Decode as JD
@@ -33,9 +34,13 @@ schemaTablesUrl =
     schemaUrl >> flip (++) "/tables"
 
 
-schemaTablesForDataTypeUrl : Int -> Int -> String
-schemaTablesForDataTypeUrl schemaId dataTypeId =
-    schemaTablesUrl schemaId ++ "?data_type_id=" ++ toString dataTypeId
+schemaTablesForDataTypeUrl : Int -> DataType -> String
+schemaTablesForDataTypeUrl schemaId =
+    DataType.toUrlParams >> (++) (schemaTablesUrl schemaId ++ "?")
+
+
+
+--schemaTablesUrl schemaId ++ "?data_type_id=" ++ toString dataTypeId
 
 
 referencesUrl : Int -> String
@@ -82,10 +87,10 @@ indexReferences tableId =
         (dataDecoder (JD.list Table.decoder))
 
 
-indexForSchemaForDataType : Int -> Int -> Http.Request (List Table)
-indexForSchemaForDataType schemaId dataTypeId =
+indexForSchemaForDataType : Int -> DataType -> Http.Request (List Table)
+indexForSchemaForDataType schemaId dataType =
     Http.get
-        (schemaTablesForDataTypeUrl schemaId dataTypeId)
+        (schemaTablesForDataTypeUrl schemaId dataType)
         (dataDecoder (JD.list Table.decoder))
 
 

@@ -6,6 +6,7 @@ module Utils.Http
         , errorBody
         , isUnprocessableEntity
         , isUnprocessableTable
+        , paramsToString
         , put
         )
 
@@ -124,3 +125,13 @@ isUnprocessableEntity error =
 
         _ ->
             False
+
+
+paramsToString : List ( String, Maybe String ) -> String
+paramsToString =
+    List.filterMap (uncurry joinMaybeString) >> String.join "&"
+
+
+joinMaybeString : String -> Maybe String -> Maybe String
+joinMaybeString string maybeString =
+    Maybe.map ((++) (string ++ "=")) maybeString

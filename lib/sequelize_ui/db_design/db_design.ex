@@ -66,6 +66,14 @@ defmodule SequelizeUi.DbDesign do
       where: t.schema_id == ^schema_id and c.data_type_id == ^data_type_id
   end
 
+  def list_tables_for_schema_by_data_type(schema_id, data_type_params) do
+    column_query = from Column, where: ^data_type_params
+    Repo.all from t in Table,
+      join: c in ^column_query, on: [table_id: t.id],
+      where: t.schema_id == ^schema_id,
+      distinct: true
+  end
+
   def list_reference_tables_for_table(table_id) do
     Repo.all from reference_table in Table,
       join: col in assoc(reference_table, :columns),
@@ -102,6 +110,11 @@ defmodule SequelizeUi.DbDesign do
 
   def list_columns_for_table(table_id) do
     Repo.all(from Column, where: [table_id: ^table_id])
+  end
+  def list_columns_for_table(table_id, nil), do: list_columns_for_table(table_id)
+  def list_columns_for_table(table_id, data_type_id) do
+    Repo.all from Column,
+      where: [table_id: ^table_id, data_type_id: ^data_type_id]
   end
 
   def list_reference_columns_for_table(table_id) do
