@@ -406,7 +406,8 @@ update msg model =
             case maybeTableId of
                 Just tableId ->
                     ( model
-                    , ColumnReq.indexForTable tableId |> Http.send (LoadNewColumnAssocColumns idx tableId)
+                    , ColumnReq.indexForTableWithDataType tableId model.newColumn.dataType
+                        |> Http.send (LoadNewColumnAssocColumns idx tableId)
                     , AppUpdate.none
                     )
 

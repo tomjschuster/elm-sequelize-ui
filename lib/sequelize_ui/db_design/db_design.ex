@@ -117,6 +117,13 @@ defmodule SequelizeUi.DbDesign do
       where: [table_id: ^table_id, data_type_id: ^data_type_id]
   end
 
+  def list_columns_for_table_by_data_type(table_id, data_type_params) do
+    column_query = from Column, where: ^data_type_params
+    Repo.all from c in column_query,
+      where: c.table_id == ^table_id,
+      distinct: true
+  end
+
   def list_reference_columns_for_table(table_id) do
     Repo.all from reference_column in Column,
       join: constraint in assoc(reference_column, :reference_constraints),

@@ -3,6 +3,7 @@ module Request.Column
         ( create
         , destroy
         , indexForTable
+        , indexForTableWithDataType
         , indexReferences
         , one
         , update
@@ -10,6 +11,7 @@ module Request.Column
         )
 
 import Data.Column as Column exposing (Column)
+import Data.DataType as DataType exposing (DataType)
 import Http exposing (Request)
 import Json.Decode as JD
 import Request.Table exposing (tableUrl)
@@ -36,6 +38,11 @@ referencesUrl =
     tableUrl >> flip (++) "/column-references"
 
 
+tableColumnsForDataTypeUrl : Int -> DataType -> String
+tableColumnsForDataTypeUrl tableId =
+    DataType.toUrlParams >> (++) (tableColumnsUrl tableId ++ "?")
+
+
 create : Column -> List Int -> Request Column
 create column referenceIds =
     Http.post
@@ -53,6 +60,13 @@ indexForTable : Int -> Request (List Column)
 indexForTable tableId =
     Http.get
         (tableColumnsUrl tableId)
+        (dataDecoder (JD.list Column.decoder))
+
+
+indexForTableWithDataType : Int -> DataType -> Request (List Column)
+indexForTableWithDataType tableId dataType =
+    Http.get
+        (tableColumnsForDataTypeUrl tableId dataType)
         (dataDecoder (JD.list Column.decoder))
 
 

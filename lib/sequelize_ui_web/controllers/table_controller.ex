@@ -18,13 +18,6 @@ defmodule SequelizeUiWeb.TableController do
   end
 
   def index_for_schema(conn, %{"schema_id" => schema_id} = params) do
-    data_type_id =
-      case params |> Map.get("data_type_id", "") |> Integer.parse() do
-        {data_type_id, ""} ->
-          data_type_id
-        otherwise ->
-          nil
-      end
     tables = DbDesign.list_tables_for_schema(schema_id)
     render(conn, "index.json", tables: tables)
   end

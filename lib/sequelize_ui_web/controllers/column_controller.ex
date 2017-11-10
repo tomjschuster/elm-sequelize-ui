@@ -10,6 +10,12 @@ defmodule SequelizeUiWeb.ColumnController do
     render(conn, "index.json", columns: columns)
   end
 
+  def index_for_table(conn, %{"table_id" => schema_id, "data_type_id" => data_type_id} = params) do
+    processed_params= SequelizeUiWeb.TableController.process_data_type_params(params)
+    columns = DbDesign.list_columns_for_table_by_data_type(schema_id, processed_params)
+    render(conn, "index.json", columns: columns)
+  end
+
   def index_for_table(conn, %{"table_id" => table_id} = params) do
     data_type_id =
       case params |> Map.get("data_type_id", "") |> Integer.parse() do
@@ -21,7 +27,6 @@ defmodule SequelizeUiWeb.ColumnController do
     columns = DbDesign.list_columns_for_table(table_id, data_type_id)
     render(conn, "index.json", columns: columns)
   end
-
 
   def index_references(conn, %{"table_id" => table_id}) do
     columns = DbDesign.list_reference_columns_for_table(table_id)
