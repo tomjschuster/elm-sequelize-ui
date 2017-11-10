@@ -339,5 +339,68 @@ defmodule SequelizeUi.DbDesign do
   def delete_constraint(%Constraint{} = constraint) do
     Repo.delete(constraint)
   end
+
+  defp data_type_params_to_atoms(params) do
+    params
+    |> Map.take(["data_type_id", "size", "precision", "scale", "with_timezone"])
+    |> Enum.into(%{}, fn {k, v} -> {String.to_atom(k), v} end)
+    |> Map.update!(:data_type_id, &(String.to_integer(&1)))
+  end
+
+  def process_data_type_params(params) do
+    params
+    |> data_type_params_to_atoms()
+    |> data_type_id_to_attrs()
+  end
+
+  defp data_type_id_to_attrs(params) do
+    case params.data_type_id do
+      1 -> size_params(params)
+      2 -> size_params(params)
+      3 -> plain_data_type_params(params)
+      4 -> size_params(params)
+      5 -> size_params(params)
+      6 -> plain_data_type_params(params)
+      7 -> plain_data_type_params(params)
+      8 -> plain_data_type_params(params)
+      9 -> plain_data_type_params(params)
+      10 -> plain_data_type_params(params)
+      11 -> plain_data_type_params(params)
+      12 -> precision_params(params)
+      13 -> plain_data_type_params(params)
+      14 -> plain_data_type_params(params)
+      15 -> plain_data_type_params(params)
+      16 -> plain_data_type_params(params)
+      17 -> plain_data_type_params(params)
+      18 -> timezone_params(params)
+      19 -> timezone_params(params)
+    end
+  end
+
+  defp plain_data_type_params(params) do
+    [data_type_id: params.data_type_id]
+  end
+
+  defp size_params(params) do
+    [
+      data_type_id: params.data_type_id,
+      size: String.to_integer(params.size)
+    ]
+  end
+
+  defp precision_params(params) do
+    [
+      data_type_id: params.data_type_id,
+      precision: String.to_integer(params.precision),
+      scale: String.to_integer(params.scale)
+    ]
+  end
+
+  defp timezone_params(params) do
+    [
+      data_type_id: params.data_type_id,
+      with_timezone: String.to_existing_atom(params.with_timezone)
+    ]
+  end
 end
 

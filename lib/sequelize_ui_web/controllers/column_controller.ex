@@ -11,8 +11,8 @@ defmodule SequelizeUiWeb.ColumnController do
   end
 
   def index_for_table(conn, %{"table_id" => schema_id, "data_type_id" => data_type_id} = params) do
-    processed_params= SequelizeUiWeb.TableController.process_data_type_params(params)
-    columns = DbDesign.list_columns_for_table_by_data_type(schema_id, processed_params)
+    attrs = DbDesign.process_data_type_params(params)
+    columns = DbDesign.list_columns_for_table_by_data_type(schema_id, attrs)
     render(conn, "index.json", columns: columns)
   end
 
