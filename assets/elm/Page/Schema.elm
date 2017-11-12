@@ -108,10 +108,7 @@ update msg model =
         NoOp ->
             ( model, Cmd.none, AppUpdate.none )
 
-        FocusResult (Ok ()) ->
-            ( model, Cmd.none, AppUpdate.none )
-
-        FocusResult (Err _) ->
+        FocusResult _ ->
             ( model, Cmd.none, AppUpdate.none )
 
         Goto route ->

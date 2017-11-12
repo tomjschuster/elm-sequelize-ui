@@ -213,10 +213,7 @@ update msg model =
         NoOp ->
             ( model, Cmd.none, AppUpdate.none )
 
-        FocusResult (Ok ()) ->
-            ( model, Cmd.none, AppUpdate.none )
-
-        FocusResult (Err _) ->
+        FocusResult _ ->
             ( model, Cmd.none, AppUpdate.none )
 
         Goto route ->
@@ -242,7 +239,7 @@ update msg model =
 
         LoadDbEntities (Ok entities) ->
             ( updateWithDbEntities entities { model | errors = [], newColumnAssocTables = [] }
-            , Cmd.none
+            , Dom.focus "create-column" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
