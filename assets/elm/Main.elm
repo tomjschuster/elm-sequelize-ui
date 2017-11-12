@@ -7,6 +7,7 @@ import Page.Home as Home
 import Page.Schema as Schema
 import Page.Table as Table
 import Router exposing (Route)
+import Views.Column.ReferenceFields
 
 
 main : Program Never Model Msg

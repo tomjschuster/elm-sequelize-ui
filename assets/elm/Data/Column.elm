@@ -2,6 +2,8 @@ module Data.Column
     exposing
         ( Column
         , ColumnConstraints
+        , EditingColumn
+        , EditingReference(..)
         , Reference
         , addReference
         , buildConstraints
@@ -58,6 +60,22 @@ type alias Column =
     , dataType : DataType
     , constraints : ColumnConstraints
     }
+
+
+type alias EditingColumn =
+    { id : Int
+    , tableId : Int
+    , name : String
+    , dataType : DataType
+    , constraints : ColumnConstraints
+    , references : List EditingReference
+    }
+
+
+type EditingReference
+    = SelectTable
+    | SelectColumn Int (List Column)
+    | Ready Int (List Column) Int
 
 
 empty : Column
