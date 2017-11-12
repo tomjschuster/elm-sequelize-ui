@@ -20,67 +20,64 @@ import Html.Events as Events exposing (onClick)
 import Utils.Handlers as Handlers exposing (onChangeInt)
 
 
-type alias Config =
-    {}
+type alias Config msg =
+    { addEditingReference : msg
+    , toSelectEditingReferenceTable : Int -> Maybe Int -> msg
+    , toSelectEditingReferenceColumn : Int -> Int -> List Column -> Maybe Int -> msg
+    , toRemoveEditingReference : Int -> msg
+    }
 
 
 view :
-    msg
-    -> (Int -> Maybe Int -> msg)
-    -> (Int -> Int -> List Column -> Maybe Int -> msg)
-    -> (Int -> msg)
+    Config msg
     -> Array EditingReference
     -> List Table
     -> Html msg
-view addEditingReference toSelectEditingReferenceTable toSelectEditingReferenceColumn toRemoveEditingReference assocs tables =
+view config assocs tables =
     if List.isEmpty tables then
         div [] [ p [] [ text "No columns with the current data type exist in schema." ] ]
     else
         div []
-            [ ul [] (createColumnAssocListItems toSelectEditingReferenceTable toSelectEditingReferenceColumn toRemoveEditingReference tables assocs)
-            , button [ onClick addEditingReference, type_ "button" ] [ text "Add Association" ]
+            [ ul [] (createColumnAssocListItems config tables assocs)
+            , button [ onClick config.addEditingReference, type_ "button" ] [ text "Add Association" ]
             ]
 
 
 createColumnAssocListItems :
-    (Int -> Maybe Int -> msg)
-    -> (Int -> Int -> List Column -> Maybe Int -> msg)
-    -> (Int -> msg)
+    Config msg
     -> List Table
     -> Array EditingReference
     -> List (Html msg)
-createColumnAssocListItems toSelectEditingReferenceTable toSelectEditingReferenceColumn toRemoveEditingReference tables =
-    Array.toIndexedList >> List.map (uncurry (createColumnAssoc toSelectEditingReferenceTable toSelectEditingReferenceColumn toRemoveEditingReference tables))
+createColumnAssocListItems config tables =
+    Array.toIndexedList >> List.map (uncurry (createColumnAssoc config tables))
 
 
 createColumnAssoc :
-    (Int -> Maybe Int -> msg)
-    -> (Int -> Int -> List Column -> Maybe Int -> msg)
-    -> (Int -> msg)
+    Config msg
     -> List Table
     -> Int
     -> EditingReference
     -> Html msg
-createColumnAssoc toSelectEditingReferenceTable toSelectEditingReferenceColumn toRemoveEditingReference tables idx assoc =
+createColumnAssoc config tables idx assoc =
     case assoc of
         SelectTable ->
             li []
-                [ tableSelect (toSelectEditingReferenceTable idx) Nothing tables
-                , deleteNewAssocButton toRemoveEditingReference idx
+                [ tableSelect (config.toSelectEditingReferenceTable idx) Nothing tables
+                , deleteNewAssocButton config.toRemoveEditingReference idx
                 ]
 
         SelectColumn tableId columns ->
             li []
-                [ tableSelect (toSelectEditingReferenceTable idx) (Just tableId) tables
-                , columnSelect (toSelectEditingReferenceColumn idx tableId columns) Nothing columns
-                , deleteNewAssocButton toRemoveEditingReference idx
+                [ tableSelect (config.toSelectEditingReferenceTable idx) (Just tableId) tables
+                , columnSelect (config.toSelectEditingReferenceColumn idx tableId columns) Nothing columns
+                , deleteNewAssocButton config.toRemoveEditingReference idx
                 ]
 
         Ready tableId columns columnId ->
             li []
-                [ tableSelect (toSelectEditingReferenceTable idx) (Just tableId) tables
-                , columnSelect (toSelectEditingReferenceColumn idx tableId columns) (Just columnId) columns
-                , deleteNewAssocButton toRemoveEditingReference idx
+                [ tableSelect (config.toSelectEditingReferenceTable idx) (Just tableId) tables
+                , columnSelect (config.toSelectEditingReferenceColumn idx tableId columns) (Just columnId) columns
+                , deleteNewAssocButton config.toRemoveEditingReference idx
                 ]
 
 
