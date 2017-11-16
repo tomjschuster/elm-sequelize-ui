@@ -26,7 +26,8 @@ import Data.Constraint as Constraint
         , PrimaryKey
         , UniqueKey
         )
-import Data.Table as Table exposing (Table, TableConstraints)
+import Data.Table as Table exposing (Table)
+import Data.Table.Constraints as TableConstraints exposing (TableConstraints)
 import Dict exposing (Dict)
 import Json.Decode as JD exposing (Decoder, int, maybe, string)
 import Json.Decode.Pipeline exposing (custom, decode, hardcoded, optional, required)

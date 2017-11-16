@@ -20,7 +20,7 @@ import Data.Constraint as Constraint
         , PrimaryKey
         , UniqueKey
         )
-import Data.Table exposing (TableConstraints)
+import Data.Table.Constraints exposing (TableConstraints)
 import Json.Encode as JE exposing (Value)
 
 

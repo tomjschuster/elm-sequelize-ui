@@ -4,12 +4,12 @@ import AppUpdate exposing (AppUpdate)
 import Array exposing (Array)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Column as Column exposing (Column)
-import Data.Column.Constraints as ColumnConstraints exposing (ColumnConstraints)
 import Data.Column.DataType as DataType exposing (DataType)
 import Data.Constraint as Constraint exposing (Constraint)
 import Data.DbEntity as DbEntity exposing (DbEntity(..))
 import Data.Schema as Schema exposing (Schema)
-import Data.Table as Table exposing (Table, TableConstraints)
+import Data.Table as Table exposing (Table)
+import Data.Table.Constraints as TableConstraints exposing (TableConstraints)
 import Dict exposing (Dict)
 import Dom
 import Html
@@ -406,7 +406,7 @@ update msg model =
                             (Column.findAndAddConstraints
                                 model.tableReferences
                                 model.columnReferences
-                                (Table.buildConstraints model.constraints)
+                                (TableConstraints.fromList model.constraints)
                             )
             in
             ( { model
@@ -418,7 +418,7 @@ update msg model =
                         |> Maybe.map
                             (Column.findAndAddEditingConstraints
                                 model.columnReferences
-                                (Table.buildConstraints model.constraints)
+                                (TableConstraints.fromList model.constraints)
                             )
                 , errors = []
               }
@@ -630,7 +630,10 @@ view model =
     main_ []
         [ breadCrumbs model.schema model.table
         , tableView model.editingTable model.table
-        , createColumn model.newColumn model.newColumnReferenceTables model.newColumnReferenceColumns
+        , newColumnView
+            model.newColumn
+            model.newColumnReferenceTables
+            model.newColumnReferenceColumns
         , columnsView model
         ]
 
@@ -733,10 +736,11 @@ saveEditTableButton =
 -- CREATE COLUMN
 
 
-createColumn : Column -> List Table -> List Column -> Html Msg
-createColumn column tables columns =
+newColumnView : Column -> List Table -> List Column -> Html Msg
+newColumnView column tables columns =
     section []
-        [ EditColumn.view
+        [ newColumnTitle
+        , EditColumn.view
             CreateColumn
             UpdateNewColumn
             "Create"
@@ -744,6 +748,11 @@ createColumn column tables columns =
             tables
             columns
         ]
+
+
+newColumnTitle : Html msg
+newColumnTitle =
+    h3 [] [ text "New Column" ]
 
 
 
@@ -759,7 +768,7 @@ columnsChildren : Model -> List (Html Msg)
 columnsChildren model =
     let
         tableConstraints =
-            Table.buildConstraints model.constraints
+            TableConstraints.fromList model.constraints
     in
     CE.prependIfErrors model.errors
         [ columnsTitle
