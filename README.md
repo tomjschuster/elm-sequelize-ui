@@ -4,16 +4,11 @@
 ## In Progress
 
 * Constraints
-  * Associations
-    * Display FK
-    * Edit column FK
-    * View model
   * Table constraints
-* Type ID helper functions
-* Refactor
 
 # Todo
 * Constraints
+* Type ID helper functions
 * Field Order
 * Comments
 * Enum Types, Geometric Types
