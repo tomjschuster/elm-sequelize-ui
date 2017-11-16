@@ -8,6 +8,7 @@ module Data.Column
         , addReference
         , buildConstraints
         , decoder
+        , deleteReference
         , empty
         , encode
         , encodeNew
@@ -16,6 +17,8 @@ module Data.Column
         , init
         , removeFromList
         , replaceIfMatch
+        , selectColumn
+        , selectTable
         , updateConstraints
         , updateConstraintsDefaultValue
         , updateConstraintsHasDefaultValue
@@ -74,8 +77,39 @@ type alias EditingColumn =
 
 type EditingReference
     = SelectTable
-    | SelectColumn Int (List Column)
-    | Ready Int (List Column) Int
+    | SelectColumn Int
+    | Ready Int Int
+
+
+selectColumn : Int -> Maybe Int -> List EditingReference -> List EditingReference
+selectColumn idx maybeColumnId =
+    List.indexedMap
+        (\currIdx reference ->
+            if idx == currIdx then
+                maybeColumnId |> Maybe.map SelectColumn |> Maybe.withDefault SelectTable
+            else
+                reference
+        )
+
+
+deleteReference : Int -> List EditingReference -> List EditingReference
+deleteReference idx =
+    List.indexedMap (,)
+        >> List.filter (Tuple.first >> (/=) idx)
+        >> List.map Tuple.second
+
+
+selectTable : Int -> Maybe Int -> List EditingReference -> List EditingReference
+selectTable idx maybeTableId =
+    List.indexedMap
+        (\currIdx reference ->
+            case ( idx == currIdx, reference ) of
+                ( True, SelectColumn columnId ) ->
+                    maybeTableId |> Maybe.map (Ready columnId) |> Maybe.withDefault (SelectColumn columnId)
+
+                _ ->
+                    reference
+        )
 
 
 empty : Column

@@ -29,67 +29,85 @@ type alias Config msg =
 
 
 view :
-    Config msg
-    -> Array EditingReference
+    (List EditingReference -> msg)
+    -> List EditingReference
     -> List Table
+    -> List Column
     -> Html msg
-view config assocs tables =
+view toMsg references tables columns =
     if List.isEmpty tables then
         div [] [ p [] [ text "No columns with the current data type exist in schema." ] ]
     else
         div []
-            [ ul [] (createColumnAssocListItems config tables assocs)
-            , button [ onClick config.addEditingReference, type_ "button" ] [ text "Add Association" ]
+            [ ul [] (referenceFields toMsg tables columns references)
+            , button [ onClick (references ++ [ Column.SelectTable ] |> toMsg), type_ "button" ] [ text "Add Association" ]
             ]
 
 
-createColumnAssocListItems :
-    Config msg
+referenceFields :
+    (List EditingReference -> msg)
     -> List Table
-    -> Array EditingReference
+    -> List Column
+    -> List EditingReference
     -> List (Html msg)
-createColumnAssocListItems config tables =
-    Array.toIndexedList >> List.map (uncurry (createColumnAssoc config tables))
+referenceFields toMsg tables columns references =
+    List.indexedMap (referenceField toMsg references tables columns) references
 
 
-createColumnAssoc :
-    Config msg
+referenceField :
+    (List EditingReference -> msg)
+    -> List EditingReference
     -> List Table
+    -> List Column
     -> Int
     -> EditingReference
     -> Html msg
-createColumnAssoc config tables idx assoc =
-    case assoc of
+referenceField toMsg references tables allColumns idx reference =
+    case reference of
         SelectTable ->
             li []
-                [ tableSelect (config.toSelectEditingReferenceTable idx) Nothing tables
-                , deleteNewAssocButton config.toRemoveEditingReference idx
+                [ tableSelect toMsg references idx Nothing tables
+                , deleteButton toMsg references idx
                 ]
 
-        SelectColumn tableId columns ->
+        SelectColumn tableId ->
+            let
+                columns =
+                    List.filter (.tableId >> (==) tableId) allColumns
+            in
             li []
-                [ tableSelect (config.toSelectEditingReferenceTable idx) (Just tableId) tables
-                , columnSelect (config.toSelectEditingReferenceColumn idx tableId columns) Nothing columns
-                , deleteNewAssocButton config.toRemoveEditingReference idx
+                [ tableSelect toMsg references idx (Just tableId) tables
+                , columnSelect toMsg references idx Nothing columns
+                , deleteButton toMsg references idx
                 ]
 
-        Ready tableId columns columnId ->
+        Ready tableId columnId ->
+            let
+                columns =
+                    List.filter (.tableId >> (==) tableId) allColumns
+            in
             li []
-                [ tableSelect (config.toSelectEditingReferenceTable idx) (Just tableId) tables
-                , columnSelect (config.toSelectEditingReferenceColumn idx tableId columns) (Just columnId) columns
-                , deleteNewAssocButton config.toRemoveEditingReference idx
+                [ tableSelect toMsg references idx (Just tableId) tables
+                , columnSelect toMsg references idx (Just columnId) columns
+                , deleteButton toMsg references idx
                 ]
 
 
-tableSelect : (Maybe Int -> msg) -> Maybe Int -> List Table -> Html msg
-tableSelect toSelectTable maybeTableId tables =
+tableSelect :
+    (List EditingReference -> msg)
+    -> List EditingReference
+    -> Int
+    -> Maybe Int
+    -> List Table
+    -> Html msg
+tableSelect toMsg references idx maybeTableId tables =
     case tables of
         [] ->
             select [ disabled True ] [ option [] [ text "No for datatype" ] ]
 
         _ ->
             select
-                [ onChangeInt toSelectTable ]
+                [ onChangeInt (flip (Column.selectTable idx) references >> toMsg) ]
                 (option [ selected (maybeTableId == Nothing) ]
                     [ text "Select a Table" ]
                     :: List.map (tableOption maybeTableId) tables
@@ -105,10 +123,16 @@ tableOption maybeId { id, name } =
         [ text name ]
 
 
-columnSelect : (Maybe Int -> msg) -> Maybe Int -> List Column -> Html msg
-columnSelect toSelectColumn maybeColumnId columns =
+columnSelect :
+    (List EditingReference -> msg)
+    -> List EditingReference
+    -> Int
+    -> Maybe Int
+    -> List Column
+    -> Html msg
+columnSelect toMsg references idx maybeColumnId columns =
     select
-        [ onChangeInt toSelectColumn ]
+        [ onChangeInt (flip (Column.selectColumn idx) references >> toMsg) ]
         (option [ selected (maybeColumnId == Nothing) ] [ text "Select a Column" ]
             :: List.map (columnOption maybeColumnId) columns
         )
@@ -123,8 +147,8 @@ columnOption maybeId { id, name } =
         [ text name ]
 
 
-deleteNewAssocButton : (Int -> msg) -> Int -> Html msg
-deleteNewAssocButton toRemoveEditingReference idx =
+deleteButton : (List EditingReference -> msg) -> List EditingReference -> Int -> Html msg
+deleteButton toMsg references idx =
     button
-        [ onClick (toRemoveEditingReference idx), type_ "button" ]
+        [ onClick (Column.deleteReference idx references |> toMsg), type_ "button" ]
         [ text "Delete" ]
