@@ -29,8 +29,7 @@ view saveMsg toUpdateMsg saveText column tables columns =
     form
         []
         [ fieldset []
-            [ legend [] [ text "Create a column" ]
-            , p
+            [ p
                 []
                 [ newColumnInput
                     (flip Column.updateName column >> toUpdateMsg)

@@ -80,6 +80,8 @@ type alias Model =
     , newColumnReferenceTables : List Table
     , newColumnReferenceColumns : List Column
     , editingColumn : Maybe Column
+    , editingColumnReferenceTables : List Table
+    , editingColumnReferenceColumns : List Column
     , toDeleteId : Maybe Int
     , errors : List ChangesetError
     }
@@ -98,6 +100,8 @@ initialModel =
     , newColumnReferenceTables = []
     , newColumnReferenceColumns = []
     , editingColumn = Nothing
+    , editingColumnReferenceTables = []
+    , editingColumnReferenceColumns = []
     , toDeleteId = Nothing
     , errors = []
     }
@@ -178,9 +182,8 @@ type Msg
     | CreateColumn
       -- UPDATE COLUMN
     | EditColumn Int
-    | UpdateEditingColumnConstraints ColumnConstraints
-    | InputEditingColumnName String
-    | SelectEditingColumnDataType DataType
+    | UpdateEditingColumn Column
+    | LoadEditingColumnReferenceCandidates (Result Http.Error ( List Table, List Column ))
     | CancelEditColumn
     | SaveEditingColumn
     | LoadEditingColumn (Result Http.Error Column)
@@ -394,9 +397,8 @@ update msg model =
 
         -- EDIT COLUMN
         EditColumn id ->
-            ( { model
-                | editingTable = Nothing
-                , editingColumn =
+            let
+                editingColumn =
                     model.columns
                         |> List.filter (.id >> (==) id)
                         |> List.head
@@ -406,35 +408,63 @@ update msg model =
                                 model.columnReferences
                                 (Table.buildConstraints model.constraints)
                             )
+            in
+            ( { model
+                | editingTable = Nothing
+                , editingColumn =
+                    model.columns
+                        |> List.filter (.id >> (==) id)
+                        |> List.head
+                        |> Maybe.map
+                            (Column.findAndAddEditingConstraints
+                                model.columnReferences
+                                (Table.buildConstraints model.constraints)
+                            )
                 , errors = []
               }
-            , Dom.focus "edit-column-name" |> Task.attempt FocusResult
+            , Cmd.batch
+                [ editingColumn
+                    |> Maybe.map
+                        (.dataType
+                            >> TableReq.indexReferenceCandidates model.schema.id
+                            >> Http.send LoadEditingColumnReferenceCandidates
+                        )
+                    |> Maybe.withDefault Cmd.none
+                , Dom.focus "edit-column-name" |> Task.attempt FocusResult
+                ]
             , AppUpdate.none
             )
 
-        UpdateEditingColumnConstraints constraints ->
-            ( { model | editingColumn = Maybe.map (Column.updateConstraints constraints) model.editingColumn }
+        UpdateEditingColumn editingColumn ->
+            let
+                sameDataType =
+                    model.editingColumn
+                        |> Maybe.map (.dataType >> (/=) editingColumn.dataType)
+                        |> Maybe.withDefault False
+
+                newDataType =
+                    sameDataType && editingColumn.dataType /= DataType.none
+
+                cmd =
+                    if newDataType then
+                        TableReq.indexReferenceCandidates model.schema.id editingColumn.dataType
+                            |> Http.send LoadEditingColumnReferenceCandidates
+                    else
+                        Cmd.none
+            in
+            ( { model | editingColumn = Just editingColumn }
+            , cmd
+            , AppUpdate.none
+            )
+
+        LoadEditingColumnReferenceCandidates (Ok ( tables, columns )) ->
+            ( { model | editingColumnReferenceTables = tables, editingColumnReferenceColumns = columns }
             , Cmd.none
             , AppUpdate.none
             )
 
-        InputEditingColumnName name ->
-            ( { model
-                | editingColumn =
-                    Maybe.map (Column.updateName name) model.editingColumn
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        SelectEditingColumnDataType dataType ->
-            ( { model
-                | editingColumn =
-                    Maybe.map (Column.updateDataType dataType) model.editingColumn
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
+        LoadEditingColumnReferenceCandidates (Err error) ->
+            handleHttpError model error
 
         CancelEditColumn ->
             ( { model
@@ -768,15 +798,21 @@ columnItemChildren model tableConstraints column =
     in
     case model.editingColumn of
         Just editingColumn ->
-            if column.id == editingColumn.id then
-                [ editColumnNameInput editingColumn.name
-                , DTSelect.view "edit-column-data-type" SelectEditingColumnDataType column.dataType
-                , CFields.view "create-column-constraints" UpdateEditingColumnConstraints editingColumn.constraints
+            if editingColumn.id == column.id then
+                [ EditColumn.view
+                    SaveEditingColumn
+                    UpdateEditingColumn
+                    "Save"
+                    editingColumn
+                    model.editingColumnReferenceTables
+                    model.editingColumnReferenceColumns
                 , cancelEditColumnButton
-                , saveEditColumnButton
                 ]
             else
-                [ text column.name
+                [ p [] [ text column.name ]
+                , DTDisplay.view column.dataType
+                , editColumnButton column.id
+                , deleteColumnButton column.id
                 , ConDisplay.view columnConstraints
                 ]
 
@@ -797,30 +833,6 @@ editColumnButton id =
 deleteColumnButton : Int -> Html Msg
 deleteColumnButton id =
     button [ onClick (DestroyColumn id) ] [ text "Delete" ]
-
-
-editColumnNameInput : String -> Html Msg
-editColumnNameInput name =
-    input
-        [ id "edit-column-name"
-        , value name
-        , onInput InputEditingColumnName
-        , customOnKeyDown onEditingColumnNameKeyDown
-        ]
-        []
-
-
-onEditingColumnNameKeyDown : Key -> Maybe Msg
-onEditingColumnNameKeyDown key =
-    case key of
-        Enter ->
-            Just SaveEditingColumn
-
-        Escape ->
-            Just CancelEditColumn
-
-        _ ->
-            Nothing
 
 
 cancelEditColumnButton : Html Msg

@@ -6,6 +6,7 @@ module Data.Column
         , empty
         , encode
         , findAndAddConstraints
+        , findAndAddEditingConstraints
         , init
         , removeFromList
         , replaceIfMatch
@@ -80,9 +81,26 @@ buildConstraints tableLookup columnLookup columnId tableConstraints =
     }
 
 
+buildEditingConstraints : Dict Int Column -> Int -> TableConstraints -> ColumnConstraints
+buildEditingConstraints columnLookup columnId tableConstraints =
+    { isPrimaryKey = isPrimaryKey columnId tableConstraints
+    , isNotNull = isNotNull columnId tableConstraints
+    , defaultValue = defaultValue columnId tableConstraints
+    , isUnique = isUnique columnId tableConstraints
+    , references =
+        singleReferences columnId tableConstraints
+            |> List.filterMap (editingReferenceFromColumnId columnLookup)
+    }
+
+
 findAndAddConstraints : Dict Int Table -> Dict Int Column -> TableConstraints -> Column -> Column
 findAndAddConstraints tableLookup columnLookup constraints column =
     { column | constraints = buildConstraints tableLookup columnLookup column.id constraints }
+
+
+findAndAddEditingConstraints : Dict Int Column -> TableConstraints -> Column -> Column
+findAndAddEditingConstraints columnLookup constraints column =
+    { column | constraints = buildEditingConstraints columnLookup column.id constraints }
 
 
 
@@ -119,6 +137,13 @@ referenceFromColumnId tableLookup columnLookup columnId =
             Maybe.andThen (.tableId >> flip Dict.get tableLookup) maybeColumn
     in
     Maybe.map2 (\c t -> Reference.Display t.id t.name c.id c.name) maybeTable maybeColumn
+
+
+editingReferenceFromColumnId : Dict Int Column -> Int -> Maybe Reference
+editingReferenceFromColumnId columnLookup columnId =
+    columnLookup
+        |> Dict.get columnId
+        |> Maybe.map (.tableId >> flip Reference.Ready columnId)
 
 
 
