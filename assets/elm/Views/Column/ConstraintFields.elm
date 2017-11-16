@@ -1,6 +1,6 @@
 module Views.Column.ConstraintFields exposing (view)
 
-import Data.Column as Column exposing (Column, ColumnConstraints)
+import Data.Column.Constraints as ColumnConstraints exposing (ColumnConstraints)
 import Html exposing (Attribute, Html, button, input, label, li, text, ul)
 import Html.Attributes exposing (checked, for, id, type_, value)
 import Html.Events exposing (onCheck, onInput)
@@ -108,24 +108,24 @@ defaultInput viewId toMsg constraints =
 
 onPrimaryKeyCheck : (ColumnConstraints -> msg) -> ColumnConstraints -> Attribute msg
 onPrimaryKeyCheck toMsg column =
-    onCheck (flip Column.updateConstraintsIsPrimaryKey column >> toMsg)
+    onCheck (flip ColumnConstraints.updateIsPrimaryKey column >> toMsg)
 
 
 onNotNullCheck : (ColumnConstraints -> msg) -> ColumnConstraints -> Attribute msg
 onNotNullCheck toMsg column =
-    onCheck (flip Column.updateConstraintsIsNotNull column >> toMsg)
+    onCheck (flip ColumnConstraints.updateIsNotNull column >> toMsg)
 
 
 onDefaultValueCheck : (ColumnConstraints -> msg) -> ColumnConstraints -> Attribute msg
 onDefaultValueCheck toMsg column =
-    onCheck (flip Column.updateConstraintsHasDefaultValue column >> toMsg)
+    onCheck (flip ColumnConstraints.updateHasDefaultValue column >> toMsg)
 
 
 onDefaultValueInput : (ColumnConstraints -> msg) -> ColumnConstraints -> Attribute msg
 onDefaultValueInput toMsg column =
-    onInput (flip Column.updateConstraintsDefaultValue column >> toMsg)
+    onInput (flip ColumnConstraints.updateDefaultValue column >> toMsg)
 
 
 onUniqueCheck : (ColumnConstraints -> msg) -> ColumnConstraints -> Attribute msg
 onUniqueCheck toMsg column =
-    onCheck (flip Column.updateConstraintsIsUnique column >> toMsg)
+    onCheck (flip ColumnConstraints.updateIsUnique column >> toMsg)

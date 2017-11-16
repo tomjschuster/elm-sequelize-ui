@@ -11,7 +11,7 @@ module Request.Column
         )
 
 import Data.Column as Column exposing (Column)
-import Data.DataType as DataType exposing (DataType)
+import Data.Column.DataType as DataType exposing (DataType)
 import Http exposing (Request)
 import Json.Decode as JD
 import Request.Table exposing (tableUrl)
@@ -43,11 +43,11 @@ tableColumnsForDataTypeUrl tableId =
     DataType.toUrlParams >> (++) (tableColumnsUrl tableId ++ "?")
 
 
-create : Column -> List Int -> Request Column
-create column referenceIds =
+create : Column -> Request Column
+create column =
     Http.post
         columnsUrl
-        (Column.encodeNew column referenceIds |> Http.jsonBody)
+        (Column.encode column |> Http.jsonBody)
         (dataDecoder <| Column.decoder)
 
 

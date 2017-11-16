@@ -1,39 +1,22 @@
 module Data.Column
     exposing
         ( Column
-        , ColumnConstraints
-        , EditingColumn
-        , EditingReference(..)
-        , Reference
-        , addReference
         , buildConstraints
         , decoder
-        , deleteReference
         , empty
         , encode
-        , encodeNew
         , findAndAddConstraints
-        , findReferences
         , init
         , removeFromList
         , replaceIfMatch
-        , selectColumn
-        , selectTable
         , updateConstraints
-        , updateConstraintsDefaultValue
-        , updateConstraintsHasDefaultValue
-        , updateConstraintsIsNotNull
-        , updateConstraintsIsPrimaryKey
-        , updateConstraintsIsUnique
         , updateDataType
-        , updateDefaultValue
-        , updateHasDefaultValue
-        , updateIsNotNull
-        , updateIsPrimaryKey
-        , updateIsUnique
         , updateName
         )
 
+import Data.Column.Constraints as ColumnConstraints exposing (ColumnConstraints)
+import Data.Column.DataType as DataType exposing (DataType)
+import Data.Column.Reference as Reference exposing (Reference)
 import Data.Constraint as Constraint
     exposing
         ( DefaultValue
@@ -42,18 +25,11 @@ import Data.Constraint as Constraint
         , PrimaryKey
         , UniqueKey
         )
-import Data.DataType as DataType exposing (DataType)
 import Data.Table as Table exposing (Table, TableConstraints)
 import Dict exposing (Dict)
 import Json.Decode as JD exposing (Decoder, int, maybe, string)
 import Json.Decode.Pipeline exposing (custom, decode, hardcoded, optional, required)
 import Json.Encode as JE exposing (Value)
-
-
-{-
-
-   Comment VARCHAR(255)
--}
 
 
 type alias Column =
@@ -65,87 +41,13 @@ type alias Column =
     }
 
 
-type alias EditingColumn =
-    { id : Int
-    , tableId : Int
-    , name : String
-    , dataType : DataType
-    , constraints : ColumnConstraints
-    , references : List EditingReference
-    }
-
-
-type EditingReference
-    = SelectTable
-    | SelectColumn Int
-    | Ready Int Int
-
-
-selectColumn : Int -> Maybe Int -> List EditingReference -> List EditingReference
-selectColumn idx maybeColumnId =
-    List.indexedMap
-        (\currIdx reference ->
-            if idx == currIdx then
-                maybeColumnId |> Maybe.map SelectColumn |> Maybe.withDefault SelectTable
-            else
-                reference
-        )
-
-
-deleteReference : Int -> List EditingReference -> List EditingReference
-deleteReference idx =
-    List.indexedMap (,)
-        >> List.filter (Tuple.first >> (/=) idx)
-        >> List.map Tuple.second
-
-
-selectTable : Int -> Maybe Int -> List EditingReference -> List EditingReference
-selectTable idx maybeTableId =
-    List.indexedMap
-        (\currIdx reference ->
-            case ( idx == currIdx, reference ) of
-                ( True, SelectColumn columnId ) ->
-                    maybeTableId |> Maybe.map (Ready columnId) |> Maybe.withDefault (SelectColumn columnId)
-
-                _ ->
-                    reference
-        )
-
-
 empty : Column
 empty =
     { id = 0
     , tableId = 0
     , name = ""
     , dataType = DataType.none
-    , constraints = defaultConstraints
-    }
-
-
-type alias ColumnConstraints =
-    { isPrimaryKey : Bool
-    , isNotNull : Bool
-    , defaultValue : Maybe String
-    , isUnique : Bool
-    , references : List Reference
-    }
-
-
-type alias Reference =
-    { columnId : Int
-    , columnName : String
-    , tableId : Int
-    , tableName : String
-    }
-
-
-defaultConstraints : ColumnConstraints
-defaultConstraints =
-    { isPrimaryKey = False
-    , isNotNull = False
-    , defaultValue = Nothing
-    , isUnique = False
-    , references = []
+    , constraints = ColumnConstraints.default
     }
 
 
@@ -174,7 +76,7 @@ buildConstraints tableLookup columnLookup columnId tableConstraints =
     , isUnique = isUnique columnId tableConstraints
     , references =
         singleReferences columnId tableConstraints
-            |> List.filterMap (lookupReferences tableLookup columnLookup)
+            |> List.filterMap (referenceFromColumnId tableLookup columnLookup)
     }
 
 
@@ -207,86 +109,16 @@ removeFromList columns id =
     List.filter (.id >> (/=) id) columns
 
 
-updateIsPrimaryKey : Bool -> Column -> Column
-updateIsPrimaryKey isPrimaryKey column =
-    { column
-        | constraints =
-            updateConstraintsIsPrimaryKey isPrimaryKey column.constraints
-    }
+referenceFromColumnId : Dict Int Table -> Dict Int Column -> Int -> Maybe Reference
+referenceFromColumnId tableLookup columnLookup columnId =
+    let
+        maybeColumn =
+            Dict.get columnId columnLookup
 
-
-updateIsNotNull : Bool -> Column -> Column
-updateIsNotNull isNotNull column =
-    { column
-        | constraints =
-            updateConstraintsIsNotNull isNotNull column.constraints
-    }
-
-
-updateHasDefaultValue : Bool -> Column -> Column
-updateHasDefaultValue hasDefaultValue column =
-    { column
-        | constraints =
-            updateConstraintsHasDefaultValue hasDefaultValue column.constraints
-    }
-
-
-updateDefaultValue : String -> Column -> Column
-updateDefaultValue defaultValue column =
-    { column
-        | constraints =
-            updateConstraintsDefaultValue defaultValue column.constraints
-    }
-
-
-updateIsUnique : Bool -> Column -> Column
-updateIsUnique isUnique column =
-    { column
-        | constraints =
-            updateConstraintsIsUnique isUnique column.constraints
-    }
-
-
-addReference : Reference -> Column -> Column
-addReference reference column =
-    { column | constraints = addConstraintsReference reference column.constraints }
-
-
-
--- UPDATE CONSTRAINTS
-
-
-updateConstraintsIsPrimaryKey : Bool -> ColumnConstraints -> ColumnConstraints
-updateConstraintsIsPrimaryKey isPrimaryKey constraints =
-    { constraints | isPrimaryKey = isPrimaryKey }
-
-
-updateConstraintsIsNotNull : Bool -> ColumnConstraints -> ColumnConstraints
-updateConstraintsIsNotNull isNotNull constraints =
-    { constraints | isNotNull = isNotNull }
-
-
-updateConstraintsHasDefaultValue : Bool -> ColumnConstraints -> ColumnConstraints
-updateConstraintsHasDefaultValue hasDefaultValue constraints =
-    if hasDefaultValue then
-        { constraints | defaultValue = Just "" }
-    else
-        { constraints | defaultValue = Nothing }
-
-
-updateConstraintsDefaultValue : String -> ColumnConstraints -> ColumnConstraints
-updateConstraintsDefaultValue defaultValue constraints =
-    { constraints | defaultValue = Just defaultValue }
-
-
-updateConstraintsIsUnique : Bool -> ColumnConstraints -> ColumnConstraints
-updateConstraintsIsUnique isUnique constraints =
-    { constraints | isUnique = isUnique }
-
-
-addConstraintsReference : Reference -> ColumnConstraints -> ColumnConstraints
-addConstraintsReference reference constraints =
-    { constraints | references = constraints.references ++ [ reference ] }
+        maybeTable =
+            Maybe.andThen (.tableId >> flip Dict.get tableLookup) maybeColumn
+    in
+    Maybe.map2 (\c t -> Reference.Display t.id t.name c.id c.name) maybeTable maybeColumn
 
 
 
@@ -330,30 +162,6 @@ singleReferences columnId =
         >> List.filterMap Constraint.singleReference
 
 
-lookupReferences : Dict Int Table -> Dict Int Column -> Int -> Maybe Reference
-lookupReferences tableLookup columnLookup columnId =
-    let
-        maybeColumn =
-            Dict.get columnId columnLookup
-
-        maybeTable =
-            Maybe.andThen (.tableId >> flip Dict.get tableLookup) maybeColumn
-    in
-    Maybe.map2 (\c t -> Reference c.id c.name t.id t.name) maybeTable maybeColumn
-
-
-findReferences : Int -> Int -> List Table -> List Column -> Maybe Reference
-findReferences tableId columnId tables columns =
-    let
-        maybeColumn =
-            List.filter (.id >> (==) columnId) columns |> List.head
-
-        maybeTable =
-            List.filter (.id >> (==) tableId) tables |> List.head
-    in
-    Maybe.map2 (\t c -> Reference c.id c.name t.id t.name) maybeTable maybeColumn
-
-
 
 -- DECODE/ENCODE
 
@@ -365,7 +173,7 @@ decoder =
         |> required "tableId" int
         |> required "name" string
         |> custom DataType.decoder
-        |> hardcoded defaultConstraints
+        |> hardcoded ColumnConstraints.default
 
 
 encode : Column -> Value
@@ -380,33 +188,5 @@ encode { id, tableId, name, dataType, constraints } =
                     ++ DataType.encode dataType
                 )
           )
-        , ( "constraints", encodeConstraints constraints [] )
-        ]
-
-
-encodeNew : Column -> List Int -> Value
-encodeNew { tableId, name, dataType, constraints } referenceIds =
-    JE.object
-        [ ( "column"
-          , JE.object
-                ([ ( "table_id", JE.int tableId )
-                 , ( "name", JE.string name )
-                 ]
-                    ++ DataType.encode dataType
-                )
-          )
-        , ( "constraints", encodeConstraints constraints referenceIds )
-        ]
-
-
-encodeConstraints : ColumnConstraints -> List Int -> Value
-encodeConstraints { isPrimaryKey, isNotNull, defaultValue, isUnique, references } referenceIds =
-    JE.object
-        [ ( "is_primary_key", JE.bool isPrimaryKey )
-        , ( "is_not_null", JE.bool isNotNull )
-        , ( "default_value"
-          , defaultValue |> Maybe.map JE.string |> Maybe.withDefault JE.null
-          )
-        , ( "is_unique", JE.bool isUnique )
-        , ( "references", referenceIds |> List.map JE.int |> JE.list )
+        , ( "constraints", ColumnConstraints.encode constraints )
         ]

@@ -11,10 +11,11 @@ defmodule SequelizeUiWeb.TableController do
     render(conn, "index.json", tables: tables)
   end
 
-  def index_for_schema(conn, %{"schema_id" => schema_id, "data_type_id" => data_type_id} = params) do
+  def index_candidates(conn, %{"schema_id" => schema_id, "data_type_id" => data_type_id} = params) do
     processed_params= DbDesign.process_data_type_params(params)
     tables = DbDesign.list_tables_for_schema_by_data_type(schema_id, processed_params)
-    render(conn, "index.json", tables: tables)
+    columns = DbDesign.list_columns_for_schema_by_data_type(schema_id, processed_params)
+    render(conn, "index-candidates.json", tables: tables, columns: columns)
   end
 
   def index_for_schema(conn, %{"schema_id" => schema_id} = params) do

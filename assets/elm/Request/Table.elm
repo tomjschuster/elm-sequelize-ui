@@ -4,14 +4,15 @@ module Request.Table
         , destroy
         , index
         , indexForSchema
-        , indexForSchemaForDataType
+        , indexReferenceCandidates
         , indexReferences
         , one
         , tableUrl
         , update
         )
 
-import Data.DataType as DataType exposing (DataType)
+import Data.Column as Column exposing (Column)
+import Data.Column.DataType as DataType exposing (DataType)
 import Data.Table as Table exposing (Table)
 import Http exposing (Request)
 import Json.Decode as JD
@@ -34,9 +35,9 @@ schemaTablesUrl =
     schemaUrl >> flip (++) "/tables"
 
 
-schemaTablesForDataTypeUrl : Int -> DataType -> String
-schemaTablesForDataTypeUrl schemaId =
-    DataType.toUrlParams >> (++) (schemaTablesUrl schemaId ++ "?")
+referenceCandidatesUrl : Int -> DataType -> String
+referenceCandidatesUrl schemaId =
+    DataType.toUrlParams >> (++) (schemaUrl schemaId ++ "/candidates?")
 
 
 
@@ -87,11 +88,16 @@ indexReferences tableId =
         (dataDecoder (JD.list Table.decoder))
 
 
-indexForSchemaForDataType : Int -> DataType -> Http.Request (List Table)
-indexForSchemaForDataType schemaId dataType =
+indexReferenceCandidates : Int -> DataType -> Http.Request ( List Table, List Column )
+indexReferenceCandidates schemaId dataType =
     Http.get
-        (schemaTablesForDataTypeUrl schemaId dataType)
-        (dataDecoder (JD.list Table.decoder))
+        (referenceCandidatesUrl schemaId dataType)
+        (dataDecoder
+            (JD.map2 (,)
+                (JD.list Table.decoder |> JD.field "tables")
+                (JD.list Column.decoder |> JD.field "columns")
+            )
+        )
 
 
 

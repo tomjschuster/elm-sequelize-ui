@@ -123,6 +123,13 @@ defmodule SequelizeUi.DbDesign do
       where: c.table_id == ^table_id,
       distinct: true
   end
+  def list_columns_for_schema_by_data_type(schema_id, data_type_params) do
+    column_query = from Column, where: ^data_type_params
+    Repo.all from c in column_query,
+      join: t in assoc(c, :table),
+      where: t.schema_id == ^schema_id,
+      distinct: true
+  end
 
   def list_reference_columns_for_table(table_id) do
     Repo.all from reference_column in Column,

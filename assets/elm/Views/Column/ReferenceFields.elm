@@ -1,7 +1,7 @@
-module Views.Column.ReferenceFields exposing (Config, view)
+module Views.Column.ReferenceFields exposing (view)
 
-import Array exposing (Array)
-import Data.Column as Column exposing (Column, EditingReference(..))
+import Data.Column as Column exposing (Column)
+import Data.Column.Reference as Reference exposing (Reference(..))
 import Data.Table as Table exposing (Table)
 import Html
     exposing
@@ -20,49 +20,43 @@ import Html.Events as Events exposing (onClick)
 import Utils.Handlers as Handlers exposing (onChangeInt)
 
 
-type alias Config msg =
-    { addEditingReference : msg
-    , toSelectEditingReferenceTable : Int -> Maybe Int -> msg
-    , toSelectEditingReferenceColumn : Int -> Int -> List Column -> Maybe Int -> msg
-    , toRemoveEditingReference : Int -> msg
-    }
-
-
 view :
-    (List EditingReference -> msg)
-    -> List EditingReference
+    (List Reference -> msg)
+    -> List Reference
     -> List Table
     -> List Column
     -> Html msg
 view toMsg references tables columns =
     if List.isEmpty tables then
-        div [] [ p [] [ text "No columns with the current data type exist in schema." ] ]
+        div [] []
     else
         div []
-            [ ul [] (referenceFields toMsg tables columns references)
-            , button [ onClick (references ++ [ Column.SelectTable ] |> toMsg), type_ "button" ] [ text "Add Association" ]
+            [ ul [] (createReferences toMsg tables columns references)
+            , button
+                [ onClick (references |> Reference.add |> toMsg), type_ "button" ]
+                [ text "Add Association" ]
             ]
 
 
-referenceFields :
-    (List EditingReference -> msg)
+createReferences :
+    (List Reference -> msg)
     -> List Table
     -> List Column
-    -> List EditingReference
+    -> List Reference
     -> List (Html msg)
-referenceFields toMsg tables columns references =
-    List.indexedMap (referenceField toMsg references tables columns) references
+createReferences toMsg tables columns references =
+    List.indexedMap (createReference toMsg references tables columns) references
 
 
-referenceField :
-    (List EditingReference -> msg)
-    -> List EditingReference
+createReference :
+    (List Reference -> msg)
+    -> List Reference
     -> List Table
     -> List Column
     -> Int
-    -> EditingReference
+    -> Reference
     -> Html msg
-referenceField toMsg references tables allColumns idx reference =
+createReference toMsg references tables allColumns idx reference =
     case reference of
         SelectTable ->
             li []
@@ -92,10 +86,21 @@ referenceField toMsg references tables allColumns idx reference =
                 , deleteButton toMsg references idx
                 ]
 
+        Display tableId tableName columnId columnName ->
+            let
+                columns =
+                    List.filter (.tableId >> (==) tableId) allColumns
+            in
+            li []
+                [ tableSelect toMsg references idx (Just tableId) tables
+                , columnSelect toMsg references idx (Just columnId) columns
+                , deleteButton toMsg references idx
+                ]
+
 
 tableSelect :
-    (List EditingReference -> msg)
-    -> List EditingReference
+    (List Reference -> msg)
+    -> List Reference
     -> Int
     -> Maybe Int
     -> List Table
@@ -107,7 +112,7 @@ tableSelect toMsg references idx maybeTableId tables =
 
         _ ->
             select
-                [ onChangeInt (flip (Column.selectTable idx) references >> toMsg) ]
+                [ onChangeInt (flip (Reference.selectTable idx) references >> toMsg) ]
                 (option [ selected (maybeTableId == Nothing) ]
                     [ text "Select a Table" ]
                     :: List.map (tableOption maybeTableId) tables
@@ -124,15 +129,15 @@ tableOption maybeId { id, name } =
 
 
 columnSelect :
-    (List EditingReference -> msg)
-    -> List EditingReference
+    (List Reference -> msg)
+    -> List Reference
     -> Int
     -> Maybe Int
     -> List Column
     -> Html msg
 columnSelect toMsg references idx maybeColumnId columns =
     select
-        [ onChangeInt (flip (Column.selectColumn idx) references >> toMsg) ]
+        [ onChangeInt (flip (Reference.selectColumn idx) references >> toMsg) ]
         (option [ selected (maybeColumnId == Nothing) ] [ text "Select a Column" ]
             :: List.map (columnOption maybeColumnId) columns
         )
@@ -147,8 +152,8 @@ columnOption maybeId { id, name } =
         [ text name ]
 
 
-deleteButton : (List EditingReference -> msg) -> List EditingReference -> Int -> Html msg
+deleteButton : (List Reference -> msg) -> List Reference -> Int -> Html msg
 deleteButton toMsg references idx =
     button
-        [ onClick (Column.deleteReference idx references |> toMsg), type_ "button" ]
+        [ onClick (Reference.delete idx references |> toMsg), type_ "button" ]
         [ text "Delete" ]
