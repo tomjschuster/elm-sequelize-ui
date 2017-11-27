@@ -5,6 +5,7 @@
 
 * Constraints
   * Table constraints
+  * Delete column reference bug
 
 # Todo
 * Constraints
