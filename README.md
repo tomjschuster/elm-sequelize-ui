@@ -5,7 +5,13 @@
 
 * Constraints
   * Table constraints
-  * Delete column reference bug
+
+## Bugs
+
+* References
+  * References to deleted columns still displayed
+  * Cannot save multiple references
+  * Cannot create references to different tables from single column
 
 # Todo
 * Constraints
@@ -13,11 +19,11 @@
 * Field Order
 * Comments
 * Enum Types, Geometric Types
-* Template builder (SQL, Sequelize, Ecto)
-* Elm CSS
+* Template generator
+* Elm CSS or CSS Library
 * UI/UX
 * Deployment
 * Users/Sessions
-* Github integration
+* Github integration?
 * Testing
 * Build pipeline
