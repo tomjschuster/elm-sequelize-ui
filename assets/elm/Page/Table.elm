@@ -58,10 +58,8 @@ import Utils.Http exposing (isUnprocessableEntity)
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
-import Views.Column.ConstraintFields as CFields
 import Views.Column.ConstraintsDisplay as ConDisplay
 import Views.Column.DataTypeDisplay as DTDisplay
-import Views.Column.DataTypeSelect as DTSelect
 import Views.Column.Edit as EditColumn
 
 
@@ -627,15 +625,29 @@ replaceOrAppendColumn column columns =
 
 view : Model -> Html Msg
 view model =
-    main_ []
-        [ breadCrumbs model.schema model.table
-        , tableView model.editingTable model.table
-        , newColumnView
-            model.newColumn
-            model.newColumnReferenceTables
-            model.newColumnReferenceColumns
-        , columnsView model
-        ]
+    case model.errors of
+        [] ->
+            main_ []
+                [ breadCrumbs model.schema model.table
+                , tableView model.editingTable model.table
+                , newColumnView
+                    model.newColumn
+                    model.newColumnReferenceTables
+                    model.newColumnReferenceColumns
+                , columnsView model
+                ]
+
+        errors ->
+            main_ []
+                [ breadCrumbs model.schema model.table
+                , tableView model.editingTable model.table
+                , CE.view model.errors
+                , newColumnView
+                    model.newColumn
+                    model.newColumnReferenceTables
+                    model.newColumnReferenceColumns
+                , columnsView model
+                ]
 
 
 breadCrumbs : Schema -> Table -> Html Msg
@@ -733,7 +745,7 @@ saveEditTableButton =
 
 
 
--- CREATE COLUMN
+-- NEW COLUMN
 
 
 newColumnView : Column -> List Table -> List Column -> Html Msg
@@ -761,16 +773,11 @@ newColumnTitle =
 
 columnsView : Model -> Html Msg
 columnsView model =
-    section [] (columnsChildren model)
-
-
-columnsChildren : Model -> List (Html Msg)
-columnsChildren model =
     let
         tableConstraints =
             TableConstraints.fromList model.constraints
     in
-    CE.prependIfErrors model.errors
+    section []
         [ columnsTitle
         , columnList model tableConstraints
         ]
@@ -792,11 +799,6 @@ columnList model tableConstraints =
 
 columnItem : Model -> TableConstraints -> Column -> Html Msg
 columnItem model tableConstraints column =
-    li [] (columnItemChildren model tableConstraints column)
-
-
-columnItemChildren : Model -> TableConstraints -> Column -> List (Html Msg)
-columnItemChildren model tableConstraints column =
     let
         columnConstraints =
             Column.buildConstraints
@@ -808,30 +810,33 @@ columnItemChildren model tableConstraints column =
     case model.editingColumn of
         Just editingColumn ->
             if editingColumn.id == column.id then
-                [ EditColumn.view
-                    SaveEditingColumn
-                    UpdateEditingColumn
-                    "Save"
-                    editingColumn
-                    model.editingColumnReferenceTables
-                    model.editingColumnReferenceColumns
-                , cancelEditColumnButton
-                ]
+                li []
+                    [ EditColumn.view
+                        SaveEditingColumn
+                        UpdateEditingColumn
+                        "Save"
+                        editingColumn
+                        model.editingColumnReferenceTables
+                        model.editingColumnReferenceColumns
+                    , cancelEditColumnButton
+                    ]
             else
+                li []
+                    [ p [] [ text column.name ]
+                    , DTDisplay.view column.dataType
+                    , editColumnButton column.id
+                    , deleteColumnButton column.id
+                    , ConDisplay.view columnConstraints
+                    ]
+
+        Nothing ->
+            li []
                 [ p [] [ text column.name ]
                 , DTDisplay.view column.dataType
                 , editColumnButton column.id
                 , deleteColumnButton column.id
                 , ConDisplay.view columnConstraints
                 ]
-
-        Nothing ->
-            [ p [] [ text column.name ]
-            , DTDisplay.view column.dataType
-            , editColumnButton column.id
-            , deleteColumnButton column.id
-            , ConDisplay.view columnConstraints
-            ]
 
 
 editColumnButton : Int -> Html Msg
