@@ -11,7 +11,6 @@
 * References
   * References to deleted columns still displayed
   * Cannot save multiple references
-  * Cannot create references to different tables from single column
 
 # Todo
 * Constraints

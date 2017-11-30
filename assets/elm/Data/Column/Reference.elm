@@ -53,19 +53,12 @@ selectTable : Int -> Maybe Int -> List Reference -> List Reference
 selectTable idx maybeTableId =
     List.indexedMap
         (\currIdx reference ->
-            case ( idx == currIdx, reference ) of
-                ( True, Ready tableId columnId ) ->
-                    if maybeTableId == Just tableId then
-                        reference
-                    else
-                        maybeTableId
-                            |> Maybe.map SelectColumn
-                            |> Maybe.withDefault SelectTable
-
-                _ ->
-                    maybeTableId
-                        |> Maybe.map SelectColumn
-                        |> Maybe.withDefault SelectTable
+            if idx == currIdx && getTableId reference /= maybeTableId then
+                maybeTableId
+                    |> Maybe.map SelectColumn
+                    |> Maybe.withDefault SelectTable
+            else
+                reference
         )
 
 
@@ -107,3 +100,19 @@ singleToString reference =
 encode : List Reference -> Value
 encode =
     List.filterMap (getColumnId >> Maybe.map JE.int) >> JE.list
+
+
+getTableId : Reference -> Maybe Int
+getTableId reference =
+    case reference of
+        SelectColumn tableId ->
+            Just tableId
+
+        Ready tableId columnId ->
+            Just tableId
+
+        Display tableId tableName columnId columnName ->
+            Just tableId
+
+        _ ->
+            Nothing
