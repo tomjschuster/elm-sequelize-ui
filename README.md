@@ -9,8 +9,8 @@
 ## Bugs
 
 * References
+  * References not being persisted properly
   * References to deleted columns still displayed
-  * Cannot save multiple references
 
 # Todo
 * Constraints
