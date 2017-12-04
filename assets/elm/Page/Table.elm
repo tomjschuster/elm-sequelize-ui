@@ -111,27 +111,6 @@ type alias InitialData =
     }
 
 
-type NewColumnAssoc
-    = SelectTable
-    | SelectColumn Int (List Column)
-    | NewColumnAssocReady Int (List Column) Int
-
-
-newColumnAssocsToIds : Array NewColumnAssoc -> List Int
-newColumnAssocsToIds =
-    Array.toList >> List.filterMap newColumnAssocToId
-
-
-newColumnAssocToId : NewColumnAssoc -> Maybe Int
-newColumnAssocToId assoc =
-    case assoc of
-        NewColumnAssocReady _ _ columnId ->
-            Just columnId
-
-        _ ->
-            Nothing
-
-
 init : Int -> Int -> ( Model, Cmd Msg )
 init schemaId tableId =
     ( { initialModel | newColumn = Column.init tableId }

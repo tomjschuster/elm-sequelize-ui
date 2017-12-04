@@ -137,7 +137,7 @@ referenceFromColumnId tableLookup columnLookup columnId =
         maybeTable =
             Maybe.andThen (.tableId >> flip Dict.get tableLookup) maybeColumn
     in
-    Maybe.map2 (\c t -> Reference.Display t.id t.name c.id c.name) maybeTable maybeColumn
+    Maybe.map2 (\c t -> Reference.Display t.id t.name c.id c.name) maybeColumn maybeTable
 
 
 editingReferenceFromColumnId : Dict Int Column -> Int -> Maybe Reference
