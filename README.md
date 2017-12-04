@@ -9,8 +9,8 @@
 ## Bugs
 
 * References
-  * References not being persisted properly
-  * References to deleted columns still displayed
+  * Updating existing reference target column not working
+  * Column reference views not updated after update/delete
 
 # Todo
 * Constraints
