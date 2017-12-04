@@ -228,7 +228,7 @@ defmodule SequelizeUi.DbDesign do
          {:ok, dv_constraint} <- create_column_dv(table, column, params),
          {:ok, uq_constraint} <- create_column_uq(table, column, params),
          {:ok, fk_constraints} <- create_column_fks(table, column, params) do
-      [pk_constraint, nn_constraint, dv_constraint, uq_constraint, fk_constraints]
+      [pk_constraint, nn_constraint, dv_constraint, uq_constraint | fk_constraints]
       |> Enum.filter(&(&1))
       |> (&({:ok, &1})).()
     end
@@ -278,7 +278,13 @@ defmodule SequelizeUi.DbDesign do
   defp create_column_uq(_table, _column, %{"references" => []}), do: {:ok, nil}
   defp create_column_fks(%Table{} = table, %Column{} = column, params) do
     attrs = constraint_attrs(table, "foreign_key")
-    build_foreign_keys(table, column, attrs, Map.get(params, "references"))
+    %{"references" => references} = params
+    results = Enum.map(references, &build_foreign_key(table, column, attrs, &1))
+
+    with nil <- Enum.find(results, fn {status, v} -> status === :error end) do
+      constraints = for {:ok, constraint} <- results, do: constraint
+      {:ok, constraints}
+    end
   end
 
  defp constraint_attrs(%Table{} = table, enum, value \\ nil) do
@@ -302,6 +308,13 @@ defmodule SequelizeUi.DbDesign do
          all_col_con_attrs <- Enum.map(references, &make_col_con_attrs(column.id, &1, constraint.id)),
          results <- Enum.map(all_col_con_attrs, &create_column_constraint/1),
          nil <- Enum.find(results, fn {status, value} -> status === :error end),
+         do: {:ok, constraint}
+  end
+
+  defp build_foreign_key(%Table{} = table, %Column{} = column, attrs, reference_id) do
+    with {:ok, constraint} <- create_constraint(attrs),
+         col_con_attrs <- make_col_con_attrs(column.id, reference_id, constraint.id),
+         {:ok, col_con} <- create_column_constraint(col_con_attrs),
          do: {:ok, constraint}
   end
 
