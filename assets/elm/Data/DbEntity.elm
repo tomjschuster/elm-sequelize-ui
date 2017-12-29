@@ -7,19 +7,25 @@ import Data.Table exposing (Table)
 
 
 type DbEntity
-    = DbSchema Schema
+    = -- Schema
+      DbSchema Schema
+    | DbSchemas (List Schema)
     | DbNewSchema Schema
     | DbUpdatedSchema Schema
-    | DbSchemas (List Schema)
+    | DbSchemaTables (List Table)
+    | DbSchemaColumns (List Column)
+      -- Table
     | DbTable Table
+    | DbTables (List Table)
     | DbNewTable Table
     | DbUpdatedTable Table
-    | DbTables (List Table)
-    | DbReferenceTables (List Table)
-    | DbDataTypeTables (List Table)
+      -- Column
     | DbColumn Column
+    | DbColumns (List Column)
     | DbNewColumn Column
     | DbUpdatedColumn Column
-    | DbColumns (List Column)
-    | DbReferenceColumns (List Column)
+      -- Constraint
+    | DbConstraint Constraint
     | DbConstraints (List Constraint)
+    | DbNewConstraint Constraint
+    | DbUpdatedConstraint Constraint

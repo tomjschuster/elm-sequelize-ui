@@ -117,6 +117,12 @@ defmodule SequelizeUi.DbDesign do
       where: [table_id: ^table_id, data_type_id: ^data_type_id]
   end
 
+  def list_columns_for_schema(schema_id) do
+    Repo.all from column in Column,
+      join: table in assoc(column, :table),
+      where: table.schema_id == ^schema_id
+  end
+
   def list_columns_for_table_by_data_type(table_id, data_type_params) do
     column_query = from Column, where: ^data_type_params
     Repo.all from c in column_query,

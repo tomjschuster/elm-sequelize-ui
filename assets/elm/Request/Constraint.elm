@@ -7,7 +7,7 @@ module Request.Constraint
 import Data.Constraint as Constraint exposing (Constraint)
 import Http exposing (Request)
 import Json.Decode as JD
-import Request.Table exposing (tableUrl)
+import Request.Table as TableReq
 import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
 
@@ -23,7 +23,7 @@ columnUrl =
 
 tableConstraintsUrl : Int -> String
 tableConstraintsUrl =
-    tableUrl >> flip (++) "/constraints"
+    TableReq.resourceUrl >> flip (++) "/constraints"
 
 
 indexForTable : Int -> Request (List Constraint)

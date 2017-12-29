@@ -7,7 +7,7 @@ module Request.Table
         , indexReferenceCandidates
         , indexReferences
         , one
-        , tableUrl
+        , resourceUrl
         , update
         )
 
@@ -16,28 +16,28 @@ import Data.Column.DataType as DataType exposing (DataType)
 import Data.Table as Table exposing (Table)
 import Http exposing (Request)
 import Json.Decode as JD
-import Request.Schema exposing (schemaUrl)
+import Request.Schema as SchemaReq
 import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
 
-tablesUrl : String
-tablesUrl =
+url : String
+url =
     baseUrl ++ "tables/"
 
 
-tableUrl : Int -> String
-tableUrl =
-    toString >> (++) tablesUrl
+resourceUrl : Int -> String
+resourceUrl =
+    toString >> (++) url
 
 
 schemaTablesUrl : Int -> String
 schemaTablesUrl =
-    schemaUrl >> flip (++) "/tables"
+    SchemaReq.resourceUrl >> flip (++) "/tables"
 
 
 referenceCandidatesUrl : Int -> DataType -> String
 referenceCandidatesUrl schemaId =
-    DataType.toUrlParams >> (++) (schemaUrl schemaId ++ "/candidates?")
+    DataType.toUrlParams >> (++) (SchemaReq.resourceUrl schemaId ++ "/candidates?")
 
 
 
@@ -46,7 +46,7 @@ referenceCandidatesUrl schemaId =
 
 referencesUrl : Int -> String
 referencesUrl =
-    tableUrl >> flip (++) "/table-references"
+    resourceUrl >> flip (++) "/table-references"
 
 
 
@@ -55,7 +55,7 @@ referencesUrl =
 
 create : Table -> Request Table
 create table =
-    Http.post tablesUrl
+    Http.post url
         (Table.encodeNew table |> Http.jsonBody)
         (dataDecoder Table.decoder)
 
@@ -66,12 +66,12 @@ create table =
 
 index : Request (List Table)
 index =
-    Http.get tablesUrl (dataDecoder (JD.list Table.decoder))
+    Http.get url (dataDecoder (JD.list Table.decoder))
 
 
 one : Int -> Request Table
 one id =
-    Http.get (tableUrl id) (dataDecoder Table.decoder)
+    Http.get (resourceUrl id) (dataDecoder Table.decoder)
 
 
 indexForSchema : Int -> Http.Request (List Table)
@@ -107,7 +107,7 @@ indexReferenceCandidates schemaId dataType =
 update : Table -> Request Table
 update table =
     put
-        (tableUrl table.id)
+        (resourceUrl table.id)
         (Table.encode table |> Http.jsonBody)
         (dataDecoder Table.decoder)
 
@@ -118,4 +118,4 @@ update table =
 
 destroy : Int -> Request ()
 destroy id =
-    delete (tableUrl id)
+    delete (resourceUrl id)

@@ -2,6 +2,7 @@ module Request.Column
     exposing
         ( create
         , destroy
+        , indexForSchema
         , indexForTable
         , indexForTableWithDataType
         , indexReferences
@@ -14,52 +15,65 @@ import Data.Column as Column exposing (Column)
 import Data.Column.DataType as DataType exposing (DataType)
 import Http exposing (Request)
 import Json.Decode as JD
-import Request.Table exposing (tableUrl)
+import Request.Schema as SchemaReq
+import Request.Table as TableReq
 import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
 
-columnsUrl : String
-columnsUrl =
+url : String
+url =
     baseUrl ++ "columns/"
 
 
-columnUrl : Int -> String
-columnUrl =
-    toString >> (++) columnsUrl
+resourceUrl : Int -> String
+resourceUrl =
+    toString >> (++) url
 
 
-tableColumnsUrl : Int -> String
-tableColumnsUrl =
-    tableUrl >> flip (++) "/columns"
+tableUrl : Int -> String
+tableUrl =
+    TableReq.resourceUrl >> flip (++) "/columns"
+
+
+schemaUrl : Int -> String
+schemaUrl =
+    SchemaReq.resourceUrl >> flip (++) "/columns"
 
 
 referencesUrl : Int -> String
 referencesUrl =
-    tableUrl >> flip (++) "/column-references"
+    TableReq.resourceUrl >> flip (++) "/column-references"
 
 
 tableColumnsForDataTypeUrl : Int -> DataType -> String
 tableColumnsForDataTypeUrl tableId =
-    DataType.toUrlParams >> (++) (tableColumnsUrl tableId ++ "?")
+    DataType.toUrlParams >> (++) (TableReq.resourceUrl tableId ++ "?")
 
 
 create : Column -> Request Column
 create column =
     Http.post
-        columnsUrl
+        url
         (Column.encode column |> Http.jsonBody)
         (dataDecoder <| Column.decoder)
 
 
 one : Int -> Request Column
 one id =
-    Http.get (columnUrl id) (dataDecoder Column.decoder)
+    Http.get (resourceUrl id) (dataDecoder Column.decoder)
 
 
 indexForTable : Int -> Request (List Column)
 indexForTable tableId =
     Http.get
-        (tableColumnsUrl tableId)
+        (tableUrl tableId)
+        (dataDecoder (JD.list Column.decoder))
+
+
+indexForSchema : Int -> Request (List Column)
+indexForSchema schemaId =
+    Http.get
+        (schemaUrl schemaId)
         (dataDecoder (JD.list Column.decoder))
 
 
@@ -79,18 +93,18 @@ indexReferences tableId =
 
 update : Column -> Request Column
 update column =
-    put (columnUrl column.id)
+    put (resourceUrl column.id)
         (Column.encode column |> Http.jsonBody)
         (dataDecoder Column.decoder)
 
 
 updateWithConstraints : Column -> Request Column
 updateWithConstraints column =
-    put (columnUrl column.id)
+    put (resourceUrl column.id)
         (Column.encode column |> Http.jsonBody)
         (dataDecoder Column.decoder)
 
 
 destroy : Int -> Request ()
 destroy id =
-    delete (columnUrl id)
+    delete (resourceUrl id)

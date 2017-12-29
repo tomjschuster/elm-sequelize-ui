@@ -29,6 +29,7 @@ defmodule SequelizeUiWeb.Router do
       delete "/:id", SchemaController, :delete
 
       get "/:schema_id/tables", TableController, :index_for_schema
+      get "/:schema_id/columns", ColumnController, :index_for_schema
       get "/:schema_id/candidates", TableController, :index_candidates
     end
 

@@ -28,6 +28,11 @@ defmodule SequelizeUiWeb.ColumnController do
     render(conn, "index.json", columns: columns)
   end
 
+  def index_for_schema(conn, %{"schema_id" => schema_id} = params) do
+    columns = DbDesign.list_columns_for_schema(schema_id)
+    render(conn, "index.json", columns: columns)
+  end
+
   def index_references(conn, %{"table_id" => table_id}) do
     columns = DbDesign.list_reference_columns_for_table(table_id)
     render(conn, "index.json", columns: columns)

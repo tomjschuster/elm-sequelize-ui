@@ -4,8 +4,9 @@ module Request.Schema
         , destroy
         , index
         , one
-        , schemaUrl
+        , resourceUrl
         , update
+        , url
         )
 
 import Data.Schema as Schema exposing (Schema)
@@ -14,43 +15,43 @@ import Json.Decode as JD
 import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
 
-schemasUrl : String
-schemasUrl =
+url : String
+url =
     baseUrl ++ "schemas/"
 
 
-schemaUrl : Int -> String
-schemaUrl =
-    toString >> (++) schemasUrl
+resourceUrl : Int -> String
+resourceUrl =
+    toString >> (++) url
 
 
 index : Http.Request (List Schema)
 index =
     Http.get
-        schemasUrl
+        url
         (dataDecoder (JD.list Schema.decoder))
 
 
 one : Int -> Http.Request Schema
 one id =
-    Http.get (schemaUrl id) (dataDecoder Schema.decoder)
+    Http.get (resourceUrl id) (dataDecoder Schema.decoder)
 
 
 create : Schema -> Http.Request Schema
 create schema =
     Http.post
-        schemasUrl
+        url
         (Schema.encodeNew schema |> Http.jsonBody)
         (dataDecoder Schema.decoder)
 
 
 update : Schema -> Http.Request Schema
 update schema =
-    put (schemaUrl schema.id)
+    put (resourceUrl schema.id)
         (Http.jsonBody (Schema.encode schema))
         (dataDecoder Schema.decoder)
 
 
 destroy : Int -> Http.Request ()
 destroy id =
-    delete (schemaUrl id)
+    delete (resourceUrl id)
