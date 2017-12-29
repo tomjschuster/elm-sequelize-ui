@@ -67,30 +67,30 @@ import Views.Column.Edit as EditColumn
 
 
 type alias Model =
-    { schema : Schema
+    { tableId : Int
+    , schema : Schema
     , schemaTables : List Table
     , schemaColumns : List Column
-    , tableId : Int
-    , constraints : List Constraint
+    , tableConstraints : List Constraint
     , editingTable : Maybe Table
     , newColumn : Column
     , editingColumn : Maybe Column
-    , toDeleteId : Maybe Int
+    , toDeleteColumnId : Maybe Int
     , errors : List ChangesetError
     }
 
 
 initialModel : Model
 initialModel =
-    { schema = Schema.empty
+    { tableId = 0
+    , schema = Schema.empty
     , schemaTables = []
     , schemaColumns = []
-    , tableId = 0
-    , constraints = []
+    , tableConstraints = []
     , editingTable = Nothing
     , newColumn = Column.empty
     , editingColumn = Nothing
-    , toDeleteId = Nothing
+    , toDeleteColumnId = Nothing
     , errors = []
     }
 
@@ -123,8 +123,6 @@ type Msg
     | Goto Route
     | LoadDbEntity (Result Http.Error DbEntity)
     | LoadDbEntities (Result Http.Error (List DbEntity))
-      -- SCHEMA
-    | LoadSchema (Result Http.Error Schema)
       -- TABLE
     | EditTable
     | InputTableName String
@@ -179,47 +177,16 @@ update msg model =
             )
 
         LoadDbEntity (Err error) ->
-            if isUnprocessableEntity error then
-                ( { model | errors = ChangesetError.parseHttpError error }
-                , Cmd.none
-                , AppUpdate.none
-                )
-            else
-                ( model, Cmd.none, AppUpdate.httpError error )
+            handleHttpError model error
 
         LoadDbEntities (Ok entities) ->
-            ( updateWithDbEntities entities { model | errors = [], schemaTables = [] }
+            ( updateWithDbEntities entities { model | errors = [] }
             , Dom.focus "create-column" |> Task.attempt FocusResult
             , AppUpdate.none
             )
 
         LoadDbEntities (Err error) ->
-            if isUnprocessableEntity error then
-                ( { model | errors = ChangesetError.parseHttpError error }
-                , Cmd.none
-                , AppUpdate.none
-                )
-            else
-                ( model, Cmd.none, AppUpdate.httpError error )
-
-        -- SCHEMA
-        LoadSchema (Ok schema) ->
-            ( { model
-                | schema = schema
-                , errors = []
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        LoadSchema (Err error) ->
-            if isUnprocessableEntity error then
-                ( { model | errors = ChangesetError.parseHttpError error }
-                , Cmd.none
-                , AppUpdate.none
-                )
-            else
-                ( model, Cmd.none, AppUpdate.httpError error )
+            handleHttpError model error
 
         -- TABLE
         EditTable ->
@@ -283,10 +250,15 @@ update msg model =
 
         CreateColumn ->
             ( model
-            , Task.sequence
-                [ ColumnReq.create model.newColumn |> sendDbEntity DbNewColumn
-                , ConstraintReq.indexForTable model.tableId |> sendDbEntity DbConstraints
-                ]
+            , ColumnReq.create model.newColumn
+                |> Http.toTask
+                |> Task.andThen
+                    (\column ->
+                        Task.sequence
+                            [ Task.succeed (DbUpdatedColumn column)
+                            , ConstraintReq.indexForTable model.tableId |> sendDbEntity DbConstraints
+                            ]
+                    )
                 |> Task.attempt LoadDbEntities
             , AppUpdate.none
             )
@@ -304,7 +276,7 @@ update msg model =
                                 -- tableReferences
                                 Dict.empty
                                 -- Column References
-                                (TableConstraints.fromList model.constraints)
+                                (TableConstraints.fromList model.tableConstraints)
                             )
             in
             ( { model
@@ -317,7 +289,7 @@ update msg model =
                             (Column.findAndAddEditingConstraints
                                 Dict.empty
                                 -- Column References
-                                (TableConstraints.fromList model.constraints)
+                                (TableConstraints.fromList model.tableConstraints)
                             )
                 , errors = []
               }
@@ -358,7 +330,7 @@ update msg model =
             )
 
         DestroyColumn id ->
-            ( { model | toDeleteId = Just id }
+            ( { model | toDeleteColumnId = Just id }
             , ColumnReq.destroy id |> Http.send RemoveColumn
             , AppUpdate.none
             )
@@ -367,7 +339,7 @@ update msg model =
             ( { model
                 | errors = []
                 , schemaColumns =
-                    model.toDeleteId
+                    model.toDeleteColumnId
                         |> Maybe.map (Column.removeFromList model.schemaColumns)
                         |> Maybe.withDefault model.schemaColumns
               }
@@ -423,31 +395,11 @@ updateWithDbEntity entity model =
                 , editingColumn = Nothing
             }
 
-        DbConstraints constraints ->
-            { model | constraints = constraints }
+        DbConstraints tableConstraints ->
+            { model | tableConstraints = tableConstraints }
 
         _ ->
             model
-
-
-replaceOrAppendColumn : Column -> List Column -> List Column
-replaceOrAppendColumn column columns =
-    let
-        ( replaced, newColumns ) =
-            List.foldr
-                (\x ( replaced, xs ) ->
-                    if x.id == column.id then
-                        ( True, column :: xs )
-                    else
-                        ( replaced, x :: xs )
-                )
-                ( False, [] )
-                columns
-    in
-    if replaced then
-        newColumns
-    else
-        newColumns ++ [ column ]
 
 
 
@@ -617,7 +569,7 @@ columnsView : Model -> Html Msg
 columnsView model =
     let
         tableConstraints =
-            TableConstraints.fromList model.constraints
+            TableConstraints.fromList model.tableConstraints
     in
     section []
         [ columnsTitle
