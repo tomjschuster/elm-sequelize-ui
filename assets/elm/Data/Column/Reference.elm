@@ -2,13 +2,12 @@ module Data.Column.Reference
     exposing
         ( Data
         , Reference(..)
-        , add
-        , delete
         , encode
-        , listToString
+        , maybeToString
         , selectColumn
         , selectTable
-        , singleToString
+        , start
+        , toString
         )
 
 import Json.Encode as JE exposing (Value)
@@ -29,44 +28,31 @@ type Reference
     | Display Int String Int String
 
 
-add : List Reference -> List Reference
-add =
-    flip (++) [ SelectTable ]
+start : Reference
+start =
+    SelectTable
 
 
-selectColumn : Int -> Maybe Int -> List Reference -> List Reference
-selectColumn idx maybeColumnId =
-    List.indexedMap
-        (\currIdx reference ->
-            case ( idx == currIdx, reference ) of
-                ( True, SelectColumn tableId ) ->
-                    maybeColumnId
-                        |> Maybe.map (Ready tableId)
-                        |> Maybe.withDefault (SelectColumn tableId)
+selectColumn : Maybe Int -> Reference -> Reference
+selectColumn maybeColumnId reference =
+    case reference of
+        SelectColumn tableId ->
+            maybeColumnId
+                |> Maybe.map (Ready tableId)
+                |> Maybe.withDefault (SelectColumn tableId)
 
-                _ ->
-                    reference
-        )
+        _ ->
+            reference
 
 
-selectTable : Int -> Maybe Int -> List Reference -> List Reference
-selectTable idx maybeTableId =
-    List.indexedMap
-        (\currIdx reference ->
-            if idx == currIdx && getTableId reference /= maybeTableId then
-                maybeTableId
-                    |> Maybe.map SelectColumn
-                    |> Maybe.withDefault SelectTable
-            else
-                reference
-        )
-
-
-delete : Int -> List Reference -> List Reference
-delete idx =
-    List.indexedMap (,)
-        >> List.filter (Tuple.first >> (/=) idx)
-        >> List.map Tuple.second
+selectTable : Maybe Int -> Reference -> Reference
+selectTable maybeTableId reference =
+    if getTableId reference /= maybeTableId then
+        maybeTableId
+            |> Maybe.map SelectColumn
+            |> Maybe.withDefault SelectTable
+    else
+        reference
 
 
 getColumnId : Reference -> Maybe Int
@@ -82,24 +68,29 @@ getColumnId reference =
             Nothing
 
 
-listToString : List Reference -> String
-listToString references =
-    "references: " ++ (List.map singleToString references |> String.join ", ")
+maybeToString : Maybe Reference -> String
+maybeToString =
+    Maybe.andThen toString >> Maybe.withDefault ""
 
 
-singleToString : Reference -> String
-singleToString reference =
+toString : Reference -> Maybe String
+toString reference =
     case reference of
         Display tableId tableName columnId columnName ->
-            tableName ++ "(" ++ columnName ++ ")"
+            Just (buildString tableName columnName)
 
         _ ->
-            ""
+            Nothing
 
 
-encode : List Reference -> Value
+buildString : String -> String -> String
+buildString tableName columnName =
+    "references " ++ tableName ++ "(" ++ columnName ++ ")"
+
+
+encode : Reference -> Value
 encode =
-    List.filterMap (getColumnId >> Maybe.map JE.int) >> JE.list
+    getColumnId >> Maybe.map JE.int >> Maybe.withDefault JE.null
 
 
 getTableId : Reference -> Maybe Int

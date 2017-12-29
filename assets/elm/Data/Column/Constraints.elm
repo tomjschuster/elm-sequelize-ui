@@ -4,11 +4,11 @@ module Data.Column.Constraints
         , default
         , encode
         , updateDefaultValue
+        , updateForeignKey
         , updateHasDefaultValue
         , updateIsNotNull
         , updateIsPrimaryKey
         , updateIsUnique
-        , updateReferences
         )
 
 import Data.Column.Reference as Reference exposing (Reference)
@@ -29,7 +29,7 @@ type alias ColumnConstraints =
     , isNotNull : Bool
     , defaultValue : Maybe String
     , isUnique : Bool
-    , references : List Reference
+    , reference : Maybe Reference
     }
 
 
@@ -39,7 +39,7 @@ default =
     , isNotNull = False
     , defaultValue = Nothing
     , isUnique = False
-    , references = []
+    , reference = Nothing
     }
 
 
@@ -75,9 +75,9 @@ updateIsUnique isUnique constraints =
     { constraints | isUnique = isUnique }
 
 
-updateReferences : List Reference -> ColumnConstraints -> ColumnConstraints
-updateReferences references constraints =
-    { constraints | references = references }
+updateForeignKey : Maybe Reference -> ColumnConstraints -> ColumnConstraints
+updateForeignKey reference constraints =
+    { constraints | reference = reference }
 
 
 
@@ -114,19 +114,12 @@ isUnique columnId =
         >> not
 
 
-singleReferences : Int -> TableConstraints -> List Int
-singleReferences columnId =
-    .foreignKeys
-        >> List.filter (Constraint.inSingleForeignKey columnId)
-        >> List.filterMap Constraint.singleReference
-
-
 
 -- ENCODE
 
 
 encode : ColumnConstraints -> Value
-encode { isPrimaryKey, isNotNull, defaultValue, isUnique, references } =
+encode { isPrimaryKey, isNotNull, defaultValue, isUnique, reference } =
     JE.object
         [ ( "is_primary_key", JE.bool isPrimaryKey )
         , ( "is_not_null", JE.bool isNotNull )
@@ -134,5 +127,7 @@ encode { isPrimaryKey, isNotNull, defaultValue, isUnique, references } =
           , defaultValue |> Maybe.map JE.string |> Maybe.withDefault JE.null
           )
         , ( "is_unique", JE.bool isUnique )
-        , ( "references", Reference.encode references )
+        , ( "reference"
+          , reference |> Maybe.map Reference.encode |> Maybe.withDefault JE.null
+          )
         ]

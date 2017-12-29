@@ -26,11 +26,18 @@ getConstraintsText =
 
 constraintDisplays : ColumnConstraints -> List ConstraintDisplay
 constraintDisplays constraints =
+    let
+        maybeReferenceString =
+            constraints.reference
+                |> Maybe.andThen Reference.toString
+    in
     [ ( "primary key", constraints.isPrimaryKey )
     , ( "not null", constraints.isNotNull )
     , ( defaultText constraints.defaultValue, constraints.defaultValue /= Nothing )
     , ( "unique", constraints.isUnique )
-    , ( Reference.listToString constraints.references, not (List.isEmpty constraints.references) )
+    , ( Reference.maybeToString constraints.reference
+      , constraints.reference /= Nothing
+      )
     ]
 
 

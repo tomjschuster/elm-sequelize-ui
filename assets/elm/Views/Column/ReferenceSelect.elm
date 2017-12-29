@@ -1,4 +1,4 @@
-module Views.Column.ReferenceFields exposing (view)
+module Views.Column.ReferenceSelect exposing (view)
 
 import Data.Column as Column exposing (Column)
 import Data.Column.Reference as Reference exposing (Reference(..))
@@ -21,47 +21,39 @@ import Utils.Handlers as Handlers exposing (onChangeInt)
 
 
 view :
-    (List Reference -> msg)
-    -> List Reference
+    (Maybe Reference -> msg)
+    -> Maybe Reference
     -> List Table
     -> List Column
-    -> Html msg
-view toMsg references tables columns =
-    if List.isEmpty tables then
-        div [] []
-    else
-        div []
-            [ ul [] (createReferences toMsg tables columns references)
-            , button
-                [ onClick (references |> Reference.add |> toMsg), type_ "button" ]
-                [ text "Add Association" ]
-            ]
+    -> Maybe (Html msg)
+view toMsg maybeReference tables columns =
+    case ( columns, maybeReference ) of
+        ( [], _ ) ->
+            Nothing
 
+        ( _, Nothing ) ->
+            Just
+                (button
+                    [ onClick (Just Reference.start |> toMsg), type_ "button" ]
+                    [ text "Add Foreign Key" ]
+                )
 
-createReferences :
-    (List Reference -> msg)
-    -> List Table
-    -> List Column
-    -> List Reference
-    -> List (Html msg)
-createReferences toMsg tables columns references =
-    List.indexedMap (createReference toMsg references tables columns) references
+        ( _, Just reference ) ->
+            Just (createReference toMsg tables columns reference)
 
 
 createReference :
-    (List Reference -> msg)
-    -> List Reference
+    (Maybe Reference -> msg)
     -> List Table
     -> List Column
-    -> Int
     -> Reference
     -> Html msg
-createReference toMsg references tables allColumns idx reference =
+createReference toMsg tables allColumns reference =
     case reference of
         SelectTable ->
             li []
-                [ tableSelect toMsg references idx Nothing tables
-                , deleteButton toMsg references idx
+                [ tableSelect toMsg reference Nothing tables
+                , deleteButton toMsg
                 ]
 
         SelectColumn tableId ->
@@ -70,9 +62,9 @@ createReference toMsg references tables allColumns idx reference =
                     List.filter (.tableId >> (==) tableId) allColumns
             in
             li []
-                [ tableSelect toMsg references idx (Just tableId) tables
-                , columnSelect toMsg references idx Nothing columns
-                , deleteButton toMsg references idx
+                [ tableSelect toMsg reference (Just tableId) tables
+                , columnSelect toMsg reference Nothing columns
+                , deleteButton toMsg
                 ]
 
         Ready tableId columnId ->
@@ -81,9 +73,9 @@ createReference toMsg references tables allColumns idx reference =
                     List.filter (.tableId >> (==) tableId) allColumns
             in
             li []
-                [ tableSelect toMsg references idx (Just tableId) tables
-                , columnSelect toMsg references idx (Just columnId) columns
-                , deleteButton toMsg references idx
+                [ tableSelect toMsg reference (Just tableId) tables
+                , columnSelect toMsg reference (Just columnId) columns
+                , deleteButton toMsg
                 ]
 
         Display tableId tableName columnId columnName ->
@@ -92,27 +84,26 @@ createReference toMsg references tables allColumns idx reference =
                     List.filter (.tableId >> (==) tableId) allColumns
             in
             li []
-                [ tableSelect toMsg references idx (Just tableId) tables
-                , columnSelect toMsg references idx (Just columnId) columns
-                , deleteButton toMsg references idx
+                [ tableSelect toMsg reference (Just tableId) tables
+                , columnSelect toMsg reference (Just columnId) columns
+                , deleteButton toMsg
                 ]
 
 
 tableSelect :
-    (List Reference -> msg)
-    -> List Reference
-    -> Int
+    (Maybe Reference -> msg)
+    -> Reference
     -> Maybe Int
     -> List Table
     -> Html msg
-tableSelect toMsg references idx maybeTableId tables =
+tableSelect toMsg reference maybeTableId tables =
     case tables of
         [] ->
             select [ disabled True ] [ option [] [ text "No for datatype" ] ]
 
         _ ->
             select
-                [ onChangeInt (flip (Reference.selectTable idx) references >> toMsg) ]
+                [ onChangeInt (flip Reference.selectTable reference >> Just >> toMsg) ]
                 (option [ selected (maybeTableId == Nothing) ]
                     [ text "Select a Table" ]
                     :: List.map (tableOption maybeTableId) tables
@@ -129,15 +120,14 @@ tableOption maybeId { id, name } =
 
 
 columnSelect :
-    (List Reference -> msg)
-    -> List Reference
-    -> Int
+    (Maybe Reference -> msg)
+    -> Reference
     -> Maybe Int
     -> List Column
     -> Html msg
-columnSelect toMsg references idx maybeColumnId columns =
+columnSelect toMsg reference maybeColumnId columns =
     select
-        [ onChangeInt (flip (Reference.selectColumn idx) references >> toMsg) ]
+        [ onChangeInt (flip Reference.selectColumn reference >> Just >> toMsg) ]
         (option [ selected (maybeColumnId == Nothing) ] [ text "Select a Column" ]
             :: List.map (columnOption maybeColumnId) columns
         )
@@ -152,8 +142,8 @@ columnOption maybeId { id, name } =
         [ text name ]
 
 
-deleteButton : (List Reference -> msg) -> List Reference -> Int -> Html msg
-deleteButton toMsg references idx =
+deleteButton : (Maybe Reference -> msg) -> Html msg
+deleteButton toMsg =
     button
-        [ onClick (Reference.delete idx references |> toMsg), type_ "button" ]
+        [ onClick (toMsg Nothing), type_ "button" ]
         [ text "Delete" ]

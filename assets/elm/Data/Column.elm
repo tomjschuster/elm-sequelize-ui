@@ -32,6 +32,7 @@ import Dict exposing (Dict)
 import Json.Decode as JD exposing (Decoder, int, maybe, string)
 import Json.Decode.Pipeline exposing (custom, decode, hardcoded, optional, required)
 import Json.Encode as JE exposing (Value)
+import Utils.List as ListUtils
 
 
 type alias Column =
@@ -76,9 +77,11 @@ buildConstraints tableLookup columnLookup columnId tableConstraints =
     , isNotNull = isNotNull columnId tableConstraints
     , defaultValue = defaultValue columnId tableConstraints
     , isUnique = isUnique columnId tableConstraints
-    , references =
-        singleReferences columnId tableConstraints
-            |> List.filterMap (referenceFromColumnId tableLookup columnLookup)
+    , reference =
+        tableConstraints.foreignKeys
+            |> ListUtils.find (Constraint.inSingleForeignKey columnId)
+            |> Maybe.andThen Constraint.singleReference
+            |> Maybe.andThen (referenceFromColumnId tableLookup columnLookup)
     }
 
 
@@ -88,9 +91,11 @@ buildEditingConstraints columnLookup columnId tableConstraints =
     , isNotNull = isNotNull columnId tableConstraints
     , defaultValue = defaultValue columnId tableConstraints
     , isUnique = isUnique columnId tableConstraints
-    , references =
-        singleReferences columnId tableConstraints
-            |> List.filterMap (editingReferenceFromColumnId columnLookup)
+    , reference =
+        tableConstraints.foreignKeys
+            |> ListUtils.find (Constraint.inSingleForeignKey columnId)
+            |> Maybe.andThen Constraint.singleReference
+            |> Maybe.andThen (editingReferenceFromColumnId columnLookup)
     }
 
 

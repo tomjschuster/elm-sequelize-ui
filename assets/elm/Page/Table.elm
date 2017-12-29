@@ -255,7 +255,7 @@ update msg model =
                 |> Task.andThen
                     (\column ->
                         Task.sequence
-                            [ Task.succeed (DbUpdatedColumn column)
+                            [ Task.succeed (DbNewColumn column)
                             , ConstraintReq.indexForTable model.tableId |> sendDbEntity DbConstraints
                             ]
                     )
@@ -265,30 +265,14 @@ update msg model =
 
         -- EDIT COLUMN
         EditColumn id ->
-            let
-                editingColumn =
-                    model.schemaColumns
-                        |> List.filter (.id >> (==) id)
-                        |> List.head
-                        |> Maybe.map
-                            (Column.findAndAddConstraints
-                                Dict.empty
-                                -- tableReferences
-                                Dict.empty
-                                -- Column References
-                                (TableConstraints.fromList model.tableConstraints)
-                            )
-            in
             ( { model
                 | editingTable = Nothing
                 , editingColumn =
                     model.schemaColumns
-                        |> List.filter (.id >> (==) id)
-                        |> List.head
+                        |> ListUtils.find (.id >> (==) id)
                         |> Maybe.map
                             (Column.findAndAddEditingConstraints
-                                Dict.empty
-                                -- Column References
+                                (ListUtils.toLookup .id model.schemaColumns)
                                 (TableConstraints.fromList model.tableConstraints)
                             )
                 , errors = []
@@ -324,7 +308,18 @@ update msg model =
         SaveEditingColumn ->
             ( model
             , model.editingColumn
-                |> Maybe.map (ColumnReq.updateWithConstraints >> sendDbEntity DbUpdatedColumn >> Task.attempt LoadDbEntity)
+                |> Maybe.map
+                    (ColumnReq.updateWithConstraints
+                        >> Http.toTask
+                        >> Task.andThen
+                            (\column ->
+                                Task.sequence
+                                    [ Task.succeed (DbUpdatedColumn column)
+                                    , ConstraintReq.indexForTable model.tableId |> sendDbEntity DbConstraints
+                                    ]
+                            )
+                        >> Task.attempt LoadDbEntities
+                    )
                 |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
@@ -411,13 +406,7 @@ view model =
     let
         table =
             model.schemaTables
-                |> List.filter (.id >> (==) model.tableId)
-                |> List.head
-                |> Maybe.withDefault Table.empty
-
-        columns =
-            model.schemaColumns
-                |> List.filter (.tableId >> (==) model.tableId)
+                |> ListUtils.findWithDefault Table.empty (.id >> (==) model.tableId)
     in
     case model.errors of
         [] ->
@@ -617,11 +606,8 @@ columnItem model tableConstraints column =
                         UpdateEditingColumn
                         "Save"
                         editingColumn
-                        []
-                        -- Editing Column Table References
-                        []
-
-                    -- Editing Column Column References
+                        model.schemaTables
+                        model.schemaColumns
                     , cancelEditColumnButton
                     ]
             else

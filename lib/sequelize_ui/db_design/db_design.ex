@@ -233,8 +233,8 @@ defmodule SequelizeUi.DbDesign do
          {:ok, nn_constraint} <- create_column_nn(table, column, params),
          {:ok, dv_constraint} <- create_column_dv(table, column, params),
          {:ok, uq_constraint} <- create_column_uq(table, column, params),
-         {:ok, fk_constraints} <- create_column_fks(table, column, params) do
-      [pk_constraint, nn_constraint, dv_constraint, uq_constraint | fk_constraints]
+         {:ok, fk_constraint} <- create_column_fk(table, column, params) do
+      [pk_constraint, nn_constraint, dv_constraint, uq_constraint, fk_constraint]
       |> Enum.filter(&(&1))
       |> (&({:ok, &1})).()
     end
@@ -281,16 +281,10 @@ defmodule SequelizeUi.DbDesign do
     build_constraint(column, attrs)
   end
 
-  defp create_column_uq(_table, _column, %{"references" => []}), do: {:ok, nil}
-  defp create_column_fks(%Table{} = table, %Column{} = column, params) do
+  defp create_column_fk(_table, _column, %{"reference" => nil}), do: {:ok, nil}
+  defp create_column_fk(%Table{} = table, %Column{} = column, params) do
     attrs = constraint_attrs(table, "foreign_key")
-    %{"references" => references} = params
-    results = Enum.map(references, &build_foreign_key(table, column, attrs, &1))
-
-    with nil <- Enum.find(results, fn {status, v} -> status === :error end) do
-      constraints = for {:ok, constraint} <- results, do: constraint
-      {:ok, constraints}
-    end
+    build_constraint(column, attrs, Map.get(params, "reference"))
   end
 
  defp constraint_attrs(%Table{} = table, enum, value \\ nil) do
@@ -302,25 +296,10 @@ defmodule SequelizeUi.DbDesign do
     }
   end
 
-  defp build_constraint(%Column{} = column, attrs) do
-    with {:ok, constraint} <- create_constraint(attrs),
-         col_con_attrs <- make_col_con_attrs(column.id, nil, constraint.id),
-         {:ok, _column_constraint} <- create_column_constraint(col_con_attrs),
-         do: {:ok, constraint}
-  end
-
-  defp build_foreign_keys(%Table{} = table, %Column{} = column, attrs, references) do
-    with {:ok, constraint} <- create_constraint(attrs),
-         all_col_con_attrs <- Enum.map(references, &make_col_con_attrs(column.id, &1, constraint.id)),
-         results <- Enum.map(all_col_con_attrs, &create_column_constraint/1),
-         nil <- Enum.find(results, fn {status, value} -> status === :error end),
-         do: {:ok, constraint}
-  end
-
-  defp build_foreign_key(%Table{} = table, %Column{} = column, attrs, reference_id) do
+  defp build_constraint(%Column{} = column, attrs, reference_id \\ nil) do
     with {:ok, constraint} <- create_constraint(attrs),
          col_con_attrs <- make_col_con_attrs(column.id, reference_id, constraint.id),
-         {:ok, col_con} <- create_column_constraint(col_con_attrs),
+         {:ok, _column_constraint} <- create_column_constraint(col_con_attrs),
          do: {:ok, constraint}
   end
 
