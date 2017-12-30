@@ -4,13 +4,12 @@
 ## In Progress
 
 * Constraints
+  * Build column constraints from list
   * Table constraints
 
 ## Bugs
 
-* References
-  * Updating existing reference target column not working
-  * Column reference views not updated after update/delete
+  None :)
 
 # Todo
 * Constraints
