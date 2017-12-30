@@ -2,12 +2,12 @@ module Data.Column.Reference
     exposing
         ( Data
         , Reference(..)
+        , display
         , encode
-        , maybeToString
+        , isDisplayable
         , selectColumn
         , selectTable
         , start
-        , toString
         )
 
 import Json.Encode as JE exposing (Value)
@@ -31,6 +31,16 @@ type Reference
 start : Reference
 start =
     SelectTable
+
+
+isDisplayable : Reference -> Bool
+isDisplayable reference =
+    case reference of
+        Display _ _ _ _ ->
+            True
+
+        _ ->
+            False
 
 
 selectColumn : Maybe Int -> Reference -> Reference
@@ -68,23 +78,18 @@ getColumnId reference =
             Nothing
 
 
-maybeToString : Maybe Reference -> String
-maybeToString =
-    Maybe.andThen toString >> Maybe.withDefault ""
-
-
-toString : Reference -> Maybe String
-toString reference =
+display : Reference -> String
+display reference =
     case reference of
         Display _ tableName _ columnName ->
-            Just (buildString tableName columnName)
+            buildDisplay tableName columnName
 
         _ ->
-            Nothing
+            ""
 
 
-buildString : String -> String -> String
-buildString tableName columnName =
+buildDisplay : String -> String -> String
+buildDisplay tableName columnName =
     "references " ++ tableName ++ "(" ++ columnName ++ ")"
 
 

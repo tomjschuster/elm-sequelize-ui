@@ -30,9 +30,7 @@ constraintDisplays constraints =
     , ( "not null", constraints.isNotNull )
     , ( defaultText constraints.defaultValue, constraints.defaultValue /= Nothing )
     , ( "unique", constraints.isUnique )
-    , ( Reference.maybeToString constraints.reference
-      , constraints.reference /= Nothing
-      )
+    , ( Reference.display constraints.reference, Reference.isDisplayable constraints.reference )
     ]
 
 

@@ -2,6 +2,7 @@ module Views.Column.Edit exposing (view)
 
 import Data.Column as Column exposing (Column)
 import Data.Column.Constraints as ColumnConstraints
+import Data.Column.DataType as DataType
 import Data.Table exposing (Table)
 import Dict
 import Html
@@ -25,52 +26,16 @@ import Views.Column.ReferenceSelect as ReferenceSelect
 
 view : msg -> (Column -> msg) -> String -> Column -> List Table -> List Column -> Html msg
 view saveMsg toUpdateMsg saveText column tables columns =
-    let
-        validColumnGroups =
-            columns
-                |> List.filter (.dataType >> (==) column.dataType)
-                |> ListUtils.groupBy .tableId
-
-        validTables =
-            tables
-                |> List.filter (.id >> flip Dict.member validColumnGroups)
-
-        validColumns =
-            validColumnGroups |> Dict.values |> List.concat
-
-        maybeReferenceField =
-            ReferenceSelect.view
-                (flip ColumnConstraints.updateForeignKey column.constraints
-                    >> flip Column.updateConstraints column
-                    >> toUpdateMsg
-                )
-                column.constraints.reference
-                validTables
-                validColumns
-    in
-    case maybeReferenceField of
-        Just referenceField ->
-            form
-                []
-                [ fieldset []
-                    [ nameField toUpdateMsg column
-                    , dataTypeField toUpdateMsg column
-                    , constraintFields toUpdateMsg column
-                    , referenceField
-                    , saveButton saveMsg saveText
-                    ]
-                ]
-
-        Nothing ->
-            form
-                []
-                [ fieldset []
-                    [ nameField toUpdateMsg column
-                    , dataTypeField toUpdateMsg column
-                    , constraintFields toUpdateMsg column
-                    , saveButton saveMsg saveText
-                    ]
-                ]
+    form
+        []
+        [ fieldset []
+            [ nameField toUpdateMsg column
+            , dataTypeField toUpdateMsg column
+            , constraintFields toUpdateMsg column
+            , referenceFields toUpdateMsg column tables columns
+            , saveButton saveMsg saveText
+            ]
+        ]
 
 
 
@@ -125,6 +90,40 @@ constraintFields toUpdateMsg column =
         "create-column-constraints"
         (flip Column.updateConstraints column >> toUpdateMsg)
         column.constraints
+
+
+
+-- Reference Fields
+
+
+referenceFields : (Column -> msg) -> Column -> List Table -> List Column -> Html msg
+referenceFields toUpdateMsg column tables columns =
+    let
+        toMsg =
+            flip ColumnConstraints.updateForeignKey column.constraints
+                >> flip Column.updateConstraints column
+                >> toUpdateMsg
+
+        validColumnGroups =
+            columns
+                |> List.filter (.dataType >> DataType.isMatch column.dataType)
+                |> ListUtils.groupBy .tableId
+
+        validTables =
+            tables
+                |> List.filter (.id >> flip Dict.member validColumnGroups)
+
+        validColumns =
+            validColumnGroups |> Dict.values |> List.concat
+    in
+    p []
+        [ text "References: "
+        , ReferenceSelect.view
+            toMsg
+            validTables
+            validColumns
+            column.constraints.reference
+        ]
 
 
 

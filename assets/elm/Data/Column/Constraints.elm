@@ -20,7 +20,7 @@ type alias ColumnConstraints =
     , isNotNull : Bool
     , defaultValue : Maybe String
     , isUnique : Bool
-    , reference : Maybe Reference
+    , reference : Reference
     }
 
 
@@ -30,7 +30,7 @@ default =
     , isNotNull = False
     , defaultValue = Nothing
     , isUnique = False
-    , reference = Nothing
+    , reference = Reference.SelectTable
     }
 
 
@@ -66,7 +66,7 @@ updateIsUnique isUnique constraints =
     { constraints | isUnique = isUnique }
 
 
-updateForeignKey : Maybe Reference -> ColumnConstraints -> ColumnConstraints
+updateForeignKey : Reference -> ColumnConstraints -> ColumnConstraints
 updateForeignKey reference constraints =
     { constraints | reference = reference }
 
@@ -85,6 +85,6 @@ encode { isPrimaryKey, isNotNull, defaultValue, isUnique, reference } =
           )
         , ( "is_unique", JE.bool isUnique )
         , ( "reference"
-          , reference |> Maybe.map Reference.encode |> Maybe.withDefault JE.null
+          , Reference.encode reference
           )
         ]

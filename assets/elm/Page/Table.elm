@@ -336,7 +336,6 @@ updateWithDbEntity entity model =
             { model
                 | schemaColumns = ListUtils.add column model.schemaColumns
                 , newColumn = Column.init model.tableId
-                , schemaTables = []
             }
 
         DbUpdatedColumn column ->

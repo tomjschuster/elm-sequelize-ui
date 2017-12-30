@@ -75,6 +75,7 @@ buildConstraints tableLookup columnLookup columnId tableConstraints =
             |> ListUtils.find (Constraint.inSingleForeignKey columnId)
             |> Maybe.andThen Constraint.singleReference
             |> Maybe.andThen (referenceFromColumnId tableLookup columnLookup)
+            |> Maybe.withDefault Reference.SelectTable
     }
 
 
@@ -89,6 +90,7 @@ buildEditingConstraints columnLookup columnId tableConstraints =
             |> ListUtils.find (Constraint.inSingleForeignKey columnId)
             |> Maybe.andThen Constraint.singleReference
             |> Maybe.andThen (editingReferenceFromColumnId columnLookup)
+            |> Maybe.withDefault Reference.SelectTable
     }
 
 

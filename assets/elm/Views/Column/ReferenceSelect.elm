@@ -7,9 +7,9 @@ import Html
     exposing
         ( Html
         , button
-        , li
         , option
         , select
+        , span
         , text
         )
 import Html.Attributes as Attr
@@ -18,39 +18,16 @@ import Utils.Events as EvtUtils
 
 
 view :
-    (Maybe Reference -> msg)
-    -> Maybe Reference
-    -> List Table
-    -> List Column
-    -> Maybe (Html msg)
-view toMsg maybeReference tables columns =
-    case ( columns, maybeReference ) of
-        ( [], _ ) ->
-            Nothing
-
-        ( _, Nothing ) ->
-            Just
-                (button
-                    [ Evt.onClick (Just Reference.start |> toMsg), Attr.type_ "button" ]
-                    [ text "Add Foreign Key" ]
-                )
-
-        ( _, Just reference ) ->
-            Just (createReference toMsg tables columns reference)
-
-
-createReference :
-    (Maybe Reference -> msg)
+    (Reference -> msg)
     -> List Table
     -> List Column
     -> Reference
     -> Html msg
-createReference toMsg tables allColumns reference =
+view toMsg tables allColumns reference =
     case reference of
         SelectTable ->
-            li []
+            span []
                 [ tableSelect toMsg reference Nothing tables
-                , deleteButton toMsg
                 ]
 
         SelectColumn tableId ->
@@ -58,10 +35,10 @@ createReference toMsg tables allColumns reference =
                 columns =
                     List.filter (.tableId >> (==) tableId) allColumns
             in
-            li []
+            span []
                 [ tableSelect toMsg reference (Just tableId) tables
                 , columnSelect toMsg reference Nothing columns
-                , deleteButton toMsg
+                , clearButton toMsg
                 ]
 
         Ready tableId columnId ->
@@ -69,10 +46,10 @@ createReference toMsg tables allColumns reference =
                 columns =
                     List.filter (.tableId >> (==) tableId) allColumns
             in
-            li []
+            span []
                 [ tableSelect toMsg reference (Just tableId) tables
                 , columnSelect toMsg reference (Just columnId) columns
-                , deleteButton toMsg
+                , clearButton toMsg
                 ]
 
         Display tableId _ columnId _ ->
@@ -80,15 +57,15 @@ createReference toMsg tables allColumns reference =
                 columns =
                     List.filter (.tableId >> (==) tableId) allColumns
             in
-            li []
+            span []
                 [ tableSelect toMsg reference (Just tableId) tables
                 , columnSelect toMsg reference (Just columnId) columns
-                , deleteButton toMsg
+                , clearButton toMsg
                 ]
 
 
 tableSelect :
-    (Maybe Reference -> msg)
+    (Reference -> msg)
     -> Reference
     -> Maybe Int
     -> List Table
@@ -96,11 +73,11 @@ tableSelect :
 tableSelect toMsg reference maybeTableId tables =
     case tables of
         [] ->
-            select [ Attr.disabled True ] [ option [] [ text "No for datatype" ] ]
+            select [ Attr.disabled True ] [ option [] [ text "No available columns" ] ]
 
         _ ->
             select
-                [ EvtUtils.onChangeInt (flip Reference.selectTable reference >> Just >> toMsg) ]
+                [ EvtUtils.onChangeInt (flip Reference.selectTable reference >> toMsg) ]
                 (option [ Attr.selected (maybeTableId == Nothing) ]
                     [ text "Select a Table" ]
                     :: List.map (tableOption maybeTableId) tables
@@ -117,14 +94,14 @@ tableOption maybeId { id, name } =
 
 
 columnSelect :
-    (Maybe Reference -> msg)
+    (Reference -> msg)
     -> Reference
     -> Maybe Int
     -> List Column
     -> Html msg
 columnSelect toMsg reference maybeColumnId columns =
     select
-        [ EvtUtils.onChangeInt (flip Reference.selectColumn reference >> Just >> toMsg) ]
+        [ EvtUtils.onChangeInt (flip Reference.selectColumn reference >> toMsg) ]
         (option [ Attr.selected (maybeColumnId == Nothing) ] [ text "Select a Column" ]
             :: List.map (columnOption maybeColumnId) columns
         )
@@ -139,8 +116,8 @@ columnOption maybeId { id, name } =
         [ text name ]
 
 
-deleteButton : (Maybe Reference -> msg) -> Html msg
-deleteButton toMsg =
+clearButton : (Reference -> msg) -> Html msg
+clearButton toMsg =
     button
-        [ Evt.onClick (toMsg Nothing), Attr.type_ "button" ]
-        [ text "Delete" ]
+        [ Evt.onClick (toMsg Reference.SelectTable), Attr.type_ "button" ]
+        [ text "Clear" ]
