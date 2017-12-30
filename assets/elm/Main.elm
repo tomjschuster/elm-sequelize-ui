@@ -1,4 +1,4 @@
-module Main exposing (..)
+module Main exposing (main)
 
 import AppUpdate exposing (AppUpdate)
 import Html exposing (Html, div, footer, h1, header, text)
@@ -170,8 +170,8 @@ updatePageHelper toModel toMsg pageUpdate msg model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.none
+subscriptions =
+    always Sub.none
 
 
 

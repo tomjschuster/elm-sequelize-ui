@@ -11,7 +11,7 @@ module Utils.Http
         )
 
 import Http
-import Json.Decode as JD exposing (Decoder, list, string)
+import Json.Decode as JD exposing (Decoder)
 
 
 delete : String -> Http.Request ()
@@ -87,7 +87,7 @@ httpErrorToStatusCode error =
 isError : HttpError -> Http.Error -> Bool
 isError errorType httpError =
     case httpError of
-        Http.BadStatus { status, body } ->
+        Http.BadStatus { status } ->
             if status.code == httpErrorToStatusCode errorType then
                 True
             else

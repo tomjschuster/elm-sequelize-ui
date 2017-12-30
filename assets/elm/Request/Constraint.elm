@@ -8,7 +8,7 @@ import Data.Constraint as Constraint exposing (Constraint)
 import Http exposing (Request)
 import Json.Decode as JD
 import Request.Table as TableReq
-import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
+import Utils.Http exposing (baseUrl, dataDecoder, delete)
 
 
 constraintsUrl : String

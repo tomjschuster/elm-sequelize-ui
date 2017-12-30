@@ -1,23 +1,20 @@
 module Views.Column.ReferenceSelect exposing (view)
 
-import Data.Column as Column exposing (Column)
+import Data.Column exposing (Column)
 import Data.Column.Reference as Reference exposing (Reference(..))
-import Data.Table as Table exposing (Table)
+import Data.Table exposing (Table)
 import Html
     exposing
         ( Html
         , button
-        , div
         , li
         , option
-        , p
         , select
         , text
-        , ul
         )
-import Html.Attributes as Attributes exposing (disabled, selected, type_, value)
-import Html.Events as Events exposing (onClick)
-import Utils.Handlers as Handlers exposing (onChangeInt)
+import Html.Attributes as Attr
+import Html.Events as Evt
+import Utils.Events as EvtUtils
 
 
 view :
@@ -34,7 +31,7 @@ view toMsg maybeReference tables columns =
         ( _, Nothing ) ->
             Just
                 (button
-                    [ onClick (Just Reference.start |> toMsg), type_ "button" ]
+                    [ Evt.onClick (Just Reference.start |> toMsg), Attr.type_ "button" ]
                     [ text "Add Foreign Key" ]
                 )
 
@@ -78,7 +75,7 @@ createReference toMsg tables allColumns reference =
                 , deleteButton toMsg
                 ]
 
-        Display tableId tableName columnId columnName ->
+        Display tableId _ columnId _ ->
             let
                 columns =
                     List.filter (.tableId >> (==) tableId) allColumns
@@ -99,12 +96,12 @@ tableSelect :
 tableSelect toMsg reference maybeTableId tables =
     case tables of
         [] ->
-            select [ disabled True ] [ option [] [ text "No for datatype" ] ]
+            select [ Attr.disabled True ] [ option [] [ text "No for datatype" ] ]
 
         _ ->
             select
-                [ onChangeInt (flip Reference.selectTable reference >> Just >> toMsg) ]
-                (option [ selected (maybeTableId == Nothing) ]
+                [ EvtUtils.onChangeInt (flip Reference.selectTable reference >> Just >> toMsg) ]
+                (option [ Attr.selected (maybeTableId == Nothing) ]
                     [ text "Select a Table" ]
                     :: List.map (tableOption maybeTableId) tables
                 )
@@ -113,8 +110,8 @@ tableSelect toMsg reference maybeTableId tables =
 tableOption : Maybe Int -> Table -> Html msg
 tableOption maybeId { id, name } =
     option
-        [ value (toString id)
-        , selected (maybeId |> Maybe.map ((==) id) |> Maybe.withDefault False)
+        [ Attr.value (toString id)
+        , Attr.selected (maybeId |> Maybe.map ((==) id) |> Maybe.withDefault False)
         ]
         [ text name ]
 
@@ -127,8 +124,8 @@ columnSelect :
     -> Html msg
 columnSelect toMsg reference maybeColumnId columns =
     select
-        [ onChangeInt (flip Reference.selectColumn reference >> Just >> toMsg) ]
-        (option [ selected (maybeColumnId == Nothing) ] [ text "Select a Column" ]
+        [ EvtUtils.onChangeInt (flip Reference.selectColumn reference >> Just >> toMsg) ]
+        (option [ Attr.selected (maybeColumnId == Nothing) ] [ text "Select a Column" ]
             :: List.map (columnOption maybeColumnId) columns
         )
 
@@ -136,8 +133,8 @@ columnSelect toMsg reference maybeColumnId columns =
 columnOption : Maybe Int -> Column -> Html msg
 columnOption maybeId { id, name } =
     option
-        [ value (toString id)
-        , selected (maybeId |> Maybe.map ((==) id) |> Maybe.withDefault False)
+        [ Attr.value (toString id)
+        , Attr.selected (maybeId |> Maybe.map ((==) id) |> Maybe.withDefault False)
         ]
         [ text name ]
 
@@ -145,5 +142,5 @@ columnOption maybeId { id, name } =
 deleteButton : (Maybe Reference -> msg) -> Html msg
 deleteButton toMsg =
     button
-        [ onClick (toMsg Nothing), type_ "button" ]
+        [ Evt.onClick (toMsg Nothing), Attr.type_ "button" ]
         [ text "Delete" ]

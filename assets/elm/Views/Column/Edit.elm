@@ -3,23 +3,20 @@ module Views.Column.Edit exposing (view)
 import Data.Column as Column exposing (Column)
 import Data.Column.Constraints as ColumnConstraints
 import Data.Table exposing (Table)
-import Dict exposing (Dict)
+import Dict
 import Html
     exposing
-        ( Attribute
-        , Html
+        ( Html
         , button
-        , div
         , fieldset
         , form
         , input
         , label
-        , legend
         , p
         , text
         )
-import Html.Attributes exposing (id, type_, value)
-import Html.Events exposing (onClick, onInput)
+import Html.Attributes as Attr
+import Html.Events as Evt
 import Utils.List as ListUtils
 import Views.Column.ConstraintFields as ConstraintFields
 import Views.Column.DataTypeSelect as DataTypesSelect
@@ -95,9 +92,9 @@ nameInput toNameMsg name =
     label []
         [ text "Name"
         , input
-            [ id "create-column"
-            , value name
-            , onInput toNameMsg
+            [ Attr.id "create-column"
+            , Attr.value name
+            , Evt.onInput toNameMsg
             ]
             []
         ]
@@ -136,4 +133,4 @@ constraintFields toUpdateMsg column =
 
 saveButton : msg -> String -> Html msg
 saveButton saveMsg saveText =
-    button [ type_ "button", onClick saveMsg ] [ text saveText ]
+    button [ Attr.type_ "button", Evt.onClick saveMsg ] [ text saveText ]

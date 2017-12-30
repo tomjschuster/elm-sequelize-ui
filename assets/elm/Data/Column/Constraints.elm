@@ -12,15 +12,6 @@ module Data.Column.Constraints
         )
 
 import Data.Column.Reference as Reference exposing (Reference)
-import Data.Constraint as Constraint
-    exposing
-        ( DefaultValue
-        , ForeignKey
-        , NotNull
-        , PrimaryKey
-        , UniqueKey
-        )
-import Data.Table.Constraints exposing (TableConstraints)
 import Json.Encode as JE exposing (Value)
 
 
@@ -78,40 +69,6 @@ updateIsUnique isUnique constraints =
 updateForeignKey : Maybe Reference -> ColumnConstraints -> ColumnConstraints
 updateForeignKey reference constraints =
     { constraints | reference = reference }
-
-
-
--- HELPERS
-
-
-isPrimaryKey : Int -> TableConstraints -> Bool
-isPrimaryKey columnId =
-    .primaryKey
-        >> Maybe.map (Constraint.inPrimaryKey columnId)
-        >> Maybe.withDefault False
-
-
-isNotNull : Int -> TableConstraints -> Bool
-isNotNull columnId =
-    .notNulls
-        >> List.filter (Constraint.isNotNull columnId)
-        >> List.isEmpty
-        >> not
-
-
-defaultValue : Int -> TableConstraints -> Maybe String
-defaultValue columnId =
-    .defaultValues
-        >> List.filterMap (Constraint.defaultValue columnId)
-        >> List.head
-
-
-isUnique : Int -> TableConstraints -> Bool
-isUnique columnId =
-    .uniqueKeys
-        >> List.filter (Constraint.isUnique columnId)
-        >> List.isEmpty
-        >> not
 
 
 

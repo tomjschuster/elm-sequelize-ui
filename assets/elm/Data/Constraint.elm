@@ -21,7 +21,7 @@ module Data.Constraint
         )
 
 import Json.Decode as JD exposing (Decoder)
-import Json.Decode.Pipeline exposing (custom, decode, optional, required)
+import Json.Decode.Pipeline exposing (custom, decode, required)
 import Utils.Serialization exposing (listSingletonDecoder)
 
 
@@ -274,11 +274,6 @@ defaultValue id (DefaultValue _ _ columnId value) =
         Just value
     else
         Nothing
-
-
-inUnique : ColumnId -> UniqueKey -> Bool
-inUnique id (UniqueKey _ _ index) =
-    inIndex id index
 
 
 isUnique : ColumnId -> UniqueKey -> Bool

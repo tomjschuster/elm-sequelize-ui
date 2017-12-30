@@ -58,10 +58,10 @@ selectTable maybeTableId reference =
 getColumnId : Reference -> Maybe Int
 getColumnId reference =
     case reference of
-        Ready tableId columnId ->
+        Ready _ columnId ->
             Just columnId
 
-        Display tableId tableName columnId columnName ->
+        Display _ _ columnId _ ->
             Just columnId
 
         _ ->
@@ -76,7 +76,7 @@ maybeToString =
 toString : Reference -> Maybe String
 toString reference =
     case reference of
-        Display tableId tableName columnId columnName ->
+        Display _ tableName _ columnName ->
             Just (buildString tableName columnName)
 
         _ ->
@@ -99,10 +99,10 @@ getTableId reference =
         SelectColumn tableId ->
             Just tableId
 
-        Ready tableId columnId ->
+        Ready tableId _ ->
             Just tableId
 
-        Display tableId tableName columnId columnName ->
+        Display tableId _ _ _ ->
             Just tableId
 
         _ ->

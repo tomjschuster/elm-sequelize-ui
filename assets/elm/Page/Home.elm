@@ -7,28 +7,23 @@ import Dom
 import Html
     exposing
         ( Html
-        , a
-        , aside
         , button
         , div
         , h2
-        , h3
         , input
         , li
         , main_
-        , p
-        , section
         , text
         , ul
         )
-import Html.Attributes exposing (disabled, href, id, value)
-import Html.Events as Events exposing (onClick, onInput)
+import Html.Attributes as Attr
+import Html.Events as Evt
 import Http
 import Request.Schema as RS
 import Router exposing (Route)
 import Task
-import Utils.Handlers exposing (customOnKeyDown, onEnter, onEscape)
-import Utils.Keys as Key exposing (Key(..))
+import Utils.Events as EvtUtils
+import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
 
@@ -237,8 +232,8 @@ update msg model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.none
+subscriptions =
+    always Sub.none
 
 
 
@@ -284,17 +279,17 @@ schemaChildren model =
 createSchemaInput : String -> Html Msg
 createSchemaInput name =
     input
-        [ id "create-schema"
-        , value name
-        , onInput InputSchemaName
-        , onEnter CreateSchema
+        [ Attr.id "create-schema"
+        , Attr.value name
+        , Evt.onInput InputSchemaName
+        , EvtUtils.onEnter CreateSchema
         ]
         []
 
 
 createSchemaButton : Html Msg
 createSchemaButton =
-    button [ onClick CreateSchema ] [ text "Add Schema" ]
+    button [ Evt.onClick CreateSchema ] [ text "Add Schema" ]
 
 
 
@@ -337,12 +332,12 @@ schemaLink { id, name } =
 
 editSchemaNameButton : Int -> Html Msg
 editSchemaNameButton id =
-    button [ onClick (EditSchema id) ] [ text "Edit Name" ]
+    button [ Evt.onClick (EditSchema id) ] [ text "Edit Name" ]
 
 
 deleteSchemaButton : Int -> Html Msg
 deleteSchemaButton id =
-    button [ onClick (DestroySchema id) ] [ text "Delete" ]
+    button [ Evt.onClick (DestroySchema id) ] [ text "Delete" ]
 
 
 
@@ -363,10 +358,10 @@ editingSchemaListItemChildren schema editingSchema =
 editSchemaNameInput : String -> Html Msg
 editSchemaNameInput name =
     input
-        [ id "edit-schema-name"
-        , value name
-        , onInput InputEditingSchemaName
-        , customOnKeyDown onSchemaNameKeyDown
+        [ Attr.id "edit-schema-name"
+        , Attr.value name
+        , Evt.onInput InputEditingSchemaName
+        , EvtUtils.customOnKeyDown onSchemaNameKeyDown
         ]
         []
 
@@ -386,9 +381,9 @@ onSchemaNameKeyDown key =
 
 cancelEditSchemaNameButton : Html Msg
 cancelEditSchemaNameButton =
-    button [ onClick CancelEditSchemaName ] [ text "Cancel" ]
+    button [ Evt.onClick CancelEditSchemaName ] [ text "Cancel" ]
 
 
 saveSchemaNameButton : Html Msg
 saveSchemaNameButton =
-    button [ onClick UpdateSchema ] [ text "Save" ]
+    button [ Evt.onClick UpdateSchema ] [ text "Save" ]

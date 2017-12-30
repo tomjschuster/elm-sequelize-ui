@@ -24,6 +24,7 @@ type DbEntity
     | DbColumns (List Column)
     | DbNewColumn Column
     | DbUpdatedColumn Column
+    | DbDeletedColumn Int
       -- Constraint
     | DbConstraint Constraint
     | DbConstraints (List Constraint)

@@ -1,7 +1,7 @@
 module Views.Column.ConstraintsDisplay exposing (view)
 
-import Data.Column.Constraints as ColumnConstraints exposing (ColumnConstraints)
-import Data.Column.Reference as Reference exposing (Reference)
+import Data.Column.Constraints exposing (ColumnConstraints)
+import Data.Column.Reference as Reference
 import Html exposing (Html, span, text)
 
 
@@ -26,11 +26,6 @@ getConstraintsText =
 
 constraintDisplays : ColumnConstraints -> List ConstraintDisplay
 constraintDisplays constraints =
-    let
-        maybeReferenceString =
-            constraints.reference
-                |> Maybe.andThen Reference.toString
-    in
     [ ( "primary key", constraints.isPrimaryKey )
     , ( "not null", constraints.isNotNull )
     , ( defaultText constraints.defaultValue, constraints.defaultValue /= Nothing )

@@ -17,7 +17,6 @@ import Dom
 import Html
     exposing
         ( Html
-        , a
         , button
         , div
         , h2
@@ -29,14 +28,14 @@ import Html
         , text
         , ul
         )
-import Html.Attributes exposing (disabled, id, value)
-import Html.Events exposing (onClick, onInput)
+import Html.Attributes as Attr
+import Html.Events as Evt
 import Http
 import Request.Schema as SchemaReq
 import Request.Table as TableReq
 import Router exposing (Route)
 import Task
-import Utils.Handlers exposing (customOnKeyDown, onEnter)
+import Utils.Events as EvtUtils
 import Utils.Keys exposing (Key(..))
 import Views.Breadcrumbs as BC
 import Views.ChangesetError as CE
@@ -300,8 +299,8 @@ update msg model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.none
+subscriptions =
+    always Sub.none
 
 
 
@@ -328,7 +327,7 @@ breadCrumbs schema =
 
 
 schemaView : Model -> Html Msg
-schemaView { editingSchema, schema, editingTable } =
+schemaView { editingSchema, schema } =
     section [] (schemaChildren editingSchema schema)
 
 
@@ -358,22 +357,22 @@ schemaName name =
 
 saveSchemaButton : Html Msg
 saveSchemaButton =
-    button [ onClick SaveSchema ] [ text "Save" ]
+    button [ Evt.onClick SaveSchema ] [ text "Save" ]
 
 
 cancelEditSchemaButton : Html Msg
 cancelEditSchemaButton =
-    button [ onClick CancelEditSchema ] [ text "Cancel" ]
+    button [ Evt.onClick CancelEditSchema ] [ text "Cancel" ]
 
 
 editSchemaButton : Html Msg
 editSchemaButton =
-    button [ onClick EditSchema ] [ text "Edit Name" ]
+    button [ Evt.onClick EditSchema ] [ text "Edit Name" ]
 
 
 deleteSchemaButton : Html Msg
 deleteSchemaButton =
-    button [ onClick Destroy ] [ text "Delete Schema" ]
+    button [ Evt.onClick Destroy ] [ text "Delete Schema" ]
 
 
 
@@ -391,10 +390,10 @@ editingSchemaChildren { name } =
 editSchemaNameInput : String -> Html Msg
 editSchemaNameInput name =
     input
-        [ id "edit-schema-name"
-        , value name
-        , onInput InputSchemaName
-        , customOnKeyDown onSchemaNameKeyDown
+        [ Attr.id "edit-schema-name"
+        , Attr.value name
+        , Evt.onInput InputSchemaName
+        , EvtUtils.customOnKeyDown onSchemaNameKeyDown
         ]
         []
 
@@ -440,14 +439,14 @@ createTableView : String -> Html Msg
 createTableView name =
     div []
         [ input
-            [ id "create-table"
-            , value name
-            , onInput InputNewTableName
-            , onEnter CreateTable
+            [ Attr.id "create-table"
+            , Attr.value name
+            , Evt.onInput InputNewTableName
+            , EvtUtils.onEnter CreateTable
             ]
             []
         , button
-            [ onClick CreateTable
+            [ Evt.onClick CreateTable
             ]
             [ text "Create Table" ]
         ]
@@ -500,21 +499,21 @@ tableLink { id, name, schemaId } =
 
 editTableNameButton : Int -> Html Msg
 editTableNameButton id =
-    button [ onClick (EditTableName id) ] [ text "Edit Name" ]
+    button [ Evt.onClick (EditTableName id) ] [ text "Edit Name" ]
 
 
 deleteTableButton : Int -> Html Msg
 deleteTableButton id =
-    button [ onClick (DestroyTable id) ] [ text "Delete" ]
+    button [ Evt.onClick (DestroyTable id) ] [ text "Delete" ]
 
 
 editTableNameInput : String -> Html Msg
 editTableNameInput name =
     input
-        [ id "edit-table-name"
-        , value name
-        , onInput InputEditingTableName
-        , customOnKeyDown onTableNameKeyDown
+        [ Attr.id "edit-table-name"
+        , Attr.value name
+        , Evt.onInput InputEditingTableName
+        , EvtUtils.customOnKeyDown onTableNameKeyDown
         ]
         []
 
@@ -534,9 +533,9 @@ onTableNameKeyDown key =
 
 cancelEditTableNameButton : Html Msg
 cancelEditTableNameButton =
-    button [ onClick CancelEditTableName ] [ text "Cancel" ]
+    button [ Evt.onClick CancelEditTableName ] [ text "Cancel" ]
 
 
 saveTableNameButton : Html Msg
 saveTableNameButton =
-    button [ onClick SaveTableName ] [ text "Save" ]
+    button [ Evt.onClick SaveTableName ] [ text "Save" ]

@@ -1,8 +1,8 @@
 module Views.ChangesetError exposing (prependIfErrors, view)
 
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
-import Html exposing (Html, h3, h4, li, section, text, ul)
-import Html.Attributes exposing (class)
+import Html exposing (Html, h3, li, section, text, ul)
+import Html.Attributes as Attr
 
 
 prependIfErrors : List ChangesetError -> List (Html msg) -> List (Html msg)
@@ -11,14 +11,14 @@ prependIfErrors errors content =
         [] ->
             content
 
-        x :: xs ->
+        _ ->
             view errors :: content
 
 
 view : List ChangesetError -> Html msg
 view errors =
     section
-        [ class "changeset-errors" ]
+        [ Attr.class "changeset-errors" ]
         [ heading, ul [] (List.map errorList errors |> List.concat) ]
 
 

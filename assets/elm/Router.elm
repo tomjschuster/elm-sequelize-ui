@@ -9,11 +9,11 @@ module Router
         , routePath
         )
 
-import Html exposing (Attribute, Html, a, p, text)
-import Html.Attributes exposing (href)
+import Html exposing (Attribute, Html, a)
+import Html.Attributes as Attr
 import Navigation exposing (Location)
 import UrlParser as Url exposing ((</>), Parser, int, s, top)
-import Utils.Handlers exposing (onPreventDefaultClick)
+import Utils.Events as EvtUtils
 
 
 type Route
@@ -116,12 +116,12 @@ link toMsg route attributes children =
 
 getHref : Route -> Attribute msg
 getHref =
-    getUrl >> href
+    getUrl >> Attr.href
 
 
 getOnClick : (Route -> msg) -> Route -> Attribute msg
 getOnClick toMsg =
-    toMsg >> onPreventDefaultClick
+    toMsg >> EvtUtils.onPreventDefaultClick
 
 
 routePath : Route -> List Route

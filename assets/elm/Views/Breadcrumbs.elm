@@ -1,7 +1,7 @@
 module Views.Breadcrumbs exposing (home, schema, table, view)
 
-import Data.Schema as Schema exposing (Schema)
-import Data.Table as Table exposing (Table)
+import Data.Schema exposing (Schema)
+import Data.Table exposing (Table)
 import Html exposing (Html, p, text)
 import Router exposing (Route)
 
@@ -14,7 +14,7 @@ view gotoMsg crumbs =
 breadcrumbsChildren : (Route -> msg) -> List ( Route, String ) -> List (Html msg)
 breadcrumbsChildren gotoMsg crumbs =
     case List.reverse crumbs of
-        ( route, title ) :: ancestors ->
+        ( _, title ) :: ancestors ->
             (text title :: List.map (breadcrumb gotoMsg) ancestors)
                 |> List.reverse
                 |> List.intersperse (text " > ")

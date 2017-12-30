@@ -1,14 +1,14 @@
 module Views.Column.DataTypeSelect exposing (view)
 
 import Data.Column.DataType as DataType exposing (DataType(..))
-import Html as Html exposing (Attribute, Html, div, input, label, optgroup, option, select, span, text)
-import Html.Attributes exposing (attribute, checked, for, id, name, placeholder, selected, type_, value)
-import Utils.Handlers exposing (onChangeBool, onChangeInt, onIntInput)
+import Html exposing (Html, input, label, optgroup, option, select, span, text)
+import Html.Attributes as Attr
+import Utils.Events as EvtUtils
 
 
 view : String -> (DataType -> msg) -> DataType -> Html msg
 view viewId handleChange dataType =
-    label [ for viewId ] (text "Data Type" :: children viewId handleChange dataType)
+    label [ Attr.for viewId ] (text "Data Type" :: children viewId handleChange dataType)
 
 
 children : String -> (DataType -> msg) -> DataType -> List (Html msg)
@@ -24,8 +24,8 @@ children viewId handleChange dataType =
 dtSelect : String -> (DataType -> msg) -> DataType -> Html msg
 dtSelect viewId handleChange dataType =
     select
-        [ id viewId
-        , onChangeInt (mapDataTypeChange handleChange)
+        [ Attr.id viewId
+        , EvtUtils.onChangeInt (mapDataTypeChange handleChange)
         ]
         (dtSelectChildren dataType)
 
@@ -56,13 +56,8 @@ dtOptGroups dataType =
 dtOptGroup : String -> List DataType -> DataType -> Html msg
 dtOptGroup name dataTypes dataType =
     optgroup
-        [ attribute "label" name ]
+        [ Attr.attribute "label" name ]
         (List.map (dtOption dataType) dataTypes)
-
-
-dtOptions : String -> DataType -> List (Html msg)
-dtOptions viewId dataType =
-    List.map (dtOption dataType) DataType.all
 
 
 defaultOption : Html msg
@@ -73,8 +68,8 @@ defaultOption =
 dtOption : DataType -> DataType -> Html msg
 dtOption currentType dataType =
     option
-        [ selected (DataType.isSameType dataType currentType)
-        , value (DataType.toId dataType |> toString)
+        [ Attr.selected (DataType.isSameType dataType currentType)
+        , Attr.value (DataType.toId dataType |> toString)
         ]
         [ text (DataType.toShortName dataType) ]
 
@@ -103,19 +98,19 @@ modifierView viewId handleChange dataType =
         Time withTimezone ->
             Just <| timezoneCheckbox Time viewId handleChange withTimezone
 
-        otherType ->
+        _ ->
             Nothing
 
 
 sizeInput : (Maybe Int -> DataType) -> String -> (DataType -> msg) -> Maybe Int -> Html msg
-sizeInput toDataType viewId handleChange size =
+sizeInput toDataType _ handleChange size =
     label []
         [ text "Size"
         , input
-            [ type_ "number"
-            , placeholder (toString DataType.defaultSize)
-            , value (maybeIntToString size)
-            , onIntInput (toDataType >> handleChange)
+            [ Attr.type_ "number"
+            , Attr.placeholder (toString DataType.defaultSize)
+            , Attr.value (maybeIntToString size)
+            , EvtUtils.onIntInput (toDataType >> handleChange)
             ]
             []
         ]
@@ -144,14 +139,14 @@ precisionInput :
     -> Html msg
 precisionInput toDataType viewId handleDataTypeChange precision scale =
     label
-        [ for (viewId ++ "-precision") ]
+        [ Attr.for (viewId ++ "-precision") ]
         [ text "Precision"
         , input
-            [ id (viewId ++ "-precision")
-            , type_ "number"
-            , placeholder (toString DataType.defaultPrecision)
-            , onIntInput (flip toDataType scale >> handleDataTypeChange)
-            , value (maybeIntToString precision)
+            [ Attr.id (viewId ++ "-precision")
+            , Attr.type_ "number"
+            , Attr.placeholder (toString DataType.defaultPrecision)
+            , EvtUtils.onIntInput (flip toDataType scale >> handleDataTypeChange)
+            , Attr.value (maybeIntToString precision)
             ]
             []
         ]
@@ -166,14 +161,14 @@ scaleInput :
     -> Html msg
 scaleInput toDataType viewId handleDataTypeChange precision scale =
     label
-        [ for (viewId ++ "-scale") ]
+        [ Attr.for (viewId ++ "-scale") ]
         [ text "Scale"
         , input
-            [ id (viewId ++ "-scale")
-            , type_ "number"
-            , placeholder (toString DataType.defaultScale)
-            , onIntInput (toDataType precision >> handleDataTypeChange)
-            , value (maybeIntToString scale)
+            [ Attr.id (viewId ++ "-scale")
+            , Attr.type_ "number"
+            , Attr.placeholder (toString DataType.defaultScale)
+            , EvtUtils.onIntInput (toDataType precision >> handleDataTypeChange)
+            , Attr.value (maybeIntToString scale)
             ]
             []
         ]
@@ -182,13 +177,13 @@ scaleInput toDataType viewId handleDataTypeChange precision scale =
 timezoneCheckbox : (Bool -> DataType) -> String -> (DataType -> msg) -> Bool -> Html msg
 timezoneCheckbox toDataType viewId handleDataTypeChange isChecked =
     label
-        [ for (viewId ++ "-timezone") ]
+        [ Attr.for (viewId ++ "-timezone") ]
         [ text "With Timezone"
         , input
-            [ id (viewId ++ "-timezone")
-            , type_ "checkbox"
-            , checked isChecked
-            , onChangeBool (toDataType >> handleDataTypeChange)
+            [ Attr.id (viewId ++ "-timezone")
+            , Attr.type_ "checkbox"
+            , Attr.checked isChecked
+            , EvtUtils.onChangeBool (toDataType >> handleDataTypeChange)
             ]
             []
         ]

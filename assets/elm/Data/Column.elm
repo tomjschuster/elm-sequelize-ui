@@ -19,18 +19,11 @@ import Data.Column.Constraints as ColumnConstraints exposing (ColumnConstraints)
 import Data.Column.DataType as DataType exposing (DataType)
 import Data.Column.Reference as Reference exposing (Reference)
 import Data.Constraint as Constraint
-    exposing
-        ( DefaultValue
-        , ForeignKey
-        , NotNull
-        , PrimaryKey
-        , UniqueKey
-        )
-import Data.Table as Table exposing (Table)
-import Data.Table.Constraints as TableConstraints exposing (TableConstraints)
+import Data.Table exposing (Table)
+import Data.Table.Constraints exposing (TableConstraints)
 import Dict exposing (Dict)
-import Json.Decode as JD exposing (Decoder, int, maybe, string)
-import Json.Decode.Pipeline exposing (custom, decode, hardcoded, optional, required)
+import Json.Decode exposing (Decoder, int, string)
+import Json.Decode.Pipeline exposing (custom, decode, hardcoded, required)
 import Json.Encode as JE exposing (Value)
 import Utils.List as ListUtils
 
@@ -184,13 +177,6 @@ isUnique columnId =
         >> List.filter (Constraint.isUnique columnId)
         >> List.isEmpty
         >> not
-
-
-singleReferences : Int -> TableConstraints -> List Int
-singleReferences columnId =
-    .foreignKeys
-        >> List.filter (Constraint.inSingleForeignKey columnId)
-        >> List.filterMap Constraint.singleReference
 
 
 

@@ -8,8 +8,8 @@ module Data.Schema
         , updateName
         )
 
-import Json.Decode exposing (Decoder, Value, int, list, string)
-import Json.Decode.Pipeline exposing (decode, optional, required)
+import Json.Decode exposing (Decoder, int, string)
+import Json.Decode.Pipeline exposing (decode, required)
 import Json.Encode as JE
 
 

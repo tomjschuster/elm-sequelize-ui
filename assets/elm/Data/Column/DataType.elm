@@ -19,8 +19,12 @@ module Data.Column.DataType
         , numericGroup
         , toId
         , toLongName
+        , toPrecision
+        , toScale
         , toShortName
+        , toSize
         , toUrlParams
+        , toWithTimezone
         )
 
 import Json.Decode as JD exposing (Decoder)
@@ -975,25 +979,25 @@ decoder =
 dataTypeDecoder : DataType -> Decoder DataType
 dataTypeDecoder dataType =
     case dataType of
-        Char size ->
+        Char _ ->
             sizeDecoder Char
 
-        VarChar size ->
+        VarChar _ ->
             sizeDecoder VarChar
 
-        Bit size ->
+        Bit _ ->
             sizeDecoder Bit
 
-        VarBit size ->
+        VarBit _ ->
             sizeDecoder VarBit
 
-        Decimal precision scale ->
+        Decimal _ _ ->
             precisionScaleDecoder Decimal
 
-        TimeStamp withTimezone ->
+        TimeStamp _ ->
             withTimezoneDecoder TimeStamp
 
-        Time withTimezone ->
+        Time _ ->
             withTimezoneDecoder Time
 
         otherType ->
@@ -1034,7 +1038,7 @@ toUrlParams =
 
 
 encodeConfig : DataTypeConfig -> List ( String, Value )
-encodeConfig { dataType, id, size, precision, scale, withTimezone } =
+encodeConfig { dataType, size, precision, scale, withTimezone } =
     [ ( "data_type_id", encodeDataTypeId dataType )
     , ( "size", encodeNullableInt size )
     , ( "precision", encodeNullableInt precision )
@@ -1044,7 +1048,7 @@ encodeConfig { dataType, id, size, precision, scale, withTimezone } =
 
 
 configToParams : DataTypeConfig -> List ( String, Maybe String )
-configToParams { dataType, id, size, precision, scale, withTimezone } =
+configToParams { id, size, precision, scale, withTimezone } =
     [ ( "data_type_id", Just (toString id) )
     , ( "size", Maybe.map toString size )
     , ( "precision", Maybe.map toString precision )

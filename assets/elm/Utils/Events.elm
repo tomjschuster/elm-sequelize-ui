@@ -1,4 +1,4 @@
-module Utils.Handlers
+module Utils.Events
     exposing
         ( customOnKeyDown
         , onChangeBool
@@ -150,14 +150,6 @@ failOnNothingDecoder =
 failOnErrorDecoder : Result a b -> Decoder b
 failOnErrorDecoder =
     Result.map JD.succeed >> Result.withDefault (JD.fail "Error")
-
-
-failOnFalse : a -> Bool -> Decoder a
-failOnFalse value success =
-    if success then
-        JD.succeed value
-    else
-        JD.fail "false"
 
 
 

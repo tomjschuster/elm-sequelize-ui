@@ -1,4 +1,9 @@
-module Data.ChangesetError exposing (ChangesetError, columnToText, parseHttpError)
+module Data.ChangesetError
+    exposing
+        ( ChangesetError
+        , columnToText
+        , parseHttpError
+        )
 
 import Http
 import Json.Decode as JD exposing (Decoder)
@@ -6,7 +11,9 @@ import Utils.Http exposing (errorBody, isUnprocessableTable)
 
 
 type alias ChangesetError =
-    { column : String, messages : List String }
+    { column : String
+    , messages : List String
+    }
 
 
 columnToText : String -> String

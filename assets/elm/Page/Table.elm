@@ -3,48 +3,28 @@ module Page.Table exposing (Model, Msg, init, initialModel, update, view)
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Column as Column exposing (Column)
-import Data.Column.DataType as DataType exposing (DataType)
-import Data.Constraint as Constraint exposing (Constraint)
-import Data.DbEntity as DbEntity exposing (DbEntity(..))
+import Data.Constraint exposing (Constraint)
+import Data.DbEntity exposing (DbEntity(..))
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
 import Data.Table.Constraints as TableConstraints exposing (TableConstraints)
-import Dict exposing (Dict)
 import Dom
 import Html
     exposing
         ( Html
         , button
-        , div
-        , fieldset
-        , form
         , h2
         , h3
         , input
-        , label
-        , legend
         , li
         , main_
-        , option
         , p
         , section
-        , select
-        , span
         , text
         , ul
         )
-import Html.Attributes as Attributes
-    exposing
-        ( checked
-        , disabled
-        , for
-        , id
-        , name
-        , selected
-        , type_
-        , value
-        )
-import Html.Events exposing (on, onCheck, onClick, onInput)
+import Html.Attributes as Attr
+import Html.Events as Evt
 import Http
 import Request.Column as ColumnReq
 import Request.Constraint as ConstraintReq
@@ -52,7 +32,7 @@ import Request.Schema as SchemaReq
 import Request.Table as TableReq
 import Router exposing (Route)
 import Task exposing (Task)
-import Utils.Handlers exposing (customOnKeyDown, onChangeId, onChangeInt, onEnter)
+import Utils.Events as EvtUtils
 import Utils.Http exposing (isUnprocessableEntity)
 import Utils.Keys exposing (Key(..))
 import Utils.List as ListUtils
@@ -75,7 +55,6 @@ type alias Model =
     , editingTable : Maybe Table
     , newColumn : Column
     , editingColumn : Maybe Column
-    , toDeleteColumnId : Maybe Int
     , errors : List ChangesetError
     }
 
@@ -90,7 +69,6 @@ initialModel =
     , editingTable = Nothing
     , newColumn = Column.empty
     , editingColumn = Nothing
-    , toDeleteColumnId = Nothing
     , errors = []
     }
 
@@ -141,7 +119,6 @@ type Msg
     | SaveEditingColumn
       -- DELETE COLUMN
     | DestroyColumn Int
-    | RemoveColumn (Result Http.Error ())
 
 
 handleHttpError : Model -> Http.Error -> ( Model, Cmd Msg, AppUpdate )
@@ -220,7 +197,11 @@ update msg model =
         SaveTableName ->
             ( model
             , model.editingTable
-                |> Maybe.map (TableReq.update >> sendDbEntity DbUpdatedTable >> Task.attempt LoadDbEntity)
+                |> Maybe.map
+                    (TableReq.update
+                        >> sendDbEntity DbUpdatedTable
+                        >> Task.attempt LoadDbEntity
+                    )
                 |> Maybe.withDefault Cmd.none
             , AppUpdate.none
             )
@@ -256,7 +237,8 @@ update msg model =
                     (\column ->
                         Task.sequence
                             [ Task.succeed (DbNewColumn column)
-                            , ConstraintReq.indexForTable model.tableId |> sendDbEntity DbConstraints
+                            , ConstraintReq.indexForTable model.tableId
+                                |> sendDbEntity DbConstraints
                             ]
                     )
                 |> Task.attempt LoadDbEntities
@@ -282,15 +264,6 @@ update msg model =
             )
 
         UpdateEditingColumn editingColumn ->
-            let
-                sameDataType =
-                    model.editingColumn
-                        |> Maybe.map (.dataType >> (/=) editingColumn.dataType)
-                        |> Maybe.withDefault False
-
-                newDataType =
-                    sameDataType && editingColumn.dataType /= DataType.none
-            in
             ( { model | editingColumn = Just editingColumn }
             , Cmd.none
             , AppUpdate.none
@@ -315,7 +288,8 @@ update msg model =
                             (\column ->
                                 Task.sequence
                                     [ Task.succeed (DbUpdatedColumn column)
-                                    , ConstraintReq.indexForTable model.tableId |> sendDbEntity DbConstraints
+                                    , ConstraintReq.indexForTable model.tableId
+                                        |> sendDbEntity DbConstraints
                                     ]
                             )
                         >> Task.attempt LoadDbEntities
@@ -325,31 +299,13 @@ update msg model =
             )
 
         DestroyColumn id ->
-            ( { model | toDeleteColumnId = Just id }
-            , ColumnReq.destroy id |> Http.send RemoveColumn
+            ( model
+            , ColumnReq.destroy id
+                |> Http.toTask
+                |> Task.map (always (DbDeletedColumn id))
+                |> Task.attempt LoadDbEntity
             , AppUpdate.none
             )
-
-        RemoveColumn (Ok ()) ->
-            ( { model
-                | errors = []
-                , schemaColumns =
-                    model.toDeleteColumnId
-                        |> Maybe.map (Column.removeFromList model.schemaColumns)
-                        |> Maybe.withDefault model.schemaColumns
-              }
-            , Cmd.none
-            , AppUpdate.none
-            )
-
-        RemoveColumn (Err error) ->
-            if isUnprocessableEntity error then
-                ( { model | errors = ChangesetError.parseHttpError error }
-                , Dom.focus "create-column" |> Task.attempt FocusResult
-                , AppUpdate.none
-                )
-            else
-                ( model, Cmd.none, AppUpdate.httpError error )
 
 
 updateWithDbEntities : List DbEntity -> Model -> Model
@@ -390,6 +346,9 @@ updateWithDbEntity entity model =
                 , editingColumn = Nothing
             }
 
+        DbDeletedColumn id ->
+            { model | schemaColumns = List.filter (.id >> (/=) id) model.schemaColumns }
+
         DbConstraints tableConstraints ->
             { model | tableConstraints = tableConstraints }
 
@@ -424,7 +383,7 @@ view model =
             main_ []
                 [ breadCrumbs model.schema table
                 , tableView model.editingTable table
-                , CE.view model.errors
+                , CE.view errors
                 , newColumnView
                     model.newColumn
                     model.schemaTables
@@ -473,12 +432,12 @@ tableName name =
 
 editTableNameButton : Html Msg
 editTableNameButton =
-    button [ onClick EditTable ] [ text "Edit Name" ]
+    button [ Evt.onClick EditTable ] [ text "Edit Name" ]
 
 
 deleteTableButton : Html Msg
 deleteTableButton =
-    button [ onClick Destroy ] [ text "Delete Table" ]
+    button [ Evt.onClick Destroy ] [ text "Delete Table" ]
 
 
 
@@ -496,10 +455,10 @@ editingTableChildren { name } =
 editTableNameInput : String -> Html Msg
 editTableNameInput name =
     input
-        [ id "edit-table-name"
-        , value name
-        , onInput InputTableName
-        , customOnKeyDown onTableNameKeyDown
+        [ Attr.id "edit-table-name"
+        , Attr.value name
+        , Evt.onInput InputTableName
+        , EvtUtils.customOnKeyDown onTableNameKeyDown
         ]
         []
 
@@ -519,12 +478,12 @@ onTableNameKeyDown key =
 
 cancelEditTableButton : Html Msg
 cancelEditTableButton =
-    button [ onClick CancelEditTable ] [ text "Cancel" ]
+    button [ Evt.onClick CancelEditTable ] [ text "Cancel" ]
 
 
 saveEditTableButton : Html Msg
 saveEditTableButton =
-    button [ onClick SaveTableName ] [ text "Save" ]
+    button [ Evt.onClick SaveTableName ] [ text "Save" ]
 
 
 
@@ -590,10 +549,8 @@ columnItem model tableConstraints column =
     let
         columnConstraints =
             Column.buildConstraints
-                Dict.empty
-                -- tableReferences
-                Dict.empty
-                -- Column References
+                (ListUtils.toLookup .id model.schemaTables)
+                (ListUtils.toLookup .id model.schemaColumns)
                 column.id
                 tableConstraints
     in
@@ -631,19 +588,14 @@ columnItem model tableConstraints column =
 
 editColumnButton : Int -> Html Msg
 editColumnButton id =
-    button [ onClick (EditColumn id) ] [ text "Edit" ]
+    button [ Evt.onClick (EditColumn id) ] [ text "Edit" ]
 
 
 deleteColumnButton : Int -> Html Msg
 deleteColumnButton id =
-    button [ onClick (DestroyColumn id) ] [ text "Delete" ]
+    button [ Evt.onClick (DestroyColumn id) ] [ text "Delete" ]
 
 
 cancelEditColumnButton : Html Msg
 cancelEditColumnButton =
-    button [ onClick CancelEditColumn ] [ text "Cancel" ]
-
-
-saveEditColumnButton : Html Msg
-saveEditColumnButton =
-    button [ onClick SaveEditingColumn ] [ text "Save" ]
+    button [ Evt.onClick CancelEditColumn ] [ text "Cancel" ]
