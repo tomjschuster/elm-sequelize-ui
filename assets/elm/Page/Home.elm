@@ -19,12 +19,12 @@ import Html
 import Html.Attributes as Attr
 import Html.Events as Evt
 import Http
-import Request.Schema as RS
+import Request.Schema as SchemaReq
 import Router exposing (Route)
 import Task
 import Utils.Events as EvtUtils
 import Utils.Keys exposing (Key(..))
-import Views.Breadcrumbs as BC
+import Views.Breadcrumbs as BreadCrumbs
 import Views.ChangesetError as CE
 
 
@@ -47,7 +47,7 @@ initialModel =
 
 init : ( Model, Cmd Msg )
 init =
-    ( initialModel, Http.send LoadSchemas RS.index )
+    ( initialModel, Http.send LoadSchemas SchemaReq.index )
 
 
 
@@ -113,7 +113,7 @@ update msg model =
 
         CreateSchema ->
             ( { model | editingSchema = Nothing }
-            , RS.create model.newSchema |> Http.send LoadNewSchema
+            , SchemaReq.create model.newSchema |> Http.send LoadNewSchema
             , AppUpdate.none
             )
 
@@ -163,7 +163,7 @@ update msg model =
             case model.editingSchema of
                 Just schema ->
                     ( { model | errors = [] }
-                    , RS.update schema |> Http.send LoadUpdatedSchema
+                    , SchemaReq.update schema |> Http.send LoadUpdatedSchema
                     , AppUpdate.none
                     )
 
@@ -200,7 +200,7 @@ update msg model =
         -- DELETE SCHEMA
         DestroySchema id ->
             ( { model | editingSchema = Nothing, toDeleteId = Just id }
-            , RS.destroy id |> Http.send RemoveSchema
+            , SchemaReq.destroy id |> Http.send RemoveSchema
             , AppUpdate.none
             )
 
@@ -256,7 +256,7 @@ title =
 
 breadCrumbs : Html Msg
 breadCrumbs =
-    BC.view Goto [ BC.home ]
+    BreadCrumbs.view Goto [ BreadCrumbs.home ]
 
 
 schemasView : Model -> Html Msg

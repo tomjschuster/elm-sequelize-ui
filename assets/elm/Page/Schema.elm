@@ -37,7 +37,7 @@ import Router exposing (Route)
 import Task
 import Utils.Events as EvtUtils
 import Utils.Keys exposing (Key(..))
-import Views.Breadcrumbs as BC
+import Views.Breadcrumbs as BreadCrumbs
 import Views.ChangesetError as CE
 
 
@@ -318,8 +318,8 @@ view model =
 
 breadCrumbs : Schema -> Html Msg
 breadCrumbs schema =
-    BC.view Goto
-        [ BC.home, BC.schema schema ]
+    BreadCrumbs.view Goto
+        [ BreadCrumbs.home, BreadCrumbs.schema schema ]
 
 
 

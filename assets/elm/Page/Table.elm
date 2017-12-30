@@ -33,10 +33,10 @@ import Request.Table as TableReq
 import Router exposing (Route)
 import Task exposing (Task)
 import Utils.Events as EvtUtils
-import Utils.Http exposing (isUnprocessableEntity)
+import Utils.Http as HttpUtils
 import Utils.Keys exposing (Key(..))
 import Utils.List as ListUtils
-import Views.Breadcrumbs as BC
+import Views.Breadcrumbs as BreadCrumbs
 import Views.ChangesetError as CE
 import Views.Column.ConstraintsDisplay as ConDisplay
 import Views.Column.DataTypeDisplay as DTDisplay
@@ -123,7 +123,7 @@ type Msg
 
 handleHttpError : Model -> Http.Error -> ( Model, Cmd Msg, AppUpdate )
 handleHttpError model error =
-    if isUnprocessableEntity error then
+    if HttpUtils.isUnprocessableEntity error then
         ( { model | errors = ChangesetError.parseHttpError error }
         , Cmd.none
         , AppUpdate.none
@@ -364,7 +364,9 @@ view model =
     let
         table =
             model.schemaTables
-                |> ListUtils.findWithDefault Table.empty (.id >> (==) model.tableId)
+                |> ListUtils.findWithDefault
+                    Table.empty
+                    (.id >> (==) model.tableId)
     in
     case model.errors of
         [] ->
@@ -393,7 +395,8 @@ view model =
 
 breadCrumbs : Schema -> Table -> Html Msg
 breadCrumbs schema table =
-    BC.view Goto [ BC.home, BC.schema schema, BC.table table ]
+    BreadCrumbs.view Goto
+        [ BreadCrumbs.home, BreadCrumbs.schema schema, BreadCrumbs.table table ]
 
 
 
