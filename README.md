@@ -16,7 +16,6 @@
 * Type ID helper functions
 * Field Order
 * Comments
-* Enum Types, Geometric Types
 * Template generator
 * Elm CSS or CSS Library
 * UI/UX
@@ -25,3 +24,4 @@
 * Github integration?
 * Testing
 * Build pipeline
+* More advanced SQL types
