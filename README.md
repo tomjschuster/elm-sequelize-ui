@@ -4,7 +4,6 @@
 ## In Progress
 
 * Constraints
-  * Build column constraints from list
   * Table constraints
 
 ## Bugs
