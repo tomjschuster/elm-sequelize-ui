@@ -12,6 +12,7 @@
 
 # Todo
 * Constraints
+* Make HTML more semantic
 * Type ID helper functions
 * Field Order
 * Comments
