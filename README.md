@@ -12,7 +12,9 @@
 
 ## Bugs
 
-  None :)
+* Show primary key when part of composite
+* On delete column, or on update column to remove pk, only delete constraint if
+  not composite primary key
 
 # Todo
 * Constraints
