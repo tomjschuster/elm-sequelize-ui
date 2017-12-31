@@ -1,4 +1,4 @@
-module Data.Column.DataType
+module Data.DataType
     exposing
         ( DataType(..)
         , all

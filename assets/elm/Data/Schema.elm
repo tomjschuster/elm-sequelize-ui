@@ -39,21 +39,13 @@ decoder =
 encode : Schema -> JE.Value
 encode schema =
     JE.object
-        [ ( "schema"
-          , JE.object
-                [ ( "id", JE.int schema.id )
-                , ( "name", JE.string schema.name )
-                ]
-          )
+        [ ( "id", JE.int schema.id )
+        , ( "name", JE.string schema.name )
         ]
 
 
 encodeNew : Schema -> JE.Value
 encodeNew schema =
     JE.object
-        [ ( "schema"
-          , JE.object
-                [ ( "name", JE.string schema.name )
-                ]
-          )
+        [ ( "name", JE.string schema.name )
         ]

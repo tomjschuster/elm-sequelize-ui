@@ -4,12 +4,15 @@ module Data.Column.Reference
         , Reference(..)
         , display
         , encode
-        , isDisplayable
+        , fromColumnId
+        , isComplete
         , selectColumn
         , selectTable
         , start
         )
 
+import Data.Column exposing (Column)
+import Dict exposing (Dict)
 import Json.Encode as JE exposing (Value)
 
 
@@ -22,21 +25,27 @@ type alias Data =
 
 
 type Reference
-    = SelectTable
-    | SelectColumn Int
-    | Ready Int Int
-    | Display Int String Int String
+    = None
+    | TableSelected Int
+    | Complete Int Int
+
+
+fromColumnId : Dict Int Column -> Int -> Maybe Reference
+fromColumnId columnLookup columnId =
+    columnLookup
+        |> Dict.get columnId
+        |> Maybe.map (.tableId >> flip Complete columnId)
 
 
 start : Reference
 start =
-    SelectTable
+    None
 
 
-isDisplayable : Reference -> Bool
-isDisplayable reference =
+isComplete : Reference -> Bool
+isComplete reference =
     case reference of
-        Display _ _ _ _ ->
+        Complete _ _ ->
             True
 
         _ ->
@@ -46,10 +55,10 @@ isDisplayable reference =
 selectColumn : Maybe Int -> Reference -> Reference
 selectColumn maybeColumnId reference =
     case reference of
-        SelectColumn tableId ->
+        TableSelected tableId ->
             maybeColumnId
-                |> Maybe.map (Ready tableId)
-                |> Maybe.withDefault (SelectColumn tableId)
+                |> Maybe.map (Complete tableId)
+                |> Maybe.withDefault (TableSelected tableId)
 
         _ ->
             reference
@@ -59,8 +68,8 @@ selectTable : Maybe Int -> Reference -> Reference
 selectTable maybeTableId reference =
     if getTableId reference /= maybeTableId then
         maybeTableId
-            |> Maybe.map SelectColumn
-            |> Maybe.withDefault SelectTable
+            |> Maybe.map TableSelected
+            |> Maybe.withDefault None
     else
         reference
 
@@ -68,28 +77,15 @@ selectTable maybeTableId reference =
 getColumnId : Reference -> Maybe Int
 getColumnId reference =
     case reference of
-        Ready _ columnId ->
-            Just columnId
-
-        Display _ _ columnId _ ->
+        Complete _ columnId ->
             Just columnId
 
         _ ->
             Nothing
 
 
-display : Reference -> String
-display reference =
-    case reference of
-        Display _ tableName _ columnName ->
-            buildDisplay tableName columnName
-
-        _ ->
-            ""
-
-
-buildDisplay : String -> String -> String
-buildDisplay tableName columnName =
+display : String -> String -> String
+display tableName columnName =
     "references " ++ tableName ++ "(" ++ columnName ++ ")"
 
 
@@ -101,13 +97,10 @@ encode =
 getTableId : Reference -> Maybe Int
 getTableId reference =
     case reference of
-        SelectColumn tableId ->
+        TableSelected tableId ->
             Just tableId
 
-        Ready tableId _ ->
-            Just tableId
-
-        Display tableId _ _ _ ->
+        Complete tableId _ ->
             Just tableId
 
         _ ->

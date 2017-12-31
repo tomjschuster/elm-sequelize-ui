@@ -1,8 +1,8 @@
 module Views.Column.Edit exposing (view)
 
 import Data.Column as Column exposing (Column)
-import Data.Column.Constraints as ColumnConstraints
-import Data.Column.DataType as DataType
+import Data.Column.Constraints as ColumnConstraints exposing (ColumnConstraints)
+import Data.DataType as DataType
 import Data.Table exposing (Table)
 import Dict
 import Html
@@ -24,15 +24,30 @@ import Views.Column.DataTypeSelect as DataTypesSelect
 import Views.Column.ReferenceSelect as ReferenceSelect
 
 
-view : msg -> (Column -> msg) -> String -> Column -> List Table -> List Column -> Html msg
-view saveMsg toUpdateMsg saveText column tables columns =
+view :
+    msg
+    -> (( Column, ColumnConstraints ) -> msg)
+    -> String
+    -> List Table
+    -> List Column
+    -> Column
+    -> ColumnConstraints
+    -> Html msg
+view saveMsg toUpdateMsg saveText tables columns column constraints =
+    let
+        toColumnMsg =
+            flip (,) constraints >> toUpdateMsg
+
+        toConstraintsMsg =
+            (,) column >> toUpdateMsg
+    in
     form
         []
         [ fieldset []
-            [ nameField toUpdateMsg column
-            , dataTypeField toUpdateMsg column
-            , constraintFields toUpdateMsg column
-            , referenceFields toUpdateMsg column tables columns
+            [ nameField toColumnMsg column
+            , dataTypeField toColumnMsg column
+            , constraintFields toConstraintsMsg column constraints
+            , referenceFields toConstraintsMsg column tables columns constraints
             , saveButton saveMsg saveText
             ]
         ]
@@ -42,12 +57,15 @@ view saveMsg toUpdateMsg saveText column tables columns =
 -- Name
 
 
-nameField : (Column -> msg) -> Column -> Html msg
-nameField toUpdateMsg column =
+nameField :
+    (Column -> msg)
+    -> Column
+    -> Html msg
+nameField toColumnMsg column =
     p
         []
         [ nameInput
-            (flip Column.updateName column >> toUpdateMsg)
+            (flip Column.updateName column >> toColumnMsg)
             column.name
         ]
 
@@ -69,13 +87,16 @@ nameInput toNameMsg name =
 -- Data Type
 
 
-dataTypeField : (Column -> msg) -> Column -> Html msg
-dataTypeField toUpdateMsg column =
+dataTypeField :
+    (Column -> msg)
+    -> Column
+    -> Html msg
+dataTypeField toColumnMsg column =
     p
         []
         [ DataTypesSelect.view
             "create-column-data-type"
-            (flip Column.updateDataType column >> toUpdateMsg)
+            (flip Column.updateDataType column >> toColumnMsg)
             column.dataType
         ]
 
@@ -84,25 +105,34 @@ dataTypeField toUpdateMsg column =
 -- Constraint Fields
 
 
-constraintFields : (Column -> msg) -> Column -> Html msg
-constraintFields toUpdateMsg column =
+constraintFields :
+    (ColumnConstraints -> msg)
+    -> Column
+    -> ColumnConstraints
+    -> Html msg
+constraintFields toConstraintsMsg column constraints =
     ConstraintFields.view
         "create-column-constraints"
-        (flip Column.updateConstraints column >> toUpdateMsg)
-        column.constraints
+        toConstraintsMsg
+        constraints
 
 
 
 -- Reference Fields
 
 
-referenceFields : (Column -> msg) -> Column -> List Table -> List Column -> Html msg
-referenceFields toUpdateMsg column tables columns =
+referenceFields :
+    (ColumnConstraints -> msg)
+    -> Column
+    -> List Table
+    -> List Column
+    -> ColumnConstraints
+    -> Html msg
+referenceFields toColumnMsg column tables columns constraints =
     let
-        toMsg =
-            flip ColumnConstraints.updateForeignKey column.constraints
-                >> flip Column.updateConstraints column
-                >> toUpdateMsg
+        toReferenceMsg =
+            flip ColumnConstraints.updateReference constraints
+                >> toColumnMsg
 
         validColumnGroups =
             columns
@@ -119,10 +149,10 @@ referenceFields toUpdateMsg column tables columns =
     p []
         [ text "References: "
         , ReferenceSelect.view
-            toMsg
+            toReferenceMsg
             validTables
             validColumns
-            column.constraints.reference
+            constraints.reference
         ]
 
 

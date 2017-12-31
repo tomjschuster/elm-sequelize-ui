@@ -25,12 +25,12 @@ view :
     -> Html msg
 view toMsg tables allColumns reference =
     case reference of
-        SelectTable ->
+        None ->
             span []
                 [ tableSelect toMsg reference Nothing tables
                 ]
 
-        SelectColumn tableId ->
+        TableSelected tableId ->
             let
                 columns =
                     List.filter (.tableId >> (==) tableId) allColumns
@@ -41,18 +41,7 @@ view toMsg tables allColumns reference =
                 , clearButton toMsg
                 ]
 
-        Ready tableId columnId ->
-            let
-                columns =
-                    List.filter (.tableId >> (==) tableId) allColumns
-            in
-            span []
-                [ tableSelect toMsg reference (Just tableId) tables
-                , columnSelect toMsg reference (Just columnId) columns
-                , clearButton toMsg
-                ]
-
-        Display tableId _ columnId _ ->
+        Complete tableId columnId ->
             let
                 columns =
                     List.filter (.tableId >> (==) tableId) allColumns
@@ -119,5 +108,5 @@ columnOption maybeId { id, name } =
 clearButton : (Reference -> msg) -> Html msg
 clearButton toMsg =
     button
-        [ Evt.onClick (toMsg Reference.SelectTable), Attr.type_ "button" ]
+        [ Evt.onClick (toMsg Reference.None), Attr.type_ "button" ]
         [ text "Clear" ]

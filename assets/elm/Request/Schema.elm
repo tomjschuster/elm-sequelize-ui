@@ -12,6 +12,7 @@ module Request.Schema
 import Data.Schema as Schema exposing (Schema)
 import Http
 import Json.Decode as JD
+import Json.Encode as JE
 import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
 
@@ -41,14 +42,18 @@ create : Schema -> Http.Request Schema
 create schema =
     Http.post
         url
-        (Schema.encodeNew schema |> Http.jsonBody)
+        (JE.object [ ( "schema", Schema.encodeNew schema ) ]
+            |> Http.jsonBody
+        )
         (dataDecoder Schema.decoder)
 
 
 update : Schema -> Http.Request Schema
 update schema =
     put (resourceUrl schema.id)
-        (Http.jsonBody (Schema.encode schema))
+        (JE.object [ ( "schema", Schema.encode schema ) ]
+            |> Http.jsonBody
+        )
         (dataDecoder Schema.decoder)
 
 

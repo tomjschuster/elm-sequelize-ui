@@ -3,7 +3,11 @@ module Data.Table.Constraints
         ( TableConstraints
         , decoder
         , default
+        , defaultValue
         , fromList
+        , isNotNull
+        , isPrimaryKey
+        , isUnique
         )
 
 import Data.Constraint as Constraint
@@ -35,6 +39,36 @@ default =
     , uniqueKeys = []
     , foreignKeys = []
     }
+
+
+isPrimaryKey : Int -> TableConstraints -> Bool
+isPrimaryKey columnId =
+    .primaryKey
+        >> Maybe.map (Constraint.inPrimaryKey columnId)
+        >> Maybe.withDefault False
+
+
+isNotNull : Int -> TableConstraints -> Bool
+isNotNull columnId =
+    .notNulls
+        >> List.filter (Constraint.isNotNull columnId)
+        >> List.isEmpty
+        >> not
+
+
+defaultValue : Int -> TableConstraints -> Maybe String
+defaultValue columnId =
+    .defaultValues
+        >> List.filterMap (Constraint.defaultValue columnId)
+        >> List.head
+
+
+isUnique : Int -> TableConstraints -> Bool
+isUnique columnId =
+    .uniqueKeys
+        >> List.filter (Constraint.isUnique columnId)
+        >> List.isEmpty
+        >> not
 
 
 fromList : List Constraint -> TableConstraints

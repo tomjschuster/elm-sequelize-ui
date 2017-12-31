@@ -67,22 +67,14 @@ decoder =
 encode : Table -> Value
 encode table =
     JE.object
-        [ ( "table"
-          , JE.object
-                [ ( "name", JE.string table.name )
-                , ( "schema_id", JE.int table.schemaId )
-                ]
-          )
+        [ ( "name", JE.string table.name )
+        , ( "schema_id", JE.int table.schemaId )
         ]
 
 
 encodeNew : Table -> Value
 encodeNew { name, schemaId } =
     JE.object
-        [ ( "table"
-          , JE.object
-                [ ( "name", JE.string name )
-                , ( "schema_id", JE.int schemaId )
-                ]
-          )
+        [ ( "name", JE.string name )
+        , ( "schema_id", JE.int schemaId )
         ]

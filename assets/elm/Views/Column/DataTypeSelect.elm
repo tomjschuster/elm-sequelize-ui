@@ -1,6 +1,6 @@
 module Views.Column.DataTypeSelect exposing (view)
 
-import Data.Column.DataType as DataType exposing (DataType(..))
+import Data.DataType as DataType exposing (DataType(..))
 import Html exposing (Html, input, label, optgroup, option, select, span, text)
 import Html.Attributes as Attr
 import Utils.Events as EvtUtils

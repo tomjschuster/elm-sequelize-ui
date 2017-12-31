@@ -3,11 +3,12 @@ module Page.Table exposing (Model, Msg, init, initialModel, update, view)
 import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Column as Column exposing (Column)
+import Data.Column.Constraints as ColumnConstraints exposing (ColumnConstraints)
 import Data.Constraint exposing (Constraint)
 import Data.DbEntity exposing (DbEntity(..))
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
-import Data.Table.Constraints as TableConstraints exposing (TableConstraints)
+import Dict exposing (Dict)
 import Dom
 import Html
     exposing
@@ -38,7 +39,7 @@ import Utils.Keys exposing (Key(..))
 import Utils.List as ListUtils
 import Views.Breadcrumbs as BreadCrumbs
 import Views.ChangesetError as CE
-import Views.Column.ConstraintsDisplay as ConDisplay
+import Views.Column.ConstraintsDisplay as ConstDisplay
 import Views.Column.DataTypeDisplay as DTDisplay
 import Views.Column.Edit as EditColumn
 
@@ -53,8 +54,8 @@ type alias Model =
     , schemaColumns : List Column
     , tableConstraints : List Constraint
     , editingTable : Maybe Table
-    , newColumn : Column
-    , editingColumn : Maybe Column
+    , newColumn : ( Column, ColumnConstraints )
+    , editingColumn : Maybe ( Column, ColumnConstraints )
     , errors : List ChangesetError
     }
 
@@ -67,7 +68,7 @@ initialModel =
     , schemaColumns = []
     , tableConstraints = []
     , editingTable = Nothing
-    , newColumn = Column.empty
+    , newColumn = ( Column.empty, ColumnConstraints.default )
     , editingColumn = Nothing
     , errors = []
     }
@@ -75,7 +76,10 @@ initialModel =
 
 init : Int -> Int -> ( Model, Cmd Msg )
 init schemaId tableId =
-    ( { initialModel | newColumn = Column.init tableId, tableId = tableId }
+    ( { initialModel
+        | newColumn = ( Column.init tableId, ColumnConstraints.default )
+        , tableId = tableId
+      }
     , Task.sequence
         [ SchemaReq.one schemaId |> sendDbEntity DbSchema
         , TableReq.indexForSchema schemaId |> sendDbEntity DbTables
@@ -110,11 +114,11 @@ type Msg
     | RemoveTable (Result Http.Error ())
       -- COLUMNS
       -- CREATE COLUMN
-    | UpdateNewColumn Column
+    | UpdateNewColumn ( Column, ColumnConstraints )
     | CreateColumn
       -- UPDATE COLUMN
     | EditColumn Int
-    | UpdateEditingColumn Column
+    | UpdateEditingColumn ( Column, ColumnConstraints )
     | CancelEditColumn
     | SaveEditingColumn
       -- DELETE COLUMN
@@ -231,7 +235,7 @@ update msg model =
 
         CreateColumn ->
             ( model
-            , ColumnReq.create model.newColumn
+            , uncurry ColumnReq.create model.newColumn
                 |> Http.toTask
                 |> Task.andThen
                     (\column ->
@@ -247,16 +251,18 @@ update msg model =
 
         -- EDIT COLUMN
         EditColumn id ->
+            let
+                columnLookup =
+                    ListUtils.toDictBy .id model.schemaColumns
+
+                constraints =
+                    ColumnConstraints.fromList columnLookup id model.tableConstraints
+            in
             ( { model
                 | editingTable = Nothing
                 , editingColumn =
-                    model.schemaColumns
-                        |> ListUtils.find (.id >> (==) id)
-                        |> Maybe.map
-                            (Column.findAndAddEditingConstraints
-                                (ListUtils.toLookup .id model.schemaColumns)
-                                (TableConstraints.fromList model.tableConstraints)
-                            )
+                    ListUtils.find (.id >> (==) id) model.schemaColumns
+                        |> Maybe.map (flip (,) constraints)
                 , errors = []
               }
             , Dom.focus "edit-column-name" |> Task.attempt FocusResult
@@ -282,7 +288,7 @@ update msg model =
             ( model
             , model.editingColumn
                 |> Maybe.map
-                    (ColumnReq.updateWithConstraints
+                    (uncurry ColumnReq.updateWithConstraints
                         >> Http.toTask
                         >> Task.andThen
                             (\column ->
@@ -335,7 +341,7 @@ updateWithDbEntity entity model =
         DbNewColumn column ->
             { model
                 | schemaColumns = ListUtils.add column model.schemaColumns
-                , newColumn = Column.init model.tableId
+                , newColumn = ( Column.init model.tableId, ColumnConstraints.default )
             }
 
         DbUpdatedColumn column ->
@@ -373,10 +379,12 @@ view model =
             main_ []
                 [ breadCrumbs model.schema table
                 , tableView model.editingTable table
-                , newColumnView
+                , uncurry
+                    (newColumnView
+                        model.schemaTables
+                        model.schemaColumns
+                    )
                     model.newColumn
-                    model.schemaTables
-                    model.schemaColumns
                 , columnsView model
                 ]
 
@@ -385,10 +393,12 @@ view model =
                 [ breadCrumbs model.schema table
                 , tableView model.editingTable table
                 , CE.view errors
-                , newColumnView
+                , uncurry
+                    (newColumnView
+                        model.schemaTables
+                        model.schemaColumns
+                    )
                     model.newColumn
-                    model.schemaTables
-                    model.schemaColumns
                 , columnsView model
                 ]
 
@@ -492,17 +502,18 @@ saveEditTableButton =
 -- NEW COLUMN
 
 
-newColumnView : Column -> List Table -> List Column -> Html Msg
-newColumnView column tables columns =
+newColumnView : List Table -> List Column -> Column -> ColumnConstraints -> Html Msg
+newColumnView tables columns column constraints =
     section []
         [ newColumnTitle
         , EditColumn.view
             CreateColumn
             UpdateNewColumn
             "Create"
-            column
             tables
             columns
+            column
+            constraints
         ]
 
 
@@ -517,13 +528,9 @@ newColumnTitle =
 
 columnsView : Model -> Html Msg
 columnsView model =
-    let
-        tableConstraints =
-            TableConstraints.fromList model.tableConstraints
-    in
     section []
         [ columnsTitle
-        , columnList model tableConstraints
+        , columnList model
         ]
 
 
@@ -532,41 +539,51 @@ columnsTitle =
     h3 [] [ text "Columns" ]
 
 
-columnList : Model -> TableConstraints -> Html Msg
-columnList model tableConstraints =
+columnList : Model -> Html Msg
+columnList model =
     let
         columns =
             model.schemaColumns
                 |> List.filter (.tableId >> (==) model.tableId)
+
+        constraintsLookup =
+            ColumnConstraints.dictFromList
+                (ListUtils.toDictBy .id model.schemaColumns)
+                model.tableConstraints
     in
-    ul [] (List.map (columnItem model tableConstraints) columns)
+    ul [] (List.map (columnItem constraintsLookup model) columns)
 
 
 
 -- COLUMN ITEM
 
 
-columnItem : Model -> TableConstraints -> Column -> Html Msg
-columnItem model tableConstraints column =
+columnItem : Dict Int ColumnConstraints -> Model -> Column -> Html Msg
+columnItem constraintsLookup model column =
     let
+        tableLookup =
+            ListUtils.toDictBy .id model.schemaTables
+
+        columnLookup =
+            ListUtils.toDictBy .id model.schemaColumns
+
         columnConstraints =
-            Column.buildConstraints
-                (ListUtils.toLookup .id model.schemaTables)
-                (ListUtils.toLookup .id model.schemaColumns)
-                column.id
-                tableConstraints
+            constraintsLookup
+                |> Dict.get column.id
+                |> Maybe.withDefault ColumnConstraints.default
     in
     case model.editingColumn of
-        Just editingColumn ->
+        Just ( editingColumn, editingConstraints ) ->
             if editingColumn.id == column.id then
                 li []
                     [ EditColumn.view
                         SaveEditingColumn
                         UpdateEditingColumn
                         "Save"
-                        editingColumn
                         model.schemaTables
                         model.schemaColumns
+                        editingColumn
+                        editingConstraints
                     , cancelEditColumnButton
                     ]
             else
@@ -575,7 +592,10 @@ columnItem model tableConstraints column =
                     , DTDisplay.view column.dataType
                     , editColumnButton column.id
                     , deleteColumnButton column.id
-                    , ConDisplay.view columnConstraints
+                    , ConstDisplay.view
+                        tableLookup
+                        columnLookup
+                        columnConstraints
                     ]
 
         Nothing ->
@@ -584,7 +604,10 @@ columnItem model tableConstraints column =
                 , DTDisplay.view column.dataType
                 , editColumnButton column.id
                 , deleteColumnButton column.id
-                , ConDisplay.view columnConstraints
+                , ConstDisplay.view
+                    tableLookup
+                    columnLookup
+                    columnConstraints
                 ]
 
 

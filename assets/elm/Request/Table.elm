@@ -12,10 +12,11 @@ module Request.Table
         )
 
 import Data.Column as Column exposing (Column)
-import Data.Column.DataType as DataType exposing (DataType)
+import Data.DataType as DataType exposing (DataType)
 import Data.Table as Table exposing (Table)
 import Http exposing (Request)
 import Json.Decode as JD
+import Json.Encode as JE
 import Request.Schema as SchemaReq
 import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
 
@@ -56,7 +57,9 @@ referencesUrl =
 create : Table -> Request Table
 create table =
     Http.post url
-        (Table.encodeNew table |> Http.jsonBody)
+        (JE.object [ ( "table", Table.encodeNew table ) ]
+            |> Http.jsonBody
+        )
         (dataDecoder Table.decoder)
 
 
@@ -108,7 +111,9 @@ update : Table -> Request Table
 update table =
     put
         (resourceUrl table.id)
-        (Table.encode table |> Http.jsonBody)
+        (JE.object [ ( "table", Table.encode table ) ]
+            |> Http.jsonBody
+        )
         (dataDecoder Table.decoder)
 
 

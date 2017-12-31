@@ -7,15 +7,15 @@ module Utils.List
         , groupByMap
         , maybeAdd
         , replaceIfMatch
-        , toLookup
+        , toDictBy
         )
 
 import Dict exposing (Dict)
 
 
-toLookup : (a -> comparable) -> List a -> Dict comparable a
-toLookup toKey =
-    List.map (\v -> ( toKey v, v )) >> Dict.fromList
+toDictBy : (a -> comparable) -> List a -> Dict comparable a
+toDictBy toKey =
+    List.foldl (\v acc -> Dict.insert (toKey v) v acc) Dict.empty
 
 
 groupBy : (a -> comparable) -> List a -> Dict comparable (List a)

@@ -1,11 +1,12 @@
 module Data.Constraint
     exposing
         ( Constraint(..)
-        , DefaultValue
+        , DefaultValue(..)
         , ForeignKey
         , NotNull
         , PrimaryKey
         , UniqueKey
+        , columnId
         , decoder
         , defaultValue
         , defaultValueDecoder
@@ -13,6 +14,7 @@ module Data.Constraint
         , inPrimaryKey
         , inSingleForeignKey
         , isNotNull
+        , isSingleReference
         , isUnique
         , notNullDecoder
         , primaryKeyDecoder
@@ -286,11 +288,38 @@ inSingleForeignKey id (ForeignKey _ _ index) =
     isForeignKeyIndex id index
 
 
+isSingleReference : ForeignKey -> Bool
+isSingleReference =
+    singleReference >> (/=) Nothing
+
+
 singleReference : ForeignKey -> Maybe ColumnId
 singleReference (ForeignKey _ _ index) =
     case index of
         ForeignKeyIndex [ ( _, singleId ) ] ->
             Just singleId
+
+        _ ->
+            Nothing
+
+
+columnId : Constraint -> Maybe ColumnId
+columnId constraint =
+    case constraint of
+        PK (PrimaryKey _ _ (Index [ columnId ])) ->
+            Just columnId
+
+        NN (NotNull _ _ columnId) ->
+            Just columnId
+
+        DV (DefaultValue _ _ columnId _) ->
+            Just columnId
+
+        UQ (UniqueKey _ _ (Index [ columnId ])) ->
+            Just columnId
+
+        FK (ForeignKey _ _ (ForeignKeyIndex [ ( columnId, _ ) ])) ->
+            Just columnId
 
         _ ->
             Nothing

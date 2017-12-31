@@ -12,9 +12,11 @@ module Request.Column
         )
 
 import Data.Column as Column exposing (Column)
-import Data.Column.DataType as DataType exposing (DataType)
+import Data.Column.Constraints as ColumnConstraints exposing (ColumnConstraints)
+import Data.DataType as DataType exposing (DataType)
 import Http exposing (Request)
 import Json.Decode as JD
+import Json.Encode as JE
 import Request.Schema as SchemaReq
 import Request.Table as TableReq
 import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
@@ -50,11 +52,16 @@ tableColumnsForDataTypeUrl tableId =
     DataType.toUrlParams >> (++) (TableReq.resourceUrl tableId ++ "?")
 
 
-create : Column -> Request Column
-create column =
+create : Column -> ColumnConstraints -> Request Column
+create column constraints =
     Http.post
         url
-        (Column.encode column |> Http.jsonBody)
+        (JE.object
+            [ ( "column", Column.encode column )
+            , ( "constraints", ColumnConstraints.encode constraints )
+            ]
+            |> Http.jsonBody
+        )
         (dataDecoder <| Column.decoder)
 
 
@@ -94,14 +101,21 @@ indexReferences tableId =
 update : Column -> Request Column
 update column =
     put (resourceUrl column.id)
-        (Column.encode column |> Http.jsonBody)
+        (JE.object [ ( "column", Column.encode column ) ]
+            |> Http.jsonBody
+        )
         (dataDecoder Column.decoder)
 
 
-updateWithConstraints : Column -> Request Column
-updateWithConstraints column =
+updateWithConstraints : Column -> ColumnConstraints -> Request Column
+updateWithConstraints column constraints =
     put (resourceUrl column.id)
-        (Column.encode column |> Http.jsonBody)
+        (JE.object
+            [ ( "column", Column.encode column )
+            , ( "constraints", ColumnConstraints.encode constraints )
+            ]
+            |> Http.jsonBody
+        )
         (dataDecoder Column.decoder)
 
 
