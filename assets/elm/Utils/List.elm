@@ -6,6 +6,7 @@ module Utils.List
         , groupBy
         , groupByMap
         , maybeAdd
+        , maybeCons
         , replaceIfMatch
         , toDictBy
         )
@@ -46,6 +47,11 @@ replaceIfMatch toId item =
 add : a -> List a -> List a
 add item =
     List.foldr (::) [ item ]
+
+
+maybeCons : Maybe a -> List a -> List a
+maybeCons maybe list =
+    maybe |> Maybe.map (flip (::) list) |> Maybe.withDefault list
 
 
 maybeAdd : Maybe a -> List a -> List a

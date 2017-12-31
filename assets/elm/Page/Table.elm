@@ -4,10 +4,11 @@ import AppUpdate exposing (AppUpdate)
 import Data.ChangesetError as ChangesetError exposing (ChangesetError)
 import Data.Column as Column exposing (Column)
 import Data.Column.Constraints as ColumnConstraints exposing (ColumnConstraints)
-import Data.Constraint exposing (Constraint)
+import Data.Constraint as Constraint exposing (Constraint)
 import Data.DbEntity exposing (DbEntity(..))
 import Data.Schema as Schema exposing (Schema)
 import Data.Table as Table exposing (Table)
+import Data.Table.Constraints as TableConstraints exposing (TableConstraints)
 import Dict exposing (Dict)
 import Dom
 import Html
@@ -386,6 +387,7 @@ view model =
                     )
                     model.newColumn
                 , columnsView model
+                , tableConstraintsView (TableConstraints.fromList model.tableConstraints)
                 ]
 
         errors ->
@@ -400,6 +402,7 @@ view model =
                     )
                     model.newColumn
                 , columnsView model
+                , tableConstraintsView (TableConstraints.fromList model.tableConstraints)
                 ]
 
 
@@ -624,3 +627,47 @@ deleteColumnButton id =
 cancelEditColumnButton : Html Msg
 cancelEditColumnButton =
     button [ Evt.onClick CancelEditColumn ] [ text "Cancel" ]
+
+
+
+-- TABLE CONSTRAINT
+
+
+tableConstraintsView : TableConstraints -> Html Msg
+tableConstraintsView constraints =
+    section []
+        [ h2 [] [ text "Table Constraints" ]
+        , ul []
+            (ListUtils.maybeCons (constraints.primaryKey |> Maybe.map primaryKeyView)
+                [ notNullsView constraints.notNulls
+                , defaultValuesView constraints.defaultValues
+                , uniqueKeysView constraints.uniqueKeys
+                , foreignKeysView constraints.foreignKeys
+                ]
+            )
+        ]
+
+
+primaryKeyView : Constraint.PrimaryKey -> Html Msg
+primaryKeyView primaryKeys =
+    li [] [ text (toString primaryKeys) ]
+
+
+notNullsView : List Constraint.NotNull -> Html Msg
+notNullsView notNulls =
+    li [] [ text (toString notNulls) ]
+
+
+defaultValuesView : List Constraint.DefaultValue -> Html Msg
+defaultValuesView defaultValues =
+    li [] [ text (toString defaultValues) ]
+
+
+uniqueKeysView : List Constraint.UniqueKey -> Html Msg
+uniqueKeysView uniqueKeys =
+    li [] [ text (toString uniqueKeys) ]
+
+
+foreignKeysView : List Constraint.ForeignKey -> Html Msg
+foreignKeysView foreignKeys =
+    li [] [ text (toString foreignKeys) ]
