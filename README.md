@@ -5,6 +5,10 @@
 
 * Constraints
   * Table constraints
+    * Update column constraints without deleting and not erasing any fields
+    * CRUD table constraints w/out names
+    * Names
+    * Composite foreign keys
 
 ## Bugs
 
