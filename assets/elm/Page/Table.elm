@@ -353,7 +353,10 @@ updateWithDbEntity entity model =
             }
 
         DbDeletedColumn id ->
-            { model | schemaColumns = List.filter (.id >> (/=) id) model.schemaColumns }
+            { model
+                | schemaColumns = List.filter (.id >> (/=) id) model.schemaColumns
+                , tableConstraints = List.filter (not << Constraint.hasColumn id) model.tableConstraints
+            }
 
         DbConstraints tableConstraints ->
             { model | tableConstraints = tableConstraints }

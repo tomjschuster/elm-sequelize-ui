@@ -4,7 +4,7 @@ defmodule SequelizeUi.DbDesign do
   """
 
   import Ecto.Query, warn: false
-  alias Ecto.Multi
+  alias Ecto.{Multi, Changeset}
   alias SequelizeUi.Repo
   alias SequelizeUi.DbDesign.{
     Schema,
@@ -242,19 +242,20 @@ defmodule SequelizeUi.DbDesign do
 
   defp create_column_pk(_table, _column, %{"is_primary_key" => false}), do: {:ok, nil}
   defp create_column_pk(%Table{} = table, %Column{} = column, _params) do
-    case get_pks(table.id) do
-      [pk | _rest] ->
-        add_primary_key(column, pk)
-      [] ->
-        attrs = constraint_attrs(table, "primary_key")
-        build_constraint(column, attrs)
-    end
+    pk = get_pk(table.id) || %Constraint{columns: []}
+    attrs = constraint_attrs(table, "primary_key")
+
+    pk
+    |> Constraint.changeset(attrs)
+    |> Changeset.put_assoc(:columns, [column | pk.columns])
+    |> Repo.insert_or_update()
   end
 
-  defp get_pks(table_id) do
-    Repo.all from con in Constraint,
+  defp get_pk(table_id) do
+    Repo.one from con in Constraint,
       join: type in assoc(con, :constraint_type),
-      where: type.enum_name == "primary_key" and con.table_id == ^table_id
+      where: type.enum_name == "primary_key" and con.table_id == ^table_id,
+      preload: [:columns]
   end
 
   defp add_primary_key(%Column{} = column, %Constraint{} = constraint) do

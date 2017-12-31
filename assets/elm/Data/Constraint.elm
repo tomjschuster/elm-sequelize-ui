@@ -7,10 +7,12 @@ module Data.Constraint
         , PrimaryKey
         , UniqueKey
         , columnId
+        , columnInComposite
         , decoder
         , defaultValue
         , defaultValueDecoder
         , foreignKeyDecoder
+        , hasColumn
         , inPrimaryKey
         , inSingleForeignKey
         , isNotNull
@@ -306,23 +308,44 @@ singleReference (ForeignKey _ _ index) =
 columnId : Constraint -> Maybe ColumnId
 columnId constraint =
     case constraint of
-        PK (PrimaryKey _ _ (Index [ columnId ])) ->
-            Just columnId
+        PK (PrimaryKey _ _ (Index [ id ])) ->
+            Just id
 
-        NN (NotNull _ _ columnId) ->
-            Just columnId
+        NN (NotNull _ _ id) ->
+            Just id
 
-        DV (DefaultValue _ _ columnId _) ->
-            Just columnId
+        DV (DefaultValue _ _ id _) ->
+            Just id
 
-        UQ (UniqueKey _ _ (Index [ columnId ])) ->
-            Just columnId
+        UQ (UniqueKey _ _ (Index [ id ])) ->
+            Just id
 
-        FK (ForeignKey _ _ (ForeignKeyIndex [ ( columnId, _ ) ])) ->
-            Just columnId
+        FK (ForeignKey _ _ (ForeignKeyIndex [ ( id, _ ) ])) ->
+            Just id
 
         _ ->
             Nothing
+
+
+columnInComposite : ColumnId -> Constraint -> Bool
+columnInComposite id constraint =
+    case constraint of
+        PK (PrimaryKey _ _ (Index ids)) ->
+            List.member id ids
+
+        UQ (UniqueKey _ _ (Index ids)) ->
+            List.member id ids
+
+        FK (ForeignKey _ _ (ForeignKeyIndex pairs)) ->
+            List.any (\( id1, id2 ) -> id1 == id || id2 == id) pairs
+
+        _ ->
+            False
+
+
+hasColumn : ColumnId -> Constraint -> Bool
+hasColumn id constraint =
+    columnId constraint == Just id || columnInComposite id constraint
 
 
 
