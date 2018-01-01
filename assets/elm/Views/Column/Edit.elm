@@ -46,7 +46,7 @@ view saveMsg toUpdateMsg saveText tables columns column constraints =
         [ fieldset []
             [ nameField toColumnMsg column
             , dataTypeField toColumnMsg column
-            , constraintFields toConstraintsMsg column constraints
+            , constraintFields toConstraintsMsg constraints
             , referenceFields toConstraintsMsg column tables columns constraints
             , saveButton saveMsg saveText
             ]
@@ -107,10 +107,9 @@ dataTypeField toColumnMsg column =
 
 constraintFields :
     (ColumnConstraints -> msg)
-    -> Column
     -> ColumnConstraints
     -> Html msg
-constraintFields toConstraintsMsg column constraints =
+constraintFields toConstraintsMsg constraints =
     ConstraintFields.view
         "create-column-constraints"
         toConstraintsMsg

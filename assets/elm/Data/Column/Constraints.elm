@@ -16,7 +16,7 @@ module Data.Column.Constraints
         , updateReference
         )
 
-import Data.Column as Column exposing (Column)
+import Data.Column exposing (Column)
 import Data.Column.Reference as Reference exposing (Reference)
 import Data.Constraint as Constraint exposing (Constraint)
 import Data.Table.Constraints as TableConstraints exposing (TableConstraints)

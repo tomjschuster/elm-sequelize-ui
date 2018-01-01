@@ -12,7 +12,7 @@ module Data.Column
 
 import Data.DataType as DataType exposing (DataType)
 import Json.Decode exposing (Decoder, int, string)
-import Json.Decode.Pipeline exposing (custom, decode, hardcoded, required)
+import Json.Decode.Pipeline exposing (custom, decode, required)
 import Json.Encode as JE exposing (Value)
 
 
