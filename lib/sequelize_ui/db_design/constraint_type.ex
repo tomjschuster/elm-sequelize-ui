@@ -28,6 +28,7 @@ defmodule SequelizeUi.DbDesign.ConstraintType do
       4 -> :unique_key
       5 -> :foreign_key
       6 -> :check
+      _ -> nil
     end
   end
 
@@ -39,6 +40,7 @@ defmodule SequelizeUi.DbDesign.ConstraintType do
       :unique_key -> 4
       :foreign_key -> 5
       :check -> 6
+      _ -> nil
     end
   end
 end

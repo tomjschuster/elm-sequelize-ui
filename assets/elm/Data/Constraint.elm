@@ -67,7 +67,7 @@ type ForeignKey
 
 type alias Config =
     { constraintType : ConstraintType
-    , id : Int
+    , name : String
     , decoder : Decoder Constraint
     }
 
@@ -86,57 +86,57 @@ toConfig constraintType =
     case constraintType of
         PKType ->
             { constraintType = PKType
-            , id = 1
+            , name = "primary_key"
             , decoder = JD.map PK primaryKeyDecoder
             }
 
         NNType ->
             { constraintType = NNType
-            , id = 1
+            , name = "not_null"
             , decoder = JD.map NN notNullDecoder
             }
 
         DVType ->
             { constraintType = DVType
-            , id = 1
+            , name = "default_value"
             , decoder = JD.map DV defaultValueDecoder
             }
 
         UQType ->
             { constraintType = UQType
-            , id = 1
+            , name = "unique_key"
             , decoder = JD.map UQ uniqueKeyDecoder
             }
 
         FKType ->
             { constraintType = FKType
-            , id = 1
+            , name = "foreign_key"
             , decoder = JD.map FK foreignKeyDecoder
             }
 
         NoConstraintType ->
             { constraintType = NoConstraintType
-            , id = 0
+            , name = ""
             , decoder = JD.fail "constraint fail"
             }
 
 
-typeFromId : Int -> ConstraintType
-typeFromId id =
-    case id of
-        1 ->
+typeFromName : String -> ConstraintType
+typeFromName name =
+    case name of
+        "primary_key" ->
             PKType
 
-        2 ->
+        "not_null" ->
             NNType
 
-        3 ->
+        "default_value" ->
             DVType
 
-        4 ->
+        "unique_key" ->
             UQType
 
-        5 ->
+        "foreign_key" ->
             FKType
 
         _ ->
@@ -149,8 +149,8 @@ typeFromId id =
 
 decoder : Decoder Constraint
 decoder =
-    JD.field "constraintTypeId" JD.int
-        |> JD.andThen (typeFromId >> toConfig >> .decoder)
+    JD.field "type" JD.string
+        |> JD.andThen (typeFromName >> toConfig >> .decoder)
 
 
 primaryKeyDecoder : Decoder PrimaryKey
