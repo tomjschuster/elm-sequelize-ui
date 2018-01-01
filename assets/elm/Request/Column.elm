@@ -4,7 +4,6 @@ module Request.Column
         , destroy
         , indexForSchema
         , one
-        , update
         , updateWithConstraints
         )
 
@@ -55,15 +54,6 @@ indexForSchema schemaId =
     Http.get
         (schemaUrl schemaId)
         (dataDecoder (JD.list Column.decoder))
-
-
-update : Column -> Request Column
-update column =
-    put (resourceUrl column.id)
-        (JE.object [ ( "column", Column.encode column ) ]
-            |> Http.jsonBody
-        )
-        (dataDecoder Column.decoder)
 
 
 updateWithConstraints : Column -> ColumnConstraints -> Request Column

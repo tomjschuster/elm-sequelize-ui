@@ -4,15 +4,11 @@ module Request.Table
         , destroy
         , index
         , indexForSchema
-        , indexReferenceCandidates
-        , indexReferences
         , one
         , resourceUrl
         , update
         )
 
-import Data.Column as Column exposing (Column)
-import Data.DataType as DataType exposing (DataType)
 import Data.Table as Table exposing (Table)
 import Http exposing (Request)
 import Json.Decode as JD
@@ -34,20 +30,6 @@ resourceUrl =
 schemaTablesUrl : Int -> String
 schemaTablesUrl =
     SchemaReq.resourceUrl >> flip (++) "/tables"
-
-
-referenceCandidatesUrl : Int -> DataType -> String
-referenceCandidatesUrl schemaId =
-    DataType.toUrlParams >> (++) (SchemaReq.resourceUrl schemaId ++ "/candidates?")
-
-
-
---schemaTablesUrl schemaId ++ "?data_type_id=" ++ toString dataTypeId
-
-
-referencesUrl : Int -> String
-referencesUrl =
-    resourceUrl >> flip (++) "/table-references"
 
 
 
@@ -82,25 +64,6 @@ indexForSchema schemaId =
     Http.get
         (schemaTablesUrl schemaId)
         (dataDecoder (JD.list Table.decoder))
-
-
-indexReferences : Int -> Http.Request (List Table)
-indexReferences tableId =
-    Http.get
-        (referencesUrl tableId)
-        (dataDecoder (JD.list Table.decoder))
-
-
-indexReferenceCandidates : Int -> DataType -> Http.Request ( List Table, List Column )
-indexReferenceCandidates schemaId dataType =
-    Http.get
-        (referenceCandidatesUrl schemaId dataType)
-        (dataDecoder
-            (JD.map2 (,)
-                (JD.list Table.decoder |> JD.field "tables")
-                (JD.list Column.decoder |> JD.field "columns")
-            )
-        )
 
 
 
