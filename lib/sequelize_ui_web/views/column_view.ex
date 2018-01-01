@@ -1,6 +1,6 @@
 defmodule SequelizeUiWeb.ColumnView do
   use SequelizeUiWeb, :view
-  alias SequelizeUiWeb.{ColumnView, TableView, SchemaView, ConstraintView}
+  alias SequelizeUiWeb.{ColumnView}
   alias SequelizeUi.DbDesign.DataType
 
   def render("index.json", %{columns: columns}) do

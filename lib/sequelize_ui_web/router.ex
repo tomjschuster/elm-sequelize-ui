@@ -1,6 +1,5 @@
 defmodule SequelizeUiWeb.Router do
   use SequelizeUiWeb, :router
-  import SequelizeUiWeb.CombinedWith
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -12,10 +11,6 @@ defmodule SequelizeUiWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
-  end
-
-  pipeline :combine_entities do
-    plug :combined_with
   end
 
   scope "/api", SequelizeUiWeb do
@@ -30,7 +25,6 @@ defmodule SequelizeUiWeb.Router do
 
       get "/:schema_id/tables", TableController, :index_for_schema
       get "/:schema_id/columns", ColumnController, :index_for_schema
-      get "/:schema_id/candidates", TableController, :index_candidates
     end
 
     scope "/tables" do
@@ -40,10 +34,7 @@ defmodule SequelizeUiWeb.Router do
       put "/:id", TableController, :update
       delete "/:id", TableController, :delete
 
-      get "/:table_id/columns", ColumnController, :index_for_table
       get "/:table_id/constraints", ConstraintController, :index_for_table
-      get "/:table_id/table-references", TableController, :index_references
-      get "/:table_id/column-references", ColumnController, :index_references
     end
 
     scope "/columns" do

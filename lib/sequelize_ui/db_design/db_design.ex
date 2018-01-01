@@ -23,13 +23,6 @@ defmodule SequelizeUi.DbDesign do
 
   def get_schema!(id), do: Repo.get!(Schema, id)
 
-  def get_schema_with_tables!(id) do
-    Repo.one! from s in Schema,
-      left_join: e in assoc(s, :tables),
-      where: s.id == ^id,
-      preload: [tables: e]
-  end
-
   def create_schema(attrs \\ %{}) do
     %Schema{}
     |> Schema.changeset(attrs)
@@ -59,28 +52,6 @@ defmodule SequelizeUi.DbDesign do
   def list_tables_for_schema(schema_id) do
     Repo.all(from Table, where: [schema_id: ^schema_id])
   end
-  def list_tables_for_schema(schema_id, nil), do: list_tables_for_schema(schema_id)
-  def list_tables_for_schema(schema_id, data_type_id) do
-    Repo.all from t in Table,
-      join: c in assoc(t, :columns),
-      where: t.schema_id == ^schema_id and c.data_type_id == ^data_type_id
-  end
-
-  def list_tables_for_schema_by_data_type(schema_id, data_type_params) do
-    column_query = from Column, where: ^data_type_params
-    Repo.all from t in Table,
-      join: c in ^column_query, on: [table_id: t.id],
-      where: t.schema_id == ^schema_id,
-      distinct: true
-  end
-
-  def list_reference_tables_for_table(table_id) do
-    Repo.all from reference_table in Table,
-      join: col in assoc(reference_table, :columns),
-      join: con in assoc(col, :reference_constraints),
-      join: source_table in assoc(con, :table),
-      where: source_table.id == ^table_id
-  end
 
   def get_table!(id), do: Repo.get!(Table, id)
 
@@ -104,45 +75,16 @@ defmodule SequelizeUi.DbDesign do
     Table.changeset(table, %{})
   end
 
+  # Column
+
   def list_columns do
     Repo.all(Column)
-  end
-
-  def list_columns_for_table(table_id) do
-    Repo.all(from Column, where: [table_id: ^table_id])
-  end
-  def list_columns_for_table(table_id, nil), do: list_columns_for_table(table_id)
-  def list_columns_for_table(table_id, data_type_id) do
-    Repo.all from Column,
-      where: [table_id: ^table_id, data_type_id: ^data_type_id]
   end
 
   def list_columns_for_schema(schema_id) do
     Repo.all from column in Column,
       join: table in assoc(column, :table),
       where: table.schema_id == ^schema_id
-  end
-
-  def list_columns_for_table_by_data_type(table_id, data_type_params) do
-    column_query = from Column, where: ^data_type_params
-    Repo.all from c in column_query,
-      where: c.table_id == ^table_id,
-      distinct: true
-  end
-  def list_columns_for_schema_by_data_type(schema_id, data_type_params) do
-    column_query = from Column, where: ^data_type_params
-    Repo.all from c in column_query,
-      join: t in assoc(c, :table),
-      where: t.schema_id == ^schema_id,
-      distinct: true
-  end
-
-  def list_reference_columns_for_table(table_id) do
-    Repo.all from reference_column in Column,
-      join: constraint in assoc(reference_column, :reference_constraints),
-      join: reference_table in assoc(reference_column, :table),
-      join: source_table in assoc(constraint, :table),
-      where: source_table.id == ^table_id
   end
 
   def get_column!(id), do: Repo.get!(Column, id)
@@ -190,16 +132,6 @@ defmodule SequelizeUi.DbDesign do
   def get_constraint_type_id(name) do
     with %ConstraintType{id: id} <- Repo.get_by(ConstraintType, name: name),
       do: id
-  end
-
-  defp get_table_constraints(table_id) do
-    Repo.all from con in Constraint,
-      join: table in assoc(con, :table),
-      join: col in assoc(con, :columns),
-      join: col_con in assoc(con, :column_constraints),
-      join: type in assoc(con, :constraint_type),
-      where: con.table_id == ^table_id,
-      preload: [table: table, columns: col, column_constraints: col_con, constraint_type: type]
   end
 
   def create_column_with_constraints(%{"column" => col_attrs, "constraints" => con_attrs}) do
@@ -256,12 +188,6 @@ defmodule SequelizeUi.DbDesign do
       join: type in assoc(con, :constraint_type),
       where: type.name == "primary_key" and con.table_id == ^table_id,
       preload: [:columns]
-  end
-
-  defp add_primary_key(%Column{} = column, %Constraint{} = constraint) do
-    with col_con_attrs <- make_col_con_attrs(column.id, nil, constraint.id),
-     {:ok, _column_constraint} <- create_column_constraint(col_con_attrs),
-     do: {:ok, constraint}
   end
 
   defp create_column_nn(_table, _column, %{"is_not_null" => false}), do: {:ok, nil}
@@ -345,69 +271,6 @@ defmodule SequelizeUi.DbDesign do
 
   def delete_constraint(%Constraint{} = constraint) do
     Repo.delete(constraint)
-  end
-
-  defp data_type_params_to_atoms(params) do
-    params
-    |> Map.take(["data_type_id", "size", "precision", "scale", "with_timezone"])
-    |> Enum.into(%{}, fn {k, v} -> {String.to_atom(k), v} end)
-    |> Map.update!(:data_type_id, &(String.to_integer(&1)))
-  end
-
-  def process_data_type_params(params) do
-    params
-    |> data_type_params_to_atoms()
-    |> data_type_id_to_attrs()
-  end
-
-  defp data_type_id_to_attrs(params) do
-    case params.data_type_id do
-      1 -> size_params(params)
-      2 -> size_params(params)
-      3 -> plain_data_type_params(params)
-      4 -> size_params(params)
-      5 -> size_params(params)
-      6 -> plain_data_type_params(params)
-      7 -> plain_data_type_params(params)
-      8 -> plain_data_type_params(params)
-      9 -> plain_data_type_params(params)
-      10 -> plain_data_type_params(params)
-      11 -> plain_data_type_params(params)
-      12 -> precision_params(params)
-      13 -> plain_data_type_params(params)
-      14 -> plain_data_type_params(params)
-      15 -> plain_data_type_params(params)
-      16 -> plain_data_type_params(params)
-      17 -> plain_data_type_params(params)
-      18 -> timezone_params(params)
-      19 -> timezone_params(params)
-    end
-  end
-
-  defp plain_data_type_params(params) do
-    [data_type_id: params.data_type_id]
-  end
-
-  defp size_params(params) do
-    [
-      data_type_id: params.data_type_id,
-      size: String.to_integer(params.size)
-    ]
-  end
-
-  defp precision_params(params) do
-    [
-      data_type_id: params.data_type_id,
-      precision: String.to_integer(params.precision),
-      scale: String.to_integer(params.scale)
-    ]
-  end
-
-  defp timezone_params(params) do
-    [
-      data_type_id: params.data_type_id,
-      with_timezone: String.to_existing_atom(params.with_timezone)
-    ]
   end
 end
 

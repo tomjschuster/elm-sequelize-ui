@@ -1,6 +1,6 @@
 defmodule SequelizeUiWeb.SchemaView do
   use SequelizeUiWeb, :view
-  alias SequelizeUiWeb.{SchemaView, TableView}
+  alias SequelizeUiWeb.{SchemaView}
 
   def render("index.json", %{schemas: schemas}) do
     %{data: render_many(schemas, SchemaView, "schema.json")}

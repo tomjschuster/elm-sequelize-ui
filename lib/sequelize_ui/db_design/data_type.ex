@@ -38,6 +38,7 @@ defmodule SequelizeUi.DbDesign.DataType do
       17 -> :date
       18 -> :timestamp
       19 -> :time
+      _ -> nil
     end
   end
 
@@ -62,6 +63,7 @@ defmodule SequelizeUi.DbDesign.DataType do
       :date -> 17
       :timestamp -> 18
       :time -> 19
+      _ -> nil
     end
   end
 
@@ -86,6 +88,7 @@ defmodule SequelizeUi.DbDesign.DataType do
       "date" -> 17
       "timestamp" -> 18
       "time" -> 19
+      _ -> nil
     end
   end
 end

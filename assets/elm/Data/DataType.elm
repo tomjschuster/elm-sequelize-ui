@@ -683,8 +683,8 @@ toConfig dataType =
 
         Integer ->
             { dataType = Integer
-            , name = "int"
-            , longName = "int"
+            , name = "integer"
+            , longName = "integer"
             , size = Nothing
             , precision = Nothing
             , scale = Nothing
@@ -895,7 +895,7 @@ fromName name =
         "smallint" ->
             Just smallInt
 
-        "int" ->
+        "integer" ->
             Just integer
 
         "bigint" ->
