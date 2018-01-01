@@ -64,4 +64,28 @@ defmodule SequelizeUi.DbDesign.DataType do
       :time -> 19
     end
   end
+
+  def string_to_id(string) do
+    case string do
+      "char" -> 1
+      "varchar" -> 2
+      "text" -> 3
+      "bit" -> 4
+      "varbit" -> 5
+      "smallint" -> 6
+      "integer" -> 7
+      "bigint" -> 8
+      "smallserial" -> 9
+      "serial" -> 10
+      "bigserial" -> 11
+      "decimal" -> 12
+      "double" -> 13
+      "real" -> 14
+      "money" -> 15
+      "boolean" -> 16
+      "date" -> 17
+      "timestamp" -> 18
+      "time" -> 19
+    end
+  end
 end

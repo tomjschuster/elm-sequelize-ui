@@ -599,7 +599,6 @@ isSameType dataType1 dataType2 =
 
 type alias DataTypeConfig =
     { dataType : DataType
-    , id : Int
     , name : String
     , longName : String
     , size : Maybe Int
@@ -614,7 +613,6 @@ toConfig dataType =
     case dataType of
         NoDataType ->
             { dataType = NoDataType
-            , id = 0
             , name = ""
             , longName = ""
             , size = Nothing
@@ -625,7 +623,6 @@ toConfig dataType =
 
         Char size ->
             { dataType = Char size
-            , id = 1
             , name = "char"
             , longName = "char (" ++ displaySize size ++ ")"
             , size = Just <| Maybe.withDefault defaultSize size
@@ -636,7 +633,6 @@ toConfig dataType =
 
         VarChar size ->
             { dataType = VarChar size
-            , id = 2
             , name = "varchar"
             , longName = "varchar (" ++ displaySize size ++ ")"
             , size = Just <| Maybe.withDefault defaultSize size
@@ -647,7 +643,6 @@ toConfig dataType =
 
         Text ->
             { dataType = Text
-            , id = 3
             , name = "text"
             , longName = "text"
             , size = Nothing
@@ -658,7 +653,6 @@ toConfig dataType =
 
         Bit size ->
             { dataType = Bit size
-            , id = 4
             , name = "bit"
             , longName = "bit (" ++ displaySize size ++ ")"
             , size = Just <| Maybe.withDefault defaultSize size
@@ -669,7 +663,6 @@ toConfig dataType =
 
         VarBit size ->
             { dataType = VarBit size
-            , id = 5
             , name = "varbit"
             , longName = "varbit (" ++ displaySize size ++ ")"
             , size = Just <| Maybe.withDefault defaultSize size
@@ -680,7 +673,6 @@ toConfig dataType =
 
         SmallInt ->
             { dataType = SmallInt
-            , id = 6
             , name = "smallint"
             , longName = "smallint"
             , size = Nothing
@@ -691,7 +683,6 @@ toConfig dataType =
 
         Integer ->
             { dataType = Integer
-            , id = 7
             , name = "int"
             , longName = "int"
             , size = Nothing
@@ -702,7 +693,6 @@ toConfig dataType =
 
         BigInt ->
             { dataType = BigInt
-            , id = 8
             , name = "bigint"
             , longName = "bigint"
             , size = Nothing
@@ -713,7 +703,6 @@ toConfig dataType =
 
         SmallSerial ->
             { dataType = SmallSerial
-            , id = 9
             , name = "smallserial"
             , longName = "smallserial"
             , size = Nothing
@@ -724,7 +713,6 @@ toConfig dataType =
 
         Serial ->
             { dataType = Serial
-            , id = 10
             , name = "serial"
             , longName = "serial"
             , size = Nothing
@@ -735,7 +723,6 @@ toConfig dataType =
 
         BigSerial ->
             { dataType = BigSerial
-            , id = 11
             , name = "bigserial"
             , longName = "bigserial"
             , size = Nothing
@@ -746,7 +733,6 @@ toConfig dataType =
 
         Decimal precision scale ->
             { dataType = Decimal precision scale
-            , id = 12
             , name = "decimal"
             , longName =
                 "decimal ("
@@ -762,7 +748,6 @@ toConfig dataType =
 
         Double ->
             { dataType = Double
-            , id = 13
             , name = "double"
             , longName = "double"
             , size = Nothing
@@ -773,7 +758,6 @@ toConfig dataType =
 
         Real ->
             { dataType = Real
-            , id = 14
             , name = "real"
             , longName = "real"
             , size = Nothing
@@ -784,7 +768,6 @@ toConfig dataType =
 
         Money ->
             { dataType = Money
-            , id = 15
             , name = "money"
             , longName = "money"
             , size = Nothing
@@ -795,7 +778,6 @@ toConfig dataType =
 
         Boolean ->
             { dataType = Boolean
-            , id = 16
             , name = "bool"
             , longName = "bool"
             , size = Nothing
@@ -806,7 +788,6 @@ toConfig dataType =
 
         Date ->
             { dataType = Date
-            , id = 17
             , name = "date"
             , longName = "date"
             , size = Nothing
@@ -817,7 +798,6 @@ toConfig dataType =
 
         TimeStamp withTimezone ->
             { dataType = TimeStamp withTimezone
-            , id = 18
             , name = "timestamp"
             , longName =
                 if withTimezone then
@@ -832,7 +812,6 @@ toConfig dataType =
 
         Time withTimezone ->
             { dataType = Time withTimezone
-            , id = 19
             , name = "time"
             , longName =
                 if withTimezone then
@@ -863,11 +842,6 @@ displayPrecision =
 displayScale : Maybe Int -> String
 displayScale =
     Maybe.withDefault defaultScale >> toString
-
-
-toId : DataType -> Int
-toId =
-    toConfig >> .id
 
 
 toName : DataType -> String
@@ -1038,7 +1012,7 @@ toUrlParams =
 
 encodeConfig : DataTypeConfig -> List ( String, Value )
 encodeConfig { dataType, size, precision, scale, withTimezone } =
-    [ ( "data_type_id", encodeDataTypeId dataType )
+    [ ( "data_type", encodeName dataType )
     , ( "size", encodeNullableInt size )
     , ( "precision", encodeNullableInt precision )
     , ( "scale", encodeNullableInt scale )
@@ -1047,21 +1021,20 @@ encodeConfig { dataType, size, precision, scale, withTimezone } =
 
 
 configToParams : DataTypeConfig -> List ( String, Maybe String )
-configToParams { id, size, precision, scale, withTimezone } =
-    [ ( "data_type_id", Just (toString id) )
-    , ( "size", Maybe.map toString size )
+configToParams { size, precision, scale, withTimezone } =
+    [ ( "size", Maybe.map toString size )
     , ( "precision", Maybe.map toString precision )
     , ( "scale", Maybe.map toString scale )
     , ( "with_timezone", Just (BoolUtils.toString withTimezone) )
     ]
 
 
-encodeDataTypeId : DataType -> Value
-encodeDataTypeId dataType =
+encodeName : DataType -> Value
+encodeName dataType =
     if dataType == NoDataType then
         JE.null
     else
-        JE.int (toId dataType)
+        JE.string (toName dataType)
 
 
 encodeNullableInt : Maybe Int -> Value
