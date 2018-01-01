@@ -187,8 +187,8 @@ defmodule SequelizeUi.DbDesign do
   end
 
 
-  def get_constraint_type_id(enum_name) do
-    with %ConstraintType{id: id} <- Repo.get_by(ConstraintType, enum_name: enum_name),
+  def get_constraint_type_id(name) do
+    with %ConstraintType{id: id} <- Repo.get_by(ConstraintType, name: name),
       do: id
   end
 
@@ -254,7 +254,7 @@ defmodule SequelizeUi.DbDesign do
   defp get_pk(table_id) do
     Repo.one from con in Constraint,
       join: type in assoc(con, :constraint_type),
-      where: type.enum_name == "primary_key" and con.table_id == ^table_id,
+      where: type.name == "primary_key" and con.table_id == ^table_id,
       preload: [:columns]
   end
 
@@ -314,6 +314,7 @@ defmodule SequelizeUi.DbDesign do
 
   defp delete_column_constraints(column_id) do
     constraints = get_column_constraints(column_id)
+    IO.inspect({"constraints!!!!", constraints})
     Enum.each(constraints, &(Repo.delete!(&1)))
     {:ok, length(constraints)}
   end

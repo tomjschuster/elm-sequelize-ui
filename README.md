@@ -3,6 +3,7 @@
 
 ## In Progress
 
+* Type ID helper functions
 * Constraints
   * Table constraints
     * Update column constraints without deleting and not erasing any fields
@@ -18,7 +19,6 @@
 # Todo
 * Constraints
 * Make HTML more semantic
-* Type ID helper functions
 * Field Order
 * Comments
 * Template generator
