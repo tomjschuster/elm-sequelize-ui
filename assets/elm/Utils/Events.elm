@@ -1,6 +1,7 @@
 module Utils.Events
     exposing
         ( customOnKeyDown
+        , onChange
         , onChangeBool
         , onChangeId
         , onChangeInt
@@ -12,7 +13,7 @@ module Utils.Events
         )
 
 import Html exposing (Attribute)
-import Html.Events exposing (Options, defaultOptions, on, onWithOptions)
+import Html.Events as Evt exposing (Options)
 import Json.Decode as JD exposing (Decoder)
 import Utils.Keys as Keys exposing (Key(..))
 
@@ -22,12 +23,12 @@ import Utils.Keys as Keys exposing (Key(..))
 
 onKeyDown : List Key -> msg -> Attribute msg
 onKeyDown keys msg =
-    on "keydown" (keyCodeDecoder keys |> JD.andThen (msgBoolDecoder msg))
+    Evt.on "keydown" (keyCodeDecoder keys |> JD.andThen (msgBoolDecoder msg))
 
 
 customOnKeyDown : (Key -> Maybe msg) -> Attribute msg
 customOnKeyDown toMsg =
-    onWithOptions "keydown"
+    Evt.onWithOptions "keydown"
         (Options True True)
         (JD.field "keyCode" JD.int
             |> JD.andThen
@@ -55,7 +56,11 @@ onEscape =
 
 onPreventDefaultClick : msg -> Attribute msg
 onPreventDefaultClick message =
-    onWithOptions "click"
+    let
+        defaultOptions =
+            Evt.defaultOptions
+    in
+    Evt.onWithOptions "click"
         { defaultOptions | preventDefault = True }
         (notModifierKeyDecoder
             |> JD.andThen (msgBoolDecoder message)
@@ -66,9 +71,14 @@ onPreventDefaultClick message =
 -- CHANGE
 
 
+onChange : (String -> msg) -> Attribute msg
+onChange toMsg =
+    Evt.on "change" (Evt.targetValue |> JD.map toMsg)
+
+
 onChangeId : ({ a | id : Int } -> msg) -> List { a | id : Int } -> Attribute msg
 onChangeId toMsg data =
-    on "change" (JD.andThen (Maybe.andThen (flip findInList data >> Maybe.map toMsg) >> failOnNothingDecoder) targetValueIntDecoder)
+    Evt.on "change" (JD.andThen (Maybe.andThen (flip findInList data >> Maybe.map toMsg) >> failOnNothingDecoder) targetValueIntDecoder)
 
 
 findInList : Int -> List { a | id : Int } -> Maybe { a | id : Int }
@@ -78,12 +88,12 @@ findInList id =
 
 onChangeInt : (Maybe Int -> msg) -> Attribute msg
 onChangeInt toMsg =
-    on "change" (JD.map toMsg targetValueIntDecoder)
+    Evt.on "change" (JD.map toMsg targetValueIntDecoder)
 
 
 onChangeBool : (Bool -> msg) -> Attribute msg
 onChangeBool toMsg =
-    on "change" (targetCheckedDecoder |> JD.map toMsg)
+    Evt.on "change" (targetCheckedDecoder |> JD.map toMsg)
 
 
 
@@ -92,7 +102,7 @@ onChangeBool toMsg =
 
 onIntInput : (Maybe Int -> msg) -> Attribute msg
 onIntInput toMsg =
-    on "input" (targetValueIntDecoder |> JD.map toMsg)
+    Evt.on "input" (targetValueIntDecoder |> JD.map toMsg)
 
 
 

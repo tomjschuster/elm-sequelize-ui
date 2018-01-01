@@ -1,6 +1,7 @@
 defmodule SequelizeUiWeb.ColumnView do
   use SequelizeUiWeb, :view
   alias SequelizeUiWeb.{ColumnView, TableView, SchemaView, ConstraintView}
+  alias SequelizeUi.DbDesign.DataType
 
   def render("index.json", %{columns: columns}) do
     %{data: render_many(columns, ColumnView, "column.json")}
@@ -15,6 +16,7 @@ defmodule SequelizeUiWeb.ColumnView do
       name: column.name,
       tableId: column.table_id,
       dataTypeId: column.data_type_id,
+      dataType: DataType.id_to_atom(column.data_type_id),
       size: column.size,
       precision: column.precision,
       scale: column.scale,

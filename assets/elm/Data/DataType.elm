@@ -11,17 +11,16 @@ module Data.DataType
         , defaultScale
         , defaultSize
         , encode
-        , fromId
+        , fromName
         , isMatch
         , isSameType
         , monetaryGroup
         , none
         , numericGroup
-        , toId
         , toLongName
+        , toName
         , toPrecision
         , toScale
-        , toShortName
         , toSize
         , toUrlParams
         , toWithTimezone
@@ -601,7 +600,7 @@ isSameType dataType1 dataType2 =
 type alias DataTypeConfig =
     { dataType : DataType
     , id : Int
-    , shortName : String
+    , name : String
     , longName : String
     , size : Maybe Int
     , precision : Maybe Int
@@ -616,7 +615,7 @@ toConfig dataType =
         NoDataType ->
             { dataType = NoDataType
             , id = 0
-            , shortName = ""
+            , name = ""
             , longName = ""
             , size = Nothing
             , precision = Nothing
@@ -627,7 +626,7 @@ toConfig dataType =
         Char size ->
             { dataType = Char size
             , id = 1
-            , shortName = "char"
+            , name = "char"
             , longName = "char (" ++ displaySize size ++ ")"
             , size = Just <| Maybe.withDefault defaultSize size
             , precision = Nothing
@@ -638,7 +637,7 @@ toConfig dataType =
         VarChar size ->
             { dataType = VarChar size
             , id = 2
-            , shortName = "varchar"
+            , name = "varchar"
             , longName = "varchar (" ++ displaySize size ++ ")"
             , size = Just <| Maybe.withDefault defaultSize size
             , precision = Nothing
@@ -649,7 +648,7 @@ toConfig dataType =
         Text ->
             { dataType = Text
             , id = 3
-            , shortName = "text"
+            , name = "text"
             , longName = "text"
             , size = Nothing
             , precision = Nothing
@@ -660,7 +659,7 @@ toConfig dataType =
         Bit size ->
             { dataType = Bit size
             , id = 4
-            , shortName = "bit"
+            , name = "bit"
             , longName = "bit (" ++ displaySize size ++ ")"
             , size = Just <| Maybe.withDefault defaultSize size
             , precision = Nothing
@@ -671,7 +670,7 @@ toConfig dataType =
         VarBit size ->
             { dataType = VarBit size
             , id = 5
-            , shortName = "varbit"
+            , name = "varbit"
             , longName = "varbit (" ++ displaySize size ++ ")"
             , size = Just <| Maybe.withDefault defaultSize size
             , precision = Nothing
@@ -682,7 +681,7 @@ toConfig dataType =
         SmallInt ->
             { dataType = SmallInt
             , id = 6
-            , shortName = "smallint"
+            , name = "smallint"
             , longName = "smallint"
             , size = Nothing
             , precision = Nothing
@@ -693,7 +692,7 @@ toConfig dataType =
         Integer ->
             { dataType = Integer
             , id = 7
-            , shortName = "int"
+            , name = "int"
             , longName = "int"
             , size = Nothing
             , precision = Nothing
@@ -704,7 +703,7 @@ toConfig dataType =
         BigInt ->
             { dataType = BigInt
             , id = 8
-            , shortName = "bigint"
+            , name = "bigint"
             , longName = "bigint"
             , size = Nothing
             , precision = Nothing
@@ -715,7 +714,7 @@ toConfig dataType =
         SmallSerial ->
             { dataType = SmallSerial
             , id = 9
-            , shortName = "smallserial"
+            , name = "smallserial"
             , longName = "smallserial"
             , size = Nothing
             , precision = Nothing
@@ -726,7 +725,7 @@ toConfig dataType =
         Serial ->
             { dataType = Serial
             , id = 10
-            , shortName = "serial"
+            , name = "serial"
             , longName = "serial"
             , size = Nothing
             , precision = Nothing
@@ -737,7 +736,7 @@ toConfig dataType =
         BigSerial ->
             { dataType = BigSerial
             , id = 11
-            , shortName = "bigserial"
+            , name = "bigserial"
             , longName = "bigserial"
             , size = Nothing
             , precision = Nothing
@@ -748,7 +747,7 @@ toConfig dataType =
         Decimal precision scale ->
             { dataType = Decimal precision scale
             , id = 12
-            , shortName = "decimal"
+            , name = "decimal"
             , longName =
                 "decimal ("
                     ++ displayPrecision precision
@@ -764,7 +763,7 @@ toConfig dataType =
         Double ->
             { dataType = Double
             , id = 13
-            , shortName = "double"
+            , name = "double"
             , longName = "double"
             , size = Nothing
             , precision = Nothing
@@ -775,7 +774,7 @@ toConfig dataType =
         Real ->
             { dataType = Real
             , id = 14
-            , shortName = "real"
+            , name = "real"
             , longName = "real"
             , size = Nothing
             , precision = Nothing
@@ -786,7 +785,7 @@ toConfig dataType =
         Money ->
             { dataType = Money
             , id = 15
-            , shortName = "money"
+            , name = "money"
             , longName = "money"
             , size = Nothing
             , precision = Nothing
@@ -797,7 +796,7 @@ toConfig dataType =
         Boolean ->
             { dataType = Boolean
             , id = 16
-            , shortName = "bool"
+            , name = "bool"
             , longName = "bool"
             , size = Nothing
             , precision = Nothing
@@ -808,7 +807,7 @@ toConfig dataType =
         Date ->
             { dataType = Date
             , id = 17
-            , shortName = "date"
+            , name = "date"
             , longName = "date"
             , size = Nothing
             , precision = Nothing
@@ -819,7 +818,7 @@ toConfig dataType =
         TimeStamp withTimezone ->
             { dataType = TimeStamp withTimezone
             , id = 18
-            , shortName = "timestamp"
+            , name = "timestamp"
             , longName =
                 if withTimezone then
                     "timestamp with timezone"
@@ -834,7 +833,7 @@ toConfig dataType =
         Time withTimezone ->
             { dataType = Time withTimezone
             , id = 19
-            , shortName = "time"
+            , name = "time"
             , longName =
                 if withTimezone then
                     "time with timezone"
@@ -871,9 +870,9 @@ toId =
     toConfig >> .id
 
 
-toShortName : DataType -> String
-toShortName =
-    toConfig >> .shortName
+toName : DataType -> String
+toName =
+    toConfig >> .name
 
 
 toLongName : DataType -> String
@@ -901,64 +900,64 @@ toWithTimezone =
     toConfig >> .withTimezone
 
 
-fromId : Int -> Maybe DataType
-fromId id =
-    case id of
-        1 ->
+fromName : String -> Maybe DataType
+fromName name =
+    case name of
+        "char" ->
             Just char
 
-        2 ->
+        "varchar" ->
             Just varChar
 
-        3 ->
+        "text" ->
             Just text
 
-        4 ->
+        "bit" ->
             Just bit
 
-        5 ->
+        "varbit" ->
             Just varBit
 
-        6 ->
+        "smallint" ->
             Just smallInt
 
-        7 ->
+        "int" ->
             Just integer
 
-        8 ->
+        "bigint" ->
             Just bigInt
 
-        9 ->
+        "smallserial" ->
             Just smallSerial
 
-        10 ->
+        "serial" ->
             Just serial
 
-        11 ->
+        "bigserial" ->
             Just bigSerial
 
-        12 ->
+        "decimal" ->
             Just decimal
 
-        13 ->
+        "double" ->
             Just double
 
-        14 ->
+        "real" ->
             Just real
 
-        15 ->
+        "money" ->
             Just money
 
-        16 ->
+        "bool" ->
             Just boolean
 
-        17 ->
+        "date" ->
             Just date
 
-        18 ->
+        "timestamp" ->
             Just timeStamp
 
-        19 ->
+        "time" ->
             Just time
 
         _ ->
@@ -971,9 +970,9 @@ fromId id =
 
 decoder : Decoder DataType
 decoder =
-    JD.field "dataTypeId" JD.int
+    JD.field "dataType" JD.string
         |> JD.andThen
-            (fromId >> Maybe.withDefault NoDataType >> dataTypeDecoder)
+            (fromName >> Maybe.withDefault NoDataType >> dataTypeDecoder)
 
 
 dataTypeDecoder : DataType -> Decoder DataType

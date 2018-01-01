@@ -25,14 +25,14 @@ dtSelect : String -> (DataType -> msg) -> DataType -> Html msg
 dtSelect viewId handleChange dataType =
     select
         [ Attr.id viewId
-        , EvtUtils.onChangeInt (mapDataTypeChange handleChange)
+        , EvtUtils.onChange (mapDataTypeChange handleChange)
         ]
         (dtSelectChildren dataType)
 
 
-mapDataTypeChange : (DataType -> msg) -> Maybe Int -> msg
+mapDataTypeChange : (DataType -> msg) -> String -> msg
 mapDataTypeChange handleChange =
-    Maybe.andThen DataType.fromId
+    DataType.fromName
         >> Maybe.withDefault DataType.none
         >> handleChange
 
@@ -69,9 +69,9 @@ dtOption : DataType -> DataType -> Html msg
 dtOption currentType dataType =
     option
         [ Attr.selected (DataType.isSameType dataType currentType)
-        , Attr.value (DataType.toId dataType |> toString)
+        , Attr.value (DataType.toName dataType)
         ]
-        [ text (DataType.toShortName dataType) ]
+        [ text (DataType.toName dataType) ]
 
 
 modifierView : String -> (DataType -> msg) -> DataType -> Maybe (Html msg)
