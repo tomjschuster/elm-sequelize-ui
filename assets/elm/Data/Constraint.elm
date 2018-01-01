@@ -20,6 +20,7 @@ module Data.Constraint
         , isUnique
         , notNullDecoder
         , primaryKeyDecoder
+        , primaryKeyIds
         , singleReference
         , uniqueKeyDecoder
         )
@@ -260,6 +261,11 @@ foreignKeyIndexDecoder =
 
 
 -- EXPOSED FUNCTIONS
+
+
+primaryKeyIds : PrimaryKey -> List ColumnId
+primaryKeyIds (PrimaryKey _ _ (Index columnIds)) =
+    columnIds
 
 
 inPrimaryKey : ColumnId -> PrimaryKey -> Bool

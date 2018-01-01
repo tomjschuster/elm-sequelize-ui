@@ -56,12 +56,22 @@ fromList :
 fromList columnLookup columnId =
     List.foldr
         (\constraint acc ->
-            if Constraint.columnId constraint == Just columnId then
+            if isConstraintForColumn columnId constraint then
                 addConstraint columnLookup constraint acc
             else
                 acc
         )
         default
+
+
+isConstraintForColumn : Int -> Constraint -> Bool
+isConstraintForColumn columnId constraint =
+    case constraint of
+        Constraint.PK primaryKey ->
+            Constraint.inPrimaryKey columnId primaryKey
+
+        _ ->
+            Constraint.columnId constraint == Just columnId
 
 
 dictFromList :
@@ -71,20 +81,43 @@ dictFromList :
 dictFromList columnLookup =
     List.foldr
         (\constraint acc ->
-            constraint
-                |> Constraint.columnId
-                |> Maybe.map
-                    (\columnId ->
-                        Dict.update columnId
-                            (Maybe.withDefault default
-                                >> addConstraint columnLookup constraint
-                                >> Just
-                            )
+            case constraint of
+                Constraint.PK primaryKey ->
+                    primaryKey
+                        |> Constraint.primaryKeyIds
+                        |> List.foldl
+                            (addConstraintToDict columnLookup constraint)
                             acc
-                    )
-                |> Maybe.withDefault acc
+
+                _ ->
+                    constraint
+                        |> Constraint.columnId
+                        |> Maybe.map
+                            (flip
+                                (addConstraintToDict
+                                    columnLookup
+                                    constraint
+                                )
+                                acc
+                            )
+                        |> Maybe.withDefault acc
         )
         Dict.empty
+
+
+addConstraintToDict :
+    Dict Int Column
+    -> Constraint
+    -> Int
+    -> Dict Int ColumnConstraints
+    -> Dict Int ColumnConstraints
+addConstraintToDict columnLookup constraint columnId dict =
+    Dict.update columnId
+        (Maybe.withDefault default
+            >> addConstraint columnLookup constraint
+            >> Just
+        )
+        dict
 
 
 
