@@ -8,6 +8,7 @@
     * Update column constraints without deleting and not erasing any fields
     * CRUD table constraints w/out names
     * Names
+    * Composite unique keys
     * Composite foreign keys
 
 ## Bugs
