@@ -14,8 +14,7 @@ defmodule SequelizeUiWeb.ConstraintView do
   def render("constraint.json", %{constraint: constraint}) do
     %{id: constraint.id,
       name: constraint.name,
-      type: ConstraintType.id_to_atom(constraint.constraint_type_id),
-      constraintTypeId: constraint.constraint_type_id,
+      type: constraint.constraint_type.name,
       value: constraint.value,
       columns:
         render_many(

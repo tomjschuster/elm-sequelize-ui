@@ -13,6 +13,7 @@ defmodule SequelizeUi.DbDesign.Column do
     field :scale, :integer
     field :with_timezone, :boolean
 
+
     belongs_to :table, Table, define_field: false
     belongs_to :data_type, DataType, define_field: false
     many_to_many :constraints,
@@ -30,7 +31,6 @@ defmodule SequelizeUi.DbDesign.Column do
 
   @doc false
   def changeset(%Column{} = column, attrs) do
-    attrs = attrs |> Map.put("data_type_id", DataType.string_to_id(attrs["data_type"]))
     column
     |> cast(attrs, [:table_id, :name, :data_type_id, :size, :precision, :scale, :with_timezone])
     |> validate_required([:table_id, :name, :data_type_id])

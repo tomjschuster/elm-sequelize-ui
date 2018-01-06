@@ -9,6 +9,7 @@ defmodule SequelizeUi.DbDesign do
   alias SequelizeUi.DbDesign.{
     Schema,
     Table,
+    DataType,
     Column,
     Constraint,
     ConstraintType,
@@ -84,7 +85,9 @@ defmodule SequelizeUi.DbDesign do
   def list_columns_for_schema(schema_id) do
     Repo.all from column in Column,
       join: table in assoc(column, :table),
-      where: table.schema_id == ^schema_id
+      join: data_type in assoc(column, :data_type),
+      where: table.schema_id == ^schema_id,
+      preload: [:data_type]
   end
 
   def get_column!(id), do: Repo.get!(Column, id)
@@ -114,7 +117,17 @@ defmodule SequelizeUi.DbDesign do
     Repo.all(Constraint)
   end
 
-  ## Constraint
+  # Data Type
+
+  def get_data_type_by_name(name), do: Repo.get_by DataType, name: name
+
+  def add_data_type_id_to_params(params, path \\ []) do
+    name = get_in(params, path ++ ["data_type"])
+    with %DataType{id: data_type_id} <- get_data_type_by_name(name),
+         do: put_in(params, path ++ ["data_type_id"], data_type_id)
+  end
+
+  # Constraint
 
   def create_constraint(attrs \\ %{}) do
     %Constraint{}

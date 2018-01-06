@@ -778,8 +778,8 @@ toConfig dataType =
 
         Boolean ->
             { dataType = Boolean
-            , name = "bool"
-            , longName = "bool"
+            , name = "boolean"
+            , longName = "boolean"
             , size = Nothing
             , precision = Nothing
             , scale = Nothing
@@ -922,7 +922,7 @@ fromName name =
         "money" ->
             Just money
 
-        "bool" ->
+        "boolean" ->
             Just boolean
 
         "date" ->
