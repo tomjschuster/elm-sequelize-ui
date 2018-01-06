@@ -3,7 +3,6 @@
 
 ## In Progress
 
-* Type ID helper functions
 * Constraints
   * Table constraints
     * Update column constraints without deleting and not erasing any fields
@@ -18,6 +17,8 @@
 
 # Todo
 * Constraints
+* Auto select foreign key column if only one
+* Default id column on table create
 * Make HTML more semantic
 * Field Order
 * Comments
