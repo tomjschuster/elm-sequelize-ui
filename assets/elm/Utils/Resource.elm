@@ -1,4 +1,4 @@
-module Data.Resource
+module Utils.Resource
     exposing
         ( Resource(..)
         , cancel
