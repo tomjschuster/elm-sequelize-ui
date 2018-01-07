@@ -1,6 +1,7 @@
 module Utils.Resource
     exposing
-        ( Resource(..)
+        ( Error(..)
+        , Resource(..)
         , cancel
         , create
         , delete
@@ -9,9 +10,13 @@ module Utils.Resource
         , remove
         , removeMultiple
         , save
+        , taskFromRequest
         , unloaded
         , update
         )
+
+import Http
+import Task exposing (Task)
 
 
 type Resource k v
@@ -20,6 +25,11 @@ type Resource k v
     | Read k v
     | Update k v v
     | Delete k v
+
+
+type Error
+    = InvalidAction
+    | HttpError Http.Error
 
 
 
@@ -187,3 +197,75 @@ isDelete resource =
 
         _ ->
             False
+
+
+
+{- HTTP -}
+
+
+taskFromRequest : Http.Request a -> Task Error a
+taskFromRequest =
+    Http.toTask >> Task.mapError HttpError
+
+
+
+--module Request.Schema
+--    exposing
+--        ( create
+--        , destroy
+--        , index
+--        , one
+--        , resourceUrl
+--        , update
+--        , url
+--        )
+--import Data.Schema as Schema exposing (Schema)
+--import Http
+--import Json.Decode as JD
+--import Json.Encode as JE
+--import Task exposing (Task)
+--import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
+--import Utils.Resource as Resource exposing (Resource(..))
+--url : String
+--url =
+--    baseUrl ++ "schemas/"
+--resourceUrl : Int -> String
+--resourceUrl =
+--    toString >> (++) url
+--index : Http.Request (List Schema)
+--index =
+--    Http.get
+--        url
+--        (dataDecoder (JD.list Schema.decoder))
+--one : Int -> Http.Request Schema
+--one id =
+--    Http.get (resourceUrl id) (dataDecoder Schema.decoder)
+--create : Resource Int Schema -> Task Resource.Error Schema
+--create resource =
+--    case resource of
+--        Create schema ->
+--            Http.post
+--                url
+--                (JE.object [ ( "schema", Schema.encode schema ) ]
+--                    |> Http.jsonBody
+--                )
+--                (dataDecoder Schema.decoder)
+--                |> Resource.taskFromRequest
+--        _ ->
+--            Task.fail Resource.InvalidAction
+--update : Resource Int Schema -> Task Resource.Error Schema
+--update resource =
+--    case resource of
+--        Update id schema _ ->
+--            put (resourceUrl id)
+--                (JE.object [ ( "schema", Schema.encode schema ) ]
+--                    |> Http.jsonBody
+--                )
+--                (dataDecoder Schema.decoder)
+--                |> Http.toTask
+--                |> Task.mapError Resource.HttpError
+--        _ ->
+--            Task.fail Resource.InvalidAction
+--destroy : Int -> Http.Request ()
+--destroy id =
+--    delete (resourceUrl id)
