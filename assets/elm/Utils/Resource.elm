@@ -1,30 +1,46 @@
 module Utils.Resource
     exposing
-        ( Error(..)
+        ( Config
+        , Error(..)
         , Resource(..)
+        , build
         , cancel
+        , clearDestroyed
         , create
         , delete
+        , destroy
         , load
-        , new
-        , remove
-        , removeMultiple
+        , none
         , save
+        , saveAndContinue
         , taskFromRequest
-        , unloaded
         , update
         )
 
 import Http
+import Json.Decode as JD exposing (Decoder)
+import Json.Encode as JE exposing (Value)
 import Task exposing (Task)
 
 
-type Resource k v
-    = Loading
-    | Create v
-    | Read k v
-    | Update k v v
-    | Delete k v
+type Resource id data
+    = None
+    | Requested id
+    | Create data
+    | Read id data
+    | Update id data data
+    | Delete id data
+    | Destroyed id
+
+
+type alias Config id data =
+    { baseUrl : String
+    , decodeAt : List String
+    , idDecoder : Decoder id
+    , dataDecoder : Decoder data
+    , idToString : id -> String
+    , encode : Maybe id -> Maybe data -> Value
+    }
 
 
 type Error
@@ -36,130 +52,101 @@ type Error
 {- Build -}
 
 
-unloaded : Resource k v
-unloaded =
-    Loading
+none : Resource id data
+none =
+    None
 
 
-new : v -> Resource k v
-new value =
-    Create value
+build : data -> Resource id data
+build data =
+    Create data
 
 
-load : comparable -> v -> Resource comparable v
-load key value =
-    Read key value
-
-
-
-{- CRUD -}
-
-
-create : comparable -> Resource comparable v -> Resource comparable v
-create key resource =
-    case resource of
-        Create value ->
-            Read key value
-
-        _ ->
-            resource
-
-
-update : v -> Resource k v -> Resource k v
-update value resource =
-    case resource of
-        Update key updated previous ->
-            Update key value previous
-
-        _ ->
-            resource
-
-
-save : Resource k v -> Resource k v
-save resource =
-    case resource of
-        Update key updated previous ->
-            Read key updated
-
-        _ ->
-            resource
-
-
-cancel : Resource k v -> Resource k v
-cancel resource =
-    case resource of
-        Update key updated previous ->
-            Read key previous
-
-        Delete key value ->
-            Read key value
-
-        _ ->
-            resource
-
-
-delete : Resource k v -> Resource k v
-delete resource =
-    case resource of
-        Read key value ->
-            Delete key value
-
-        Update key updated previous ->
-            Delete key previous
-
-        _ ->
-            resource
-
-
-remove : k -> List (Resource k v) -> List (Resource k v)
-remove key =
-    List.filter (\x -> isDelete x && keyMatches key x)
-
-
-removeMultiple : List k -> List (Resource k v) -> List (Resource k v)
-removeMultiple keys =
-    List.filter (\x -> isDelete x && List.any (flip keyMatches x) keys)
+read : id -> data -> Resource id data
+read id data =
+    Read id data
 
 
 
 {- Query -}
 
 
-getKey : Resource k v -> Maybe k
-getKey resource =
+getId : Resource id data -> Maybe id
+getId resource =
     case resource of
-        Loading ->
+        None ->
             Nothing
+
+        Requested id ->
+            Just id
 
         Create _ ->
             Nothing
 
-        Read key _ ->
-            Just key
+        Read id _ ->
+            Just id
 
-        Update key _ _ ->
-            Just key
+        Update id _ _ ->
+            Just id
 
-        Delete key _ ->
-            Just key
+        Delete id _ ->
+            Just id
 
-
-keyMatches : k -> Resource k v -> Bool
-keyMatches key =
-    getKey >> Maybe.map ((==) key) >> Maybe.withDefault False
+        Destroyed id ->
+            Just id
 
 
-isLoading : Resource k v -> Bool
-isLoading resource =
+getData : Resource id data -> Maybe data
+getData resource =
     case resource of
-        Loading ->
+        None ->
+            Nothing
+
+        Requested _ ->
+            Nothing
+
+        Create data ->
+            Just data
+
+        Read _ data ->
+            Just data
+
+        Update _ data _ ->
+            Just data
+
+        Delete _ data ->
+            Just data
+
+        Destroyed _ ->
+            Nothing
+
+
+idMatches : id -> Resource id data -> Bool
+idMatches id =
+    getId >> Maybe.map ((==) id) >> Maybe.withDefault False
+
+
+isNone : Resource id data -> Bool
+isNone resource =
+    case resource of
+        None ->
             True
 
         _ ->
             False
 
 
-isCreate : Resource k v -> Bool
+isRequested : Resource id data -> Bool
+isRequested resource =
+    case resource of
+        Requested _ ->
+            True
+
+        _ ->
+            False
+
+
+isCreate : Resource id data -> Bool
 isCreate resource =
     case resource of
         Create _ ->
@@ -169,7 +156,7 @@ isCreate resource =
             False
 
 
-isRead : Resource k v -> Bool
+isRead : Resource id data -> Bool
 isRead resource =
     case resource of
         Read _ _ ->
@@ -179,7 +166,7 @@ isRead resource =
             False
 
 
-isUpdate : Resource k v -> Bool
+isUpdate : Resource id data -> Bool
 isUpdate resource =
     case resource of
         Update _ _ _ ->
@@ -189,7 +176,7 @@ isUpdate resource =
             False
 
 
-isDelete : Resource k v -> Bool
+isDelete : Resource id data -> Bool
 isDelete resource =
     case resource of
         Delete _ _ ->
@@ -199,8 +186,168 @@ isDelete resource =
             False
 
 
+isDestroyed : Resource id data -> Bool
+isDestroyed resource =
+    case resource of
+        Destroyed _ ->
+            True
 
-{- HTTP -}
+        _ ->
+            False
+
+
+
+{- Edit -}
+
+
+update : data -> Resource id data -> Resource id data
+update data resource =
+    case resource of
+        Update id updated previous ->
+            Update id data previous
+
+        _ ->
+            resource
+
+
+cancel : Resource id data -> Resource id data
+cancel resource =
+    case resource of
+        Update id updated previous ->
+            Read id previous
+
+        Delete id data ->
+            Read id data
+
+        _ ->
+            resource
+
+
+delete : Resource id data -> Resource id data
+delete resource =
+    case resource of
+        Read id data ->
+            Delete id data
+
+        Update id updated previous ->
+            Delete id previous
+
+        _ ->
+            resource
+
+
+clearDestroyed : List (Resource id data) -> List (Resource id data)
+clearDestroyed =
+    List.filter (not << isDestroyed)
+
+
+
+{- Persist -}
+
+
+create : Config id data -> Resource id data -> Task Error (Resource id data)
+create config resource =
+    case resource of
+        Create data ->
+            Http.post
+                config.baseUrl
+                (encodeToJson config resource)
+                (readDecoder config)
+                |> taskFromRequest
+
+        _ ->
+            Task.fail InvalidAction
+
+
+load : Config id data -> Resource id data -> Task Error (Resource id data)
+load config resource =
+    case resource of
+        Requested id ->
+            Http.get
+                (resourceUrl config id)
+                (readDecoder config)
+                |> taskFromRequest
+
+        _ ->
+            Task.fail InvalidAction
+
+
+loadAll : Config id data -> Task Error (List (Resource id data))
+loadAll config =
+    Http.get
+        config.baseUrl
+        (readListDecoder config)
+        |> taskFromRequest
+
+
+save : Config id data -> Resource id data -> Task Error (Resource id data)
+save config resource =
+    case resource of
+        Update id data previous ->
+            Http.post
+                config.baseUrl
+                (encodeToJson config resource)
+                (readDecoder config)
+                |> taskFromRequest
+
+        _ ->
+            Task.fail InvalidAction
+
+
+saveAndContinue : Config id data -> Resource id data -> Task Error (Resource id data)
+saveAndContinue config resource =
+    case resource of
+        Update id data previous ->
+            putRequest
+                config.baseUrl
+                (encodeToJson config resource)
+                (updateDecoder config)
+                |> taskFromRequest
+
+        _ ->
+            Task.fail InvalidAction
+
+
+destroy : Config id data -> Resource id data -> Task Error (Resource id data)
+destroy config resource =
+    case resource of
+        Delete id data ->
+            deleteRequest (resourceUrl config id)
+                |> taskFromRequest
+                |> Task.map (always (Destroyed id))
+
+        _ ->
+            Task.fail InvalidAction
+
+
+
+-- Http Helpers
+
+
+resourceUrl : Config id data -> id -> String
+resourceUrl { baseUrl, idToString } id =
+    baseUrl ++ idToString id
+
+
+readDecoder : Config id data -> Decoder (Resource id data)
+readDecoder { decodeAt, idDecoder, dataDecoder } =
+    JD.at decodeAt <| JD.map2 Read idDecoder dataDecoder
+
+
+readListDecoder : Config id data -> Decoder (List (Resource id data))
+readListDecoder { decodeAt, idDecoder, dataDecoder } =
+    JD.at decodeAt <| JD.list <| JD.map2 Read idDecoder dataDecoder
+
+
+updateDecoder : Config id data -> Decoder (Resource id data)
+updateDecoder { decodeAt, idDecoder, dataDecoder } =
+    JD.at decodeAt <| JD.map3 Update idDecoder dataDecoder dataDecoder
+
+
+encodeToJson : Config id data -> Resource id data -> Http.Body
+encodeToJson { encode } resource =
+    encode (getId resource) (getData resource)
+        |> Http.jsonBody
 
 
 taskFromRequest : Http.Request a -> Task Error a
@@ -208,64 +355,27 @@ taskFromRequest =
     Http.toTask >> Task.mapError HttpError
 
 
+putRequest : String -> Http.Body -> JD.Decoder a -> Http.Request a
+putRequest url body decoder =
+    Http.request
+        { method = "PUT"
+        , headers = []
+        , url = url
+        , body = body
+        , expect = Http.expectJson decoder
+        , timeout = Nothing
+        , withCredentials = False
+        }
 
---module Request.Schema
---    exposing
---        ( create
---        , destroy
---        , index
---        , one
---        , resourceUrl
---        , update
---        , url
---        )
---import Data.Schema as Schema exposing (Schema)
---import Http
---import Json.Decode as JD
---import Json.Encode as JE
---import Task exposing (Task)
---import Utils.Http exposing (baseUrl, dataDecoder, delete, put)
---import Utils.Resource as Resource exposing (Resource(..))
---url : String
---url =
---    baseUrl ++ "schemas/"
---resourceUrl : Int -> String
---resourceUrl =
---    toString >> (++) url
---index : Http.Request (List Schema)
---index =
---    Http.get
---        url
---        (dataDecoder (JD.list Schema.decoder))
---one : Int -> Http.Request Schema
---one id =
---    Http.get (resourceUrl id) (dataDecoder Schema.decoder)
---create : Resource Int Schema -> Task Resource.Error Schema
---create resource =
---    case resource of
---        Create schema ->
---            Http.post
---                url
---                (JE.object [ ( "schema", Schema.encode schema ) ]
---                    |> Http.jsonBody
---                )
---                (dataDecoder Schema.decoder)
---                |> Resource.taskFromRequest
---        _ ->
---            Task.fail Resource.InvalidAction
---update : Resource Int Schema -> Task Resource.Error Schema
---update resource =
---    case resource of
---        Update id schema _ ->
---            put (resourceUrl id)
---                (JE.object [ ( "schema", Schema.encode schema ) ]
---                    |> Http.jsonBody
---                )
---                (dataDecoder Schema.decoder)
---                |> Http.toTask
---                |> Task.mapError Resource.HttpError
---        _ ->
---            Task.fail Resource.InvalidAction
---destroy : Int -> Http.Request ()
---destroy id =
---    delete (resourceUrl id)
+
+deleteRequest : String -> Http.Request ()
+deleteRequest url =
+    Http.request
+        { method = "DELETE"
+        , headers = []
+        , url = url
+        , body = Http.emptyBody
+        , expect = Http.expectStringResponse (always (Ok ()))
+        , timeout = Nothing
+        , withCredentials = False
+        }
